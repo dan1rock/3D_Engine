@@ -1,0 +1,57 @@
+#pragma once
+#include "cmath"
+
+class Vector3 
+{
+public:
+	Vector3(): x(0), y(0), z(0)
+	{
+
+	}
+
+	Vector3(float coordX, float coordY, float coordZ) : x(coordX), y(coordY), z(coordZ) {
+
+	}
+
+	Vector3(const Vector3& vector) : x(vector.x), y(vector.y), z(vector.z) {
+
+	}
+
+	Vector3 operator *(float num) {
+		return Vector3(x * num, y * num, z * num);
+	}
+
+	void operator *=(float num) {
+		x *= num;
+		y *= num;
+		z *= num;
+	}
+
+	Vector3 operator +(Vector3 vector) {
+		return Vector3(x + vector.x, y + vector.y, z + vector.z);
+	}
+
+	void normalize() {
+		float length = (float)sqrt(x * x + y * y + z * z);
+		if (length != 0) {
+			x /= length;
+			y /= length;
+			z /= length;
+		}
+	}
+
+	static Vector3 lerp(const Vector3& startPos, const Vector3& endPos, float delta) {
+		Vector3 res;
+		res.x = startPos.x * (1.0f - delta) + endPos.x * delta;
+		res.y = startPos.y * (1.0f - delta) + endPos.y * delta;
+		res.z = startPos.z * (1.0f - delta) + endPos.z * delta;
+		return res;
+	}
+
+	~Vector3() 
+	{
+	
+	}
+
+	float x, y, z;
+};
