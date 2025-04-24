@@ -1,18 +1,17 @@
 #include "AppWindow.h"
 #include <Windows.h>
-
-struct vertex {
-	Vector3 pos;
-	Vector3 col;
-};
+#include <iostream>
 
 __declspec(align(16))
 struct constant {
 	Matrix world;
+	Matrix model;
 	Matrix view;
 	Matrix projection;
 	unsigned int time;
 };
+
+constant constantData = { };
 
 AppWindow::AppWindow()
 {
@@ -44,8 +43,7 @@ void AppWindow::updateDeltaMousePos()
 
 void AppWindow::updatePosition()
 {
-	constant data = {};
-	data.time = ::GetTickCount64();
+	constantData.time = ::GetTickCount64();
 
 	RECT rc = this->getClientWindowRect();
 
@@ -119,7 +117,7 @@ void AppWindow::updatePosition()
 	Matrix temp;
 	Matrix cam;
 
-	data.world.setIdentity();
+	constantData.world.setIdentity();
 	cam.setIdentity();
 
 	temp.setIdentity();
@@ -139,17 +137,17 @@ void AppWindow::updatePosition()
 
 	cam.inverse();
 	
-	data.view = cam;
+	constantData.view = cam;
 
 	float aspectRatio = (float)(rc.right - rc.left) / (float)(rc.bottom - rc.top);
-	data.projection.setPerspectivePM(
+	constantData.projection.setPerspectivePM(
 		1.1f,
 		aspectRatio,
 		0.1f,
 		100.0f
 	);
 
-	mConstantBuffer->update(GraphicsEngine::engine()->getImmDeviceContext(), &data);
+	mConstantBuffer->update(GraphicsEngine::engine()->getImmDeviceContext(), &constantData);
 }
 
 AppWindow::~AppWindow()
@@ -170,54 +168,10 @@ void AppWindow::onCreate()
 
 	worldCam.setTranslation(Vector3(0, 0, -2));
 
-	vertex vertexList[] = {
-		{Vector3(-0.5f, -0.5f, -0.5f)	,	Vector3(0.6f, 0.6f, 0.0f)},// 0
-		{Vector3(-0.5f, 0.5f, -0.5f)	,	Vector3(0.7f, 0.7f, 0.0f)},// 1
-		{Vector3(0.5f, 0.5f, -0.5f)		,	Vector3(1.0f, 1.0f, 0.0f)},// 2
-		{Vector3(0.5f, -0.5f, -0.5f)	,	Vector3(0.8f, 0.8f, 0.0f)},// 3
-		
-		{Vector3(0.5f, -0.5f, 0.5f)		,	Vector3(0.9f, 0.9f, 0.0f)},// 4
-		{Vector3(0.5f, 0.5f, 0.5f)		,	Vector3(1.0f, 1.0f, 0.0f)},// 5
-		{Vector3(-0.5f, 0.5f, 0.5f)		,	Vector3(0.8f, 0.8f, 0.0f)},// 6
-		{Vector3(-0.5f, -0.5f, 0.5f)	,	Vector3(0.5f, 0.5f, 0.0f)} // 7
-	};
-	
-	unsigned int indexList[] = {
-		0,2,1,
-		2,0,3,
+	renderObjects.push_front(std::make_unique<Cube>());
+	renderObjects.push_front(std::make_unique<Cube>(Vector3(3, 0, 0)));
 
-		4,6,5,
-		6,4,7,
-
-		1,5,6,
-		5,1,2,
-
-		7,3,0,
-		3,7,4,
-
-		3,5,2,
-		5,3,4,
-
-		7,1,6,
-		1,7,0
-	};
-
-	mVertexBuffer = GraphicsEngine::engine()->createVertexBuffer();
-	mIndexBuffer = GraphicsEngine::engine()->createIndexBuffer();
 	mConstantBuffer = GraphicsEngine::engine()->createConstantBuffer();
-
-	void* shaderByteCode = nullptr;
-	SIZE_T shaderSize = 0;
-
-	GraphicsEngine::engine()->compileVertexShader(L"VertexShader.hlsl", "main", &shaderByteCode, &shaderSize);
-	mVertexShader = GraphicsEngine::engine()->createVertexShader(shaderByteCode, shaderSize);
-	mVertexBuffer->load(vertexList, sizeof(vertex), ARRAYSIZE(vertexList), shaderByteCode, shaderSize);
-	mIndexBuffer->load(indexList, ARRAYSIZE(indexList));
-	GraphicsEngine::engine()->releaseVertexShader();
-
-	GraphicsEngine::engine()->compilePixelShader(L"PixelShader.hlsl", "main", &shaderByteCode, &shaderSize);
-	mPixelShader = GraphicsEngine::engine()->createPixelShader(shaderByteCode, shaderSize);
-	GraphicsEngine::engine()->releasePixelShader();
 
 	constant data = {};
 	mConstantBuffer->load(&data, sizeof(data));
@@ -238,16 +192,14 @@ void AppWindow::onUpdate()
 	updateDeltaMousePos();
 	updatePosition();
 
-	GraphicsEngine::engine()->getImmDeviceContext()->setConstantBuffer(mVertexShader, mConstantBuffer);
-	GraphicsEngine::engine()->getImmDeviceContext()->setConstantBuffer(mPixelShader, mConstantBuffer);
+	for (auto& renderObject : renderObjects) 
+	{
+		constantData.model = *renderObject->getModelMatrix();
+		mConstantBuffer->update(GraphicsEngine::engine()->getImmDeviceContext(), &constantData);
+		renderObject->setConstantBuffer(mConstantBuffer);
+		renderObject->render();
+	}
 
-	GraphicsEngine::engine()->getImmDeviceContext()->setVertexShader(mVertexShader);
-	GraphicsEngine::engine()->getImmDeviceContext()->setPixelShader(mPixelShader);
-	GraphicsEngine::engine()->getImmDeviceContext()->setVertexBuffer(mVertexBuffer);
-	GraphicsEngine::engine()->getImmDeviceContext()->setIndexBuffer(mIndexBuffer);
-	GraphicsEngine::engine()->getImmDeviceContext()->drawIndexedTriangleList(mIndexBuffer->getVertexListSize(), 0, 0);
-	//GraphicsEngine::engine()->getImmDeviceContext()->drawTriangleStrip(mVertexBuffer->getVertexListSize(), 0);
-	//GraphicsEngine::engine()->getImmDeviceContext()->drawTriangleList(mVertexBuffer->getVertexListSize(), 0);
 	mSwapChain->present(false);
 }
 
@@ -267,10 +219,6 @@ void AppWindow::onDestroy()
 {
 	Window::onDestroy();
 	mSwapChain->release();
-	mVertexBuffer->release();
-	mVertexShader->release();
-	mPixelShader->release();
 	mConstantBuffer->release();
-	mIndexBuffer->release();
 	GraphicsEngine::engine()->release();
 }

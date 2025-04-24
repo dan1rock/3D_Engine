@@ -11,6 +11,7 @@ struct VS_OUTPUT {
 cbuffer constant: register(b0)
 {
 	row_major float4x4 world;
+	row_major float4x4 model;
 	row_major float4x4 view;
 	row_major float4x4 projection;
 	unsigned int time;
@@ -21,6 +22,7 @@ VS_OUTPUT main(VS_INPUT input)
 	VS_OUTPUT output = (VS_OUTPUT)0;
 	
 	output.pos = mul(input.pos, world);
+	output.pos = mul(input.pos, model);
 	output.pos = mul(output.pos, view);
 	output.pos = mul(output.pos, projection);
 

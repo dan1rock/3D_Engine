@@ -9,10 +9,12 @@
 #include "Input.h"
 #include "VertexShader.h"
 #include "PixelShader.h"
+#include "RenderObject.h"
 #include "Vector2.h"
 #include "Vector3.h"
 #include "Matrix.h"
-
+#include <list>
+#include "Cube.h"
 
 class AppWindow: public Window
 {
@@ -31,11 +33,7 @@ public:
 	virtual void onDestroy() override;
 private:
 	SwapChain* mSwapChain = nullptr;
-	VertexBuffer* mVertexBuffer = nullptr;
-	VertexShader* mVertexShader = nullptr;
-	PixelShader* mPixelShader = nullptr;
 	ConstantBuffer* mConstantBuffer = nullptr;
-	IndexBuffer* mIndexBuffer = nullptr;
 
 	ULONGLONG lastTickTime = 0;
 	ULONGLONG currentTickTime = 0;
@@ -51,6 +49,8 @@ private:
 	float rotZ = 0;
 
 	Matrix worldCam;
+
+	std::list<std::unique_ptr<RenderObject>> renderObjects;
 
 	bool isFocused = false;
 };
