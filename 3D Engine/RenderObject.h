@@ -15,6 +15,7 @@ public:
 	void setConstantBuffer(ConstantBuffer* constantBuffer);
 	Matrix* getModelMatrix();
 	virtual void render() = 0;
+	void setTexture(Texture* texture);
 
 protected:
 	virtual void init() = 0;
@@ -27,6 +28,8 @@ protected:
 
 	VertexBuffer* mVertexBuffer = nullptr;
 	IndexBuffer* mIndexBuffer = nullptr;
+
+	Texture* mTexture = nullptr;
 
 	bool isInitialized = false;
 };

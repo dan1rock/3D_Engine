@@ -1,5 +1,6 @@
 #pragma once
 #include <d3d11.h>
+#include "TextureManager.h"
 
 class SwapChain;
 class DeviceContext;
@@ -18,7 +19,7 @@ public:
 	bool release();
 	~GraphicsEngine();
 
-	static GraphicsEngine* engine();
+	static GraphicsEngine* get();
 
 	SwapChain* createSwapShain();
 	DeviceContext* getImmDeviceContext();
@@ -27,6 +28,8 @@ public:
 	ConstantBuffer* createConstantBuffer();
 	VertexShader* createVertexShader(const void* shaderBytecode, SIZE_T bytecodeLength);
 	PixelShader* createPixelShader(const void* shaderBytecode, SIZE_T bytecodeLength);
+
+	TextureManager* getTextureManager();
 
 	bool compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
 	void releaseVertexShader();
@@ -48,6 +51,8 @@ private:
 
 	ID3D11VertexShader* mVS = nullptr;
 	ID3D11PixelShader* mPS = nullptr;
+
+	TextureManager* mTextureManager = nullptr;
 
 	friend class SwapChain;
 	friend class DeviceContext;

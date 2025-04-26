@@ -24,18 +24,18 @@ bool VertexBuffer::load(void* vertList, UINT vertSize, UINT listSize, void* shad
 	mListSize = listSize;
 
 	HRESULT hr;
-	hr = GraphicsEngine::engine()->mD3dDevice->CreateBuffer(&bufferDesc, &subresData, &mBuffer);
+	hr = GraphicsEngine::get()->mD3dDevice->CreateBuffer(&bufferDesc, &subresData, &mBuffer);
 	if (FAILED(hr))
 		return false;
 
 	D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = {
 		//SEMANTIC NAME - SEMANTIC INDEX - FORMAT - INPUT SLOT - ALIGNED BYTE OFFSET - INPUT SLOT CLASS - INSTANCE DATA STEP RATE
 		{"POSITION"	, 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-		{"COLOR"	, 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
+		{"TEXCOORD"	, 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
 	};
 	UINT inputElementDescSize = ARRAYSIZE(inputElementDesc);
 
-	hr = GraphicsEngine::engine()->mD3dDevice->CreateInputLayout(inputElementDesc, inputElementDescSize, shaderByteCode, byteShaderSize, &mInputLayout);
+	hr = GraphicsEngine::get()->mD3dDevice->CreateInputLayout(inputElementDesc, inputElementDescSize, shaderByteCode, byteShaderSize, &mInputLayout);
 	if (FAILED(hr))
 		return false;
 

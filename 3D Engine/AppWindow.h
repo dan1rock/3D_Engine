@@ -16,6 +16,8 @@
 #include <list>
 #include "Cube.h"
 
+class Texture;
+
 class AppWindow: public Window
 {
 public:
@@ -51,6 +53,7 @@ private:
 	Matrix worldCam;
 
 	std::list<std::unique_ptr<RenderObject>> renderObjects;
+	std::list<std::unique_ptr<Resource>> resources;
 
 	bool isFocused = false;
 };

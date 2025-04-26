@@ -7,8 +7,8 @@ void RenderObject::setConstantBuffer(ConstantBuffer* constantBuffer)
 		this->init();
 	}
 
-	GraphicsEngine::engine()->getImmDeviceContext()->setConstantBuffer(mVertexShader, constantBuffer);
-	GraphicsEngine::engine()->getImmDeviceContext()->setConstantBuffer(mPixelShader, constantBuffer);
+	GraphicsEngine::get()->getImmDeviceContext()->setConstantBuffer(mVertexShader, constantBuffer);
+	GraphicsEngine::get()->getImmDeviceContext()->setConstantBuffer(mPixelShader, constantBuffer);
 }
 
 Matrix* RenderObject::getModelMatrix()
@@ -28,4 +28,9 @@ void RenderObject::render()
 	{
 		this->init();
 	}
+}
+
+void RenderObject::setTexture(Texture* texture)
+{
+	this->mTexture = texture;
 }

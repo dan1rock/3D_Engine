@@ -1,6 +1,7 @@
 #pragma once
 #include "RenderObject.h"
 #include "Vector3.h"
+#include "Vector2.h"
 
 class Cube : public RenderObject
 {

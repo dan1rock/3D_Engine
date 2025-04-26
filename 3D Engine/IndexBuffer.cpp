@@ -22,7 +22,7 @@ bool IndexBuffer::load(void* indicesList, UINT listSize)
 	mListSize = listSize;
 
 	HRESULT hr;
-	hr = GraphicsEngine::engine()->mD3dDevice->CreateBuffer(&bufferDesc, &subresData, &mBuffer);
+	hr = GraphicsEngine::get()->mD3dDevice->CreateBuffer(&bufferDesc, &subresData, &mBuffer);
 	if (FAILED(hr))
 		return false;
 

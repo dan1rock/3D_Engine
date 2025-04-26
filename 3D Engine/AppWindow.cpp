@@ -147,7 +147,7 @@ void AppWindow::updatePosition()
 		100.0f
 	);
 
-	mConstantBuffer->update(GraphicsEngine::engine()->getImmDeviceContext(), &constantData);
+	mConstantBuffer->update(GraphicsEngine::get()->getImmDeviceContext(), &constantData);
 }
 
 AppWindow::~AppWindow()
@@ -156,8 +156,8 @@ AppWindow::~AppWindow()
 
 void AppWindow::onCreate()
 {
-	GraphicsEngine::engine()->init();
-	mSwapChain = GraphicsEngine::engine()->createSwapShain();
+	GraphicsEngine::get()->init();
+	mSwapChain = GraphicsEngine::get()->createSwapShain();
 
 	RECT windowSize = this->getClientWindowRect();
 	mSwapChain->init(this->mHwnd, windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
@@ -168,23 +168,33 @@ void AppWindow::onCreate()
 
 	worldCam.setTranslation(Vector3(0, 0, -2));
 
-	renderObjects.push_front(std::make_unique<Cube>());
-	renderObjects.push_front(std::make_unique<Cube>(Vector3(3, 0, 0)));
+	Texture* texture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\cobblestone.jpg");
 
-	mConstantBuffer = GraphicsEngine::engine()->createConstantBuffer();
+	resources.emplace_front(texture);
+
+	auto cube1 = std::make_unique<Cube>();
+	cube1->setTexture(texture);
+
+	auto cube2 = std::make_unique<Cube>(Vector3(2.0f, 0.0f, 0.0f));
+	cube2->setTexture(texture);
+
+	renderObjects.push_front(std::move(cube1));
+	renderObjects.push_front(std::move(cube2));
+
+	mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
 
 	constant data = {};
 	mConstantBuffer->load(&data, sizeof(data));
 
-	ID3D11RasterizerState* rasterState = GraphicsEngine::engine()->createRasterizer();
-	GraphicsEngine::engine()->getImmDeviceContext()->setRasterizer(rasterState);
+	ID3D11RasterizerState* rasterState = GraphicsEngine::get()->createRasterizer();
+	GraphicsEngine::get()->getImmDeviceContext()->setRasterizer(rasterState);
 }
 
 void AppWindow::onUpdate()
 {
-	GraphicsEngine::engine()->getImmDeviceContext()->clearRenderTarget(mSwapChain, 0.1f, 0.1f, 0.1f, 1);
+	GraphicsEngine::get()->getImmDeviceContext()->clearRenderTarget(mSwapChain, 0.1f, 0.1f, 0.1f, 1);
 	RECT windowSize = this->getClientWindowRect();
-	GraphicsEngine::engine()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
+	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
 
 	Input::get()->update();
 
@@ -195,7 +205,7 @@ void AppWindow::onUpdate()
 	for (auto& renderObject : renderObjects) 
 	{
 		constantData.model = *renderObject->getModelMatrix();
-		mConstantBuffer->update(GraphicsEngine::engine()->getImmDeviceContext(), &constantData);
+		mConstantBuffer->update(GraphicsEngine::get()->getImmDeviceContext(), &constantData);
 		renderObject->setConstantBuffer(mConstantBuffer);
 		renderObject->render();
 	}
@@ -220,5 +230,5 @@ void AppWindow::onDestroy()
 	Window::onDestroy();
 	mSwapChain->release();
 	mConstantBuffer->release();
-	GraphicsEngine::engine()->release();
+	GraphicsEngine::get()->release();
 }

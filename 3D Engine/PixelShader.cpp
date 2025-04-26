@@ -18,7 +18,7 @@ PixelShader::~PixelShader()
 
 bool PixelShader::init(const void* shaderBytecode, SIZE_T bytecodeLength)
 {
-	if (FAILED(GraphicsEngine::engine()->mD3dDevice->CreatePixelShader(shaderBytecode, bytecodeLength, NULL, &mPixelShader)))
+	if (FAILED(GraphicsEngine::get()->mD3dDevice->CreatePixelShader(shaderBytecode, bytecodeLength, NULL, &mPixelShader)))
 		return false;
 
 	return true;

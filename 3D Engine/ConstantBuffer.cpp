@@ -21,7 +21,7 @@ bool ConstantBuffer::load(void* buffer, UINT bufferSize)
 	subresData.pSysMem = buffer;
 
 	HRESULT hr;
-	hr = GraphicsEngine::engine()->mD3dDevice->CreateBuffer(&bufferDesc, &subresData, &mBuffer);
+	hr = GraphicsEngine::get()->mD3dDevice->CreateBuffer(&bufferDesc, &subresData, &mBuffer);
 	if (FAILED(hr))
 		return false;
 

@@ -2,14 +2,14 @@
 #include "GraphicsEngine.h"
 #include <DirectXTex.h>
 
-Texture::Texture(const wchar_t* fullPath): mFullPath(fullPath)
+Texture::Texture(const wchar_t* fullPath): Resource(fullPath)
 {
 	DirectX::ScratchImage imageData;
 	HRESULT res = DirectX::LoadFromWICFile(fullPath, DirectX::WIC_FLAGS_NONE, nullptr, imageData);
 
 	if (SUCCEEDED(res))
 	{
-		res = DirectX::CreateTexture(GraphicsEngine::engine()->mD3dDevice, imageData.GetImages(),
+		res = DirectX::CreateTexture(GraphicsEngine::get()->mD3dDevice, imageData.GetImages(),
 			imageData.GetImageCount(), imageData.GetMetadata(), &mTexture);
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
@@ -18,7 +18,7 @@ Texture::Texture(const wchar_t* fullPath): mFullPath(fullPath)
 		desc.Texture2D.MipLevels = (UINT)imageData.GetMetadata().mipLevels;
 		desc.Texture2D.MostDetailedMip = 0;
 
-		GraphicsEngine::engine()->mD3dDevice->CreateShaderResourceView(mTexture, &desc,
+		GraphicsEngine::get()->mD3dDevice->CreateShaderResourceView(mTexture, &desc,
 			&mShaderResourceView);
 	}
 	else

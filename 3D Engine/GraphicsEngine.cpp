@@ -6,11 +6,17 @@
 #include "ConstantBuffer.h"
 #include "VertexShader.h"
 #include "PixelShader.h"
+#include "DirectXTex.h"
 #include <d3dcompiler.h>
 
 
 GraphicsEngine::GraphicsEngine()
 {
+	try
+	{
+		mTextureManager = new TextureManager();
+	}
+	catch(...) {}
 }
 
 bool GraphicsEngine::init()
@@ -44,6 +50,8 @@ bool GraphicsEngine::init()
 	mDxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&mDxgiAdapter);
 	mDxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&mDxgiFactory);
 
+	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+
 	return true;
 }
 
@@ -60,9 +68,10 @@ bool GraphicsEngine::release()
 
 GraphicsEngine::~GraphicsEngine()
 {
+	delete mTextureManager;
 }
 
-GraphicsEngine* GraphicsEngine::engine()
+GraphicsEngine* GraphicsEngine::get()
 {
 	static GraphicsEngine engine;
 	return &engine;
@@ -115,6 +124,11 @@ PixelShader* GraphicsEngine::createPixelShader(const void* shaderBytecode, SIZE_
 	return ps;
 }
 
+TextureManager* GraphicsEngine::getTextureManager()
+{
+	return mTextureManager;
+}
+
 bool GraphicsEngine::compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength)
 {
 	ID3DBlob* errblob = nullptr;
@@ -160,7 +174,7 @@ ID3D11RasterizerState* GraphicsEngine::createRasterizer()
 		D3D11_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, FALSE, FALSE, TRUE);
 
 	ID3D11RasterizerState* rasterState;
-	HRESULT hr = GraphicsEngine::engine()->mD3dDevice->CreateRasterizerState(&rastDesc, &rasterState);
+	HRESULT hr = GraphicsEngine::get()->mD3dDevice->CreateRasterizerState(&rastDesc, &rasterState);
 
 	if (SUCCEEDED(hr))
 		return rasterState;

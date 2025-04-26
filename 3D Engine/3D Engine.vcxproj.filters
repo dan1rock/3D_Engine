@@ -78,6 +78,10 @@
     <ClCompile Include="Cube.cpp">
       <Filter>Engine\Objects</Filter>
     </ClCompile>
+    <ClCompile Include="Resource.cpp">
+      <Filter>Engine\Resource managers</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppWindow.h">
@@ -137,6 +141,10 @@
     <ClInclude Include="Cube.h">
       <Filter>Engine\Objects</Filter>
     </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>Engine\Resource managers</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureManager.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl">

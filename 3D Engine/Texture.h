@@ -1,8 +1,8 @@
 #pragma once
 #include <d3d11.h>
-#include <string>
+#include "Resource.h"
 
-class Texture
+class Texture : public Resource
 {
 public:
 	Texture(const wchar_t* fullPath);
@@ -10,8 +10,6 @@ public:
 private:
 	ID3D11Resource* mTexture = nullptr;
 	ID3D11ShaderResourceView* mShaderResourceView = nullptr;
-
-	std::wstring mFullPath;
 
 	friend class DeviceContext;
 };
