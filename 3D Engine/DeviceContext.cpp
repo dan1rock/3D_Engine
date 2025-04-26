@@ -15,7 +15,8 @@ void DeviceContext::clearRenderTarget(SwapChain* swapChain, float r, float g, fl
 {
 	FLOAT color[] = { r,g,b,a };
 	mDeviceContext->ClearRenderTargetView(swapChain->mRenderTargetView, color);
-	mDeviceContext->OMSetRenderTargets(1, &swapChain->mRenderTargetView, NULL);
+	mDeviceContext->ClearDepthStencilView(swapChain->mDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1, 0);
+	mDeviceContext->OMSetRenderTargets(1, &swapChain->mRenderTargetView, swapChain->mDepthStencilView);
 }
 
 void DeviceContext::setRasterizer(ID3D11RasterizerState* rasterState)
