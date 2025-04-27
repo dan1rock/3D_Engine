@@ -1,7 +1,5 @@
 #pragma once
 #include "RenderObject.h"
-#include "Vector3.h"
-#include "Vector2.h"
 
 class Cube : public RenderObject
 {
@@ -15,5 +13,8 @@ public:
 
 private:
 	virtual void init() override;
+
+	VertexBuffer* mVertexBuffer = nullptr;
+	IndexBuffer* mIndexBuffer = nullptr;
 };
 

@@ -15,8 +15,10 @@
 #include "Matrix.h"
 #include <list>
 #include "Cube.h"
+#include "MeshRenderer.h"
 
 class Texture;
+class Mesh;
 
 class AppWindow: public Window
 {

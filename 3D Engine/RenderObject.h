@@ -1,10 +1,9 @@
 #pragma once
 #include "GraphicsEngine.h"
 #include "DeviceContext.h"
-#include "VertexBuffer.h"
-#include "IndexBuffer.h"
-#include "VertexShader.h"
+#include "Mesh.h"
 #include "PixelShader.h"
+#include "VertexShader.h"
 #include "Matrix.h"
 
 class ConstantBuffer;
@@ -16,6 +15,7 @@ public:
 	Matrix* getModelMatrix();
 	virtual void render() = 0;
 	void setTexture(Texture* texture);
+	void setMesh(Mesh* mesh);
 
 protected:
 	virtual void init() = 0;
@@ -26,8 +26,7 @@ protected:
 	VertexShader* mVertexShader = nullptr;
 	PixelShader* mPixelShader = nullptr;
 
-	VertexBuffer* mVertexBuffer = nullptr;
-	IndexBuffer* mIndexBuffer = nullptr;
+	Mesh* mMesh = nullptr;
 
 	Texture* mTexture = nullptr;
 

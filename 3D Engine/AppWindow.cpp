@@ -1,6 +1,6 @@
 #include "AppWindow.h"
 #include <Windows.h>
-#include <iostream>
+#include "Mesh.h"
 
 __declspec(align(16))
 struct constant {
@@ -170,7 +170,12 @@ void AppWindow::onCreate()
 
 	Texture* texture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\cobblestone.jpg");
 
+	Texture* penguinTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\penguin.png");
+	Mesh* penguinMesh = new Mesh(L"Assets\\Meshes\\penguin.obj");
+
 	resources.emplace_front(texture);
+	resources.emplace_front(penguinTexture);
+	resources.emplace_front(penguinMesh);
 
 	auto cube1 = std::make_unique<Cube>();
 	cube1->setTexture(texture);
@@ -180,6 +185,12 @@ void AppWindow::onCreate()
 
 	renderObjects.push_front(std::move(cube1));
 	renderObjects.push_front(std::move(cube2));
+
+	auto penguin = std::make_unique<MeshRenderer>(Vector3(-2.0f, 0.0f, 0.0f));
+	penguin->setTexture(penguinTexture);
+	penguin->setMesh(penguinMesh);
+
+	renderObjects.push_front(std::move(penguin));
 
 	mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
 

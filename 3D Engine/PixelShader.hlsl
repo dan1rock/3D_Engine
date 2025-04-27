@@ -3,6 +3,7 @@ sampler TextureSampler : register(s0);
 
 struct PS_INPUT {
 	float4 pos: SV_POSITION0;
+    float3 normal : TEXCOORD1;
     float2 texCoord : TEXCOORD0;
 };
 

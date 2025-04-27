@@ -1,7 +1,9 @@
 #include "Cube.h"
+#include "Vector2.h"
 
 struct vertex {
 	Vector3 pos;
+	Vector3 normal;
 	Vector2 texCoord;
 };
 
@@ -28,35 +30,35 @@ void Cube::init()
 	RenderObject::init();
 
 	vertex vertexList[] = {
-		{Vector3(-0.5f, -0.5f, -0.5f)	,	Vector2(1, 0)},// 0
-		{Vector3(-0.5f, 0.5f, -0.5f)	,	Vector2(0, 0)},// 1
-		{Vector3(0.5f, 0.5f, -0.5f)		,	Vector2(0, 1)},// 2
-		{Vector3(0.5f, -0.5f, -0.5f)	,	Vector2(1, 1)},// 3
+		{Vector3(-0.5f, -0.5f, -0.5f)	,	Vector3(0, 0, 1)  ,  Vector2(1, 0)},// 0
+		{Vector3(-0.5f, 0.5f, -0.5f)	,	Vector3(0, 0, 1)  ,  Vector2(0, 0)},// 1
+		{Vector3(0.5f, 0.5f, -0.5f)		,	Vector3(0, 0, 1)  ,  Vector2(0, 1)},// 2
+		{Vector3(0.5f, -0.5f, -0.5f)	,	Vector3(0, 0, 1)  ,  Vector2(1, 1)},// 3
 
-		{Vector3(0.5f, -0.5f, 0.5f)		,	Vector2(1, 0)},// 4
-		{Vector3(0.5f, 0.5f, 0.5f)		,	Vector2(0, 0)},// 5
-		{Vector3(-0.5f, 0.5f, 0.5f)		,	Vector2(0, 1)},// 6
-		{Vector3(-0.5f, -0.5f, 0.5f)	,	Vector2(1, 1)} // 7
+		{Vector3(0.5f, -0.5f, 0.5f)		,	Vector3(0, 0, 1)  ,  Vector2(1, 0)},// 4
+		{Vector3(0.5f, 0.5f, 0.5f)		,	Vector3(0, 0, 1)  ,  Vector2(0, 0)},// 5
+		{Vector3(-0.5f, 0.5f, 0.5f)		,	Vector3(0, 0, 1)  ,  Vector2(0, 1)},// 6
+		{Vector3(-0.5f, -0.5f, 0.5f)	,	Vector3(0, 0, 1)  ,  Vector2(1, 1)} // 7
 	};
 
 	unsigned int indexList[] = {
-		0,2,1,
-		2,0,3,
+		0,1,2,
+		2,3,0,
 
-		4,6,5,
-		6,4,7,
+		4,5,6,
+		6,7,4,
 
-		1,5,6,
-		5,1,2,
+		1,6,5,
+		5,2,1,
 
-		7,3,0,
-		3,7,4,
+		7,0,3,
+		3,4,7,
 
-		3,5,2,
-		5,3,4,
+		3,2,5,
+		5,4,3,
 
-		7,1,6,
-		1,7,0
+		7,6,1,
+		1,0,7
 	};
 
 	mVertexBuffer = GraphicsEngine::get()->createVertexBuffer();

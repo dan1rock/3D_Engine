@@ -34,3 +34,8 @@ void RenderObject::setTexture(Texture* texture)
 {
 	this->mTexture = texture;
 }
+
+void RenderObject::setMesh(Mesh* mesh)
+{
+	this->mMesh = mesh;
+}
