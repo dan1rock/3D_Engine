@@ -8,6 +8,9 @@ struct constant {
 	Matrix model;
 	Matrix view;
 	Matrix projection;
+	float cameraPos[4];
+	float lightPos[4];
+	float lightColor[4];
 	unsigned int time;
 };
 
@@ -133,6 +136,10 @@ void AppWindow::updatePosition()
 		Vector3(0, direction.z * deltaTime, 0);
 	cam.setTranslation(newPos);
 
+	constantData.cameraPos[0] = worldCam.getTranslation().x;
+	constantData.cameraPos[1] = worldCam.getTranslation().y;
+	constantData.cameraPos[2] = worldCam.getTranslation().z;
+
 	worldCam = cam;
 
 	cam.inverse();
@@ -166,31 +173,38 @@ void AppWindow::onCreate()
 	::GetCursorPos(&currentMousePos);
 	lastTickMousePos = Vector2(currentMousePos.x, currentMousePos.y);
 
-	worldCam.setTranslation(Vector3(0, 0, -2));
+	worldCam.setTranslation(Vector3(0, 1, -2));
 
-	Texture* texture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\cobblestone.jpg");
+	constantData.lightPos[0] = 50.0f;
+	constantData.lightPos[1] = 50.0f;
+	constantData.lightPos[2] = 50.0f;
+
+	constantData.lightColor[0] = 1.0f;
+	constantData.lightColor[1] = 1.0f;
+	constantData.lightColor[2] = 1.0f;
 
 	Texture* penguinTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\penguin.png");
+	Texture* rabbitTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\256-gradient.png");
+
 	Mesh* penguinMesh = new Mesh(L"Assets\\Meshes\\penguin.obj");
+	Mesh* rabbitMesh = new Mesh(L"Assets\\Meshes\\rabbit.obj");
 
-	resources.emplace_front(texture);
 	resources.emplace_front(penguinTexture);
+	resources.emplace_front(rabbitTexture);
 	resources.emplace_front(penguinMesh);
+	resources.emplace_front(rabbitMesh);
 
-	auto cube1 = std::make_unique<Cube>();
-	cube1->setTexture(texture);
-
-	auto cube2 = std::make_unique<Cube>(Vector3(2.0f, 0.0f, 0.0f));
-	cube2->setTexture(texture);
-
-	renderObjects.push_front(std::move(cube1));
-	renderObjects.push_front(std::move(cube2));
-
-	auto penguin = std::make_unique<MeshRenderer>(Vector3(-2.0f, 0.0f, 0.0f));
+	auto penguin = std::make_unique<MeshRenderer>(Vector3(-1.0f, 0.0f, 0.0f));
 	penguin->setTexture(penguinTexture);
 	penguin->setMesh(penguinMesh);
 
 	renderObjects.push_front(std::move(penguin));
+
+	auto rabbit = std::make_unique<MeshRenderer>(Vector3(1.0f, 0.0f, 0.0f));
+	rabbit->setTexture(rabbitTexture);
+	rabbit->setMesh(rabbitMesh);
+
+	renderObjects.push_front(std::move(rabbit));
 
 	mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
 
