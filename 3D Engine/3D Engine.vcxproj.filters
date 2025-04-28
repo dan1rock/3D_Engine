@@ -93,6 +93,9 @@
     <ClCompile Include="MeshManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
+    <ClCompile Include="SkySphere.cpp">
+      <Filter>Engine\Objects</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppWindow.h">
@@ -167,6 +170,9 @@
     <ClInclude Include="MeshManager.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
+    <ClInclude Include="SkySphere.h">
+      <Filter>Engine\Objects</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl">
@@ -176,6 +182,9 @@
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="VertexLayoutShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="UnlitPixelShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
   </ItemGroup>

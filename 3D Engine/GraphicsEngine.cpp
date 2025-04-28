@@ -224,17 +224,27 @@ void GraphicsEngine::releasePixelShader()
 	if (mPSBlob) mPSBlob->Release();
 }
 
-ID3D11RasterizerState* GraphicsEngine::createRasterizer()
+void GraphicsEngine::setRasterizerState(bool cullBack)
+{
+	if (mRasterStateCullBack == nullptr) createRasterizer();
+
+	mImmDeviceContext->setRasterizer(cullBack ? mRasterStateCullBack : mRasterStateCullFront);
+}
+
+bool GraphicsEngine::createRasterizer()
 {
 	CD3D11_RASTERIZER_DESC rastDesc(D3D11_FILL_SOLID, D3D11_CULL_BACK, FALSE,
 		D3D11_DEFAULT_DEPTH_BIAS, D3D11_DEFAULT_DEPTH_BIAS_CLAMP,
 		D3D11_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, FALSE, FALSE, TRUE);
 
-	ID3D11RasterizerState* rasterState;
-	HRESULT hr = GraphicsEngine::get()->mD3dDevice->CreateRasterizerState(&rastDesc, &rasterState);
+	HRESULT hr = GraphicsEngine::get()->mD3dDevice->CreateRasterizerState(&rastDesc, &mRasterStateCullBack);
 
-	if (SUCCEEDED(hr))
-		return rasterState;
+	if (!SUCCEEDED(hr)) return false;
 
-	return nullptr;
+	rastDesc.CullMode = D3D11_CULL_FRONT;
+
+	hr = GraphicsEngine::get()->mD3dDevice->CreateRasterizerState(&rastDesc, &mRasterStateCullFront);
+
+	if (!SUCCEEDED(hr)) return false;
+	return true;
 }

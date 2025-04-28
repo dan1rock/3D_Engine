@@ -53,7 +53,6 @@ private:
 	Matrix worldCam;
 
 	std::list<std::unique_ptr<RenderObject>> renderObjects;
-	std::list<std::unique_ptr<Resource>> resources;
 
 	bool isFocused = false;
 };

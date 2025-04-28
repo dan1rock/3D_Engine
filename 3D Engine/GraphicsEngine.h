@@ -43,11 +43,17 @@ public:
 	bool compilePixelShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
 	void releasePixelShader();
 
-	ID3D11RasterizerState* createRasterizer();
+	void setRasterizerState(bool cullBack);
+
 private:
+	bool createRasterizer();
+
 	ID3D11Device* mD3dDevice = nullptr;
 	D3D_FEATURE_LEVEL mFeatureLevel = {};
 	DeviceContext* mImmDeviceContext = nullptr;
+
+	ID3D11RasterizerState* mRasterStateCullFront = nullptr;
+	ID3D11RasterizerState* mRasterStateCullBack = nullptr;
 
 	IDXGIDevice* mDxgiDevice = nullptr;
 	IDXGIAdapter* mDxgiAdapter = nullptr;

@@ -3,6 +3,7 @@
 #include "Mesh.h"
 #include "Cube.h"
 #include "MeshRenderer.h"
+#include "SkySphere.h"
 #include "TextureManager.h"
 #include "MeshManager.h"
 
@@ -51,8 +52,6 @@ void AppWindow::updateDeltaMousePos()
 void AppWindow::updatePosition()
 {
 	constantData.time = ::GetTickCount64();
-
-	RECT rc = this->getClientWindowRect();
 
 	const float speed = 2.0f;
 	const float mouseSpeed = 0.002f;
@@ -140,23 +139,15 @@ void AppWindow::updatePosition()
 		Vector3(0, direction.z * deltaTime, 0);
 	cam.setTranslation(newPos);
 
+	worldCam = cam;
+
 	constantData.cameraPos[0] = worldCam.getTranslation().x;
 	constantData.cameraPos[1] = worldCam.getTranslation().y;
 	constantData.cameraPos[2] = worldCam.getTranslation().z;
 
-	worldCam = cam;
-
 	cam.inverse();
 	
 	constantData.view = cam;
-
-	float aspectRatio = (float)(rc.right - rc.left) / (float)(rc.bottom - rc.top);
-	constantData.projection.setPerspectivePM(
-		1.1f,
-		aspectRatio,
-		0.1f,
-		100.0f
-	);
 
 	mConstantBuffer->update(GraphicsEngine::get()->getImmDeviceContext(), &constantData);
 }
@@ -177,6 +168,16 @@ void AppWindow::onCreate()
 	::GetCursorPos(&currentMousePos);
 	lastTickMousePos = Vector2(currentMousePos.x, currentMousePos.y);
 
+	RECT rc = this->getClientWindowRect();
+
+	float aspectRatio = (float)(rc.right - rc.left) / (float)(rc.bottom - rc.top);
+	constantData.projection.setPerspectivePM(
+		1.1f,
+		aspectRatio,
+		0.1f,
+		100.0f
+	);
+
 	worldCam.setTranslation(Vector3(0, 1, -2));
 
 	constantData.lightPos[0] = 50.0f;
@@ -193,11 +194,6 @@ void AppWindow::onCreate()
 	Mesh* penguinMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\penguin.obj");
 	Mesh* rabbitMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\rabbit.obj");
 
-	resources.emplace_front(penguinTexture);
-	resources.emplace_front(rabbitTexture);
-	resources.emplace_front(penguinMesh);
-	resources.emplace_front(rabbitMesh);
-
 	auto penguin = std::make_unique<MeshRenderer>(Vector3(-1.0f, 0.0f, 0.0f));
 	penguin->setTexture(penguinTexture);
 	penguin->setMesh(penguinMesh);
@@ -210,13 +206,16 @@ void AppWindow::onCreate()
 
 	renderObjects.push_front(std::move(rabbit));
 
+	auto skyDome = std::make_unique<SkySphere>(&worldCam);
+
+	renderObjects.push_front(std::move(skyDome));
+
 	mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
 
 	constant data = {};
 	mConstantBuffer->load(&data, sizeof(data));
 
-	ID3D11RasterizerState* rasterState = GraphicsEngine::get()->createRasterizer();
-	GraphicsEngine::get()->getImmDeviceContext()->setRasterizer(rasterState);
+	GraphicsEngine::get()->setRasterizerState(true);
 }
 
 void AppWindow::onUpdate()

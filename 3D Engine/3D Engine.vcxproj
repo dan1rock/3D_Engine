@@ -158,6 +158,7 @@
     <ClCompile Include="RenderObject.cpp" />
     <ClCompile Include="Resource.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
+    <ClCompile Include="SkySphere.cpp" />
     <ClCompile Include="SwapChain.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TextureManager.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ResourceManager.h" />
+    <ClInclude Include="SkySphere.h" />
     <ClInclude Include="SwapChain.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />
@@ -197,6 +199,9 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="UnlitPixelShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="VertexLayoutShader.hlsl" />
     <FxCompile Include="VertexShader.hlsl">
