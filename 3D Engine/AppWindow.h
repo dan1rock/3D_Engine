@@ -14,8 +14,6 @@
 #include "Vector3.h"
 #include "Matrix.h"
 #include <list>
-#include "Cube.h"
-#include "MeshRenderer.h"
 
 class Texture;
 class Mesh;

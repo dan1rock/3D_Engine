@@ -6,6 +6,8 @@
 #include "ConstantBuffer.h"
 #include "VertexShader.h"
 #include "PixelShader.h"
+#include "TextureManager.h"
+#include "MeshManager.h"
 #include "DirectXTex.h"
 #include <d3dcompiler.h>
 
@@ -15,6 +17,7 @@ GraphicsEngine::GraphicsEngine()
 	try
 	{
 		mTextureManager = new TextureManager();
+		mMeshManager = new MeshManager();
 	}
 	catch(...) {}
 }
@@ -69,6 +72,7 @@ bool GraphicsEngine::release()
 GraphicsEngine::~GraphicsEngine()
 {
 	delete mTextureManager;
+	delete mMeshManager;
 }
 
 GraphicsEngine* GraphicsEngine::get()
@@ -124,9 +128,62 @@ PixelShader* GraphicsEngine::createPixelShader(const void* shaderBytecode, SIZE_
 	return ps;
 }
 
+VertexShader* GraphicsEngine::getVertexShader(const wchar_t* fileName, const char* entryPoint)
+{
+	auto it = vertexShaderMap.find(fileName);
+
+	if (it != vertexShaderMap.end())
+		return it->second;
+
+	void* shaderByteCode = nullptr;
+	SIZE_T shaderSize = 0;
+	VertexShader* shader;
+
+	GraphicsEngine::get()->compileVertexShader(fileName, entryPoint, &shaderByteCode, &shaderSize);
+	shader = GraphicsEngine::get()->createVertexShader(shaderByteCode, shaderSize);
+	GraphicsEngine::get()->releaseVertexShader();
+
+	if (shader)
+	{
+		vertexShaderMap[fileName] = shader;
+		return shader;
+	}
+
+	return nullptr;
+}
+
+PixelShader* GraphicsEngine::getPixelShader(const wchar_t* fileName, const char* entryPoint)
+{
+	auto it = pixelShaderMap.find(fileName);
+
+	if (it != pixelShaderMap.end())
+		return it->second;
+
+	void* shaderByteCode = nullptr;
+	SIZE_T shaderSize = 0;
+	PixelShader* shader;
+
+	GraphicsEngine::get()->compilePixelShader(fileName, entryPoint, &shaderByteCode, &shaderSize);
+	shader = GraphicsEngine::get()->createPixelShader(shaderByteCode, shaderSize);
+	GraphicsEngine::get()->releasePixelShader();
+
+	if (shader)
+	{
+		pixelShaderMap[fileName] = shader;
+		return shader;
+	}
+
+	return nullptr;
+}
+
 TextureManager* GraphicsEngine::getTextureManager()
 {
 	return mTextureManager;
+}
+
+MeshManager* GraphicsEngine::getMeshManager()
+{
+	return mMeshManager;
 }
 
 bool GraphicsEngine::compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength)

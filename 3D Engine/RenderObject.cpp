@@ -19,6 +19,12 @@ Matrix* RenderObject::getModelMatrix()
 void RenderObject::init()
 {
 	this->modelM.setIdentity();
+
+	if (mVertexShader == nullptr) mVertexShader = GraphicsEngine::get()->getVertexShader(L"VertexShader.hlsl", "main");
+	if (mPixelShader == nullptr) mPixelShader = GraphicsEngine::get()->getPixelShader(L"PixelShader.hlsl", "main");
+
+	modelM.setTranslation(this->position);
+
 	this->isInitialized = true;
 }
 

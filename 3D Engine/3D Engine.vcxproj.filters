@@ -90,6 +90,9 @@
     <ClCompile Include="MeshRenderer.cpp">
       <Filter>Engine\Objects</Filter>
     </ClCompile>
+    <ClCompile Include="MeshManager.cpp">
+      <Filter>Engine\Resource managers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppWindow.h">
@@ -160,6 +163,9 @@
     </ClInclude>
     <ClInclude Include="MeshRenderer.h">
       <Filter>Engine\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshManager.h">
+      <Filter>Engine\Resource managers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,6 +1,7 @@
 #pragma once
 #include <d3d11.h>
-#include "TextureManager.h"
+#include <unordered_map>
+#include <string>
 
 class SwapChain;
 class DeviceContext;
@@ -10,6 +11,9 @@ class ConstantBuffer;
 class VertexShader;
 class PixelShader;
 class Texture;
+class TextureManager;
+class Mesh;
+class MeshManager;
 
 class GraphicsEngine
 {
@@ -28,8 +32,11 @@ public:
 	ConstantBuffer* createConstantBuffer();
 	VertexShader* createVertexShader(const void* shaderBytecode, SIZE_T bytecodeLength);
 	PixelShader* createPixelShader(const void* shaderBytecode, SIZE_T bytecodeLength);
+	VertexShader* getVertexShader(const wchar_t* fileName, const char* entryPoint);
+	PixelShader* getPixelShader(const wchar_t* fileName, const char* entryPoint);
 
 	TextureManager* getTextureManager();
+	MeshManager* getMeshManager();
 
 	bool compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
 	void releaseVertexShader();
@@ -53,6 +60,10 @@ private:
 	ID3D11PixelShader* mPS = nullptr;
 
 	TextureManager* mTextureManager = nullptr;
+	MeshManager* mMeshManager = nullptr;
+
+	std::unordered_map<std::wstring, VertexShader*> vertexShaderMap;
+	std::unordered_map<std::wstring, PixelShader*> pixelShaderMap;
 
 	friend class SwapChain;
 	friend class DeviceContext;
@@ -62,4 +73,5 @@ private:
 	friend class VertexShader;
 	friend class PixelShader;
 	friend class Texture;
+	friend class Mesh;
 };

@@ -1,6 +1,10 @@
 #include "AppWindow.h"
 #include <Windows.h>
 #include "Mesh.h"
+#include "Cube.h"
+#include "MeshRenderer.h"
+#include "TextureManager.h"
+#include "MeshManager.h"
 
 __declspec(align(16))
 struct constant {
@@ -186,8 +190,8 @@ void AppWindow::onCreate()
 	Texture* penguinTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\penguin.png");
 	Texture* rabbitTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\256-gradient.png");
 
-	Mesh* penguinMesh = new Mesh(L"Assets\\Meshes\\penguin.obj");
-	Mesh* rabbitMesh = new Mesh(L"Assets\\Meshes\\rabbit.obj");
+	Mesh* penguinMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\penguin.obj");
+	Mesh* rabbitMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\rabbit.obj");
 
 	resources.emplace_front(penguinTexture);
 	resources.emplace_front(rabbitTexture);

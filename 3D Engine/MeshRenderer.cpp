@@ -24,26 +24,11 @@ MeshRenderer::MeshRenderer(Mesh* mesh, Vector3 position)
 
 MeshRenderer::~MeshRenderer()
 {
-	mVertexShader->release();
-	mPixelShader->release();
 }
 
 void MeshRenderer::init()
 {
 	RenderObject::init();
-
-	void* shaderByteCode = nullptr;
-	SIZE_T shaderSize = 0;
-
-	GraphicsEngine::get()->compileVertexShader(L"VertexShader.hlsl", "main", &shaderByteCode, &shaderSize);
-	mVertexShader = GraphicsEngine::get()->createVertexShader(shaderByteCode, shaderSize);
-	GraphicsEngine::get()->releaseVertexShader();
-
-	GraphicsEngine::get()->compilePixelShader(L"PixelShader.hlsl", "main", &shaderByteCode, &shaderSize);
-	mPixelShader = GraphicsEngine::get()->createPixelShader(shaderByteCode, shaderSize);
-	GraphicsEngine::get()->releasePixelShader();
-
-	modelM.setTranslation(this->position);
 }
 
 void MeshRenderer::render()

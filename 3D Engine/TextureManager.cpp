@@ -11,7 +11,7 @@ TextureManager::~TextureManager()
 
 Texture* TextureManager::createTextureFromFile(const wchar_t* filePath)
 {
-	return static_cast<Texture*>(createResourceFromFileConcrete(filePath));
+	return static_cast<Texture*>(ResourceManager::createResourceFromFile(filePath));
 }
 
 Resource* TextureManager::createResourceFromFileConcrete(const wchar_t* filePath)
