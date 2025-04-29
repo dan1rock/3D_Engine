@@ -6,6 +6,8 @@ Window::Window()
 {
 }
 
+bool windowIsResizing = false;
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	switch (msg) 
 	{
@@ -29,6 +31,25 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	{
 		window->onDestroy();
 		::PostQuitMessage(0);
+		break;
+	}
+	case WM_SIZE:
+	{
+		if (!windowIsResizing)
+		{
+			window->onWindowResized();
+		}
+		break;
+	}
+	case WM_ENTERSIZEMOVE:
+	{
+		windowIsResizing = true;
+		break;
+	}
+	case WM_EXITSIZEMOVE:
+	{
+		windowIsResizing = false;
+		window->onWindowResized();
 		break;
 	}
 	default:

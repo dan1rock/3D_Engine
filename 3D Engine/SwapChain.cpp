@@ -7,6 +7,10 @@ SwapChain::SwapChain()
 
 bool SwapChain::init(HWND hwnd, UINT width, UINT height)
 {
+	if (mSwapChain != nullptr) mSwapChain->Release();
+	if (mRenderTargetView != nullptr) mRenderTargetView->Release();
+	if (mDepthStencilView != nullptr) mDepthStencilView->Release();
+
 	ID3D11Device* device = GraphicsEngine::get()->mD3dDevice;
 
 	DXGI_SWAP_CHAIN_DESC desc;

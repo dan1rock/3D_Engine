@@ -43,7 +43,10 @@ float3 calculateLighting(float ambient, float diffuse, float specular, float shi
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
-    float3 lighting = calculateLighting(0.4f, 0.4f, 0.5f, 32.0f, lightColor, input.normal, input.lightDir, input.cameraDir);
+    float3 Normal = normalize(mul(input.normal, world));
+    Normal = normalize(mul(Normal, model));
+    
+    float3 lighting = calculateLighting(0.4f, 0.4f, 0.5f, 32.0f, lightColor, Normal, input.lightDir, input.cameraDir);
     
     float4 result = Texture.Sample(TextureSampler, input.texCoord) * float4(lighting, 1.0f);
     

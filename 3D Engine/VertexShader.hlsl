@@ -35,7 +35,7 @@ VS_OUTPUT main(VS_INPUT input)
 	output.pos = mul(output.pos, view);
 	output.pos = mul(output.pos, projection);
 
-    output.normal = normalize(mul(input.normal, world));
+    output.normal = input.normal;
     output.texCoord = input.texCoord;
 	return output;
 }

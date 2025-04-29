@@ -30,6 +30,7 @@ public:
 	// Inherited via Window
 	virtual void onCreate() override;
 	virtual void onUpdate() override;
+	virtual void onWindowResized() override;
 	virtual void onFocus() override;
 	virtual void onKillFocus() override;
 	virtual void onDestroy() override;

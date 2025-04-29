@@ -7,6 +7,8 @@
 #include "TextureManager.h"
 #include "MeshManager.h"
 
+#include <iostream>
+
 __declspec(align(16))
 struct constant {
 	Matrix world;
@@ -161,22 +163,11 @@ void AppWindow::onCreate()
 	GraphicsEngine::get()->init();
 	mSwapChain = GraphicsEngine::get()->createSwapShain();
 
-	RECT windowSize = this->getClientWindowRect();
-	mSwapChain->init(this->mHwnd, windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
+	onWindowResized();
 
 	POINT currentMousePos = {};
 	::GetCursorPos(&currentMousePos);
 	lastTickMousePos = Vector2(currentMousePos.x, currentMousePos.y);
-
-	RECT rc = this->getClientWindowRect();
-
-	float aspectRatio = (float)(rc.right - rc.left) / (float)(rc.bottom - rc.top);
-	constantData.projection.setPerspectivePM(
-		1.1f,
-		aspectRatio,
-		0.1f,
-		100.0f
-	);
 
 	worldCam.setTranslation(Vector3(0, 1, -2));
 
@@ -239,6 +230,23 @@ void AppWindow::onUpdate()
 	}
 
 	mSwapChain->present(false);
+}
+
+void AppWindow::onWindowResized()
+{
+	RECT rc = this->getClientWindowRect();
+
+	mSwapChain->init(this->mHwnd, rc.right - rc.left, rc.bottom - rc.top);
+
+	float aspectRatio = (float)(rc.right - rc.left) / (float)(rc.bottom - rc.top);
+	constantData.projection.setPerspectivePM(
+		1.1f,
+		aspectRatio,
+		0.1f,
+		100.0f
+	);
+
+	std::cout << "Resized" << std::endl;
 }
 
 void AppWindow::onFocus()
