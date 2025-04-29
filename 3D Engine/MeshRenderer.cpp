@@ -35,11 +35,6 @@ void MeshRenderer::render()
 {
 	RenderObject::render();
 
-	GraphicsEngine::get()->getImmDeviceContext()->setVertexShader(mVertexShader);
-	GraphicsEngine::get()->getImmDeviceContext()->setPixelShader(mPixelShader);
-
-	GraphicsEngine::get()->getImmDeviceContext()->setTexture(mPixelShader, mTexture);
-
 	GraphicsEngine::get()->getImmDeviceContext()->setVertexBuffer(mMesh->getVertexBuffer());
 	GraphicsEngine::get()->getImmDeviceContext()->setIndexBuffer(mMesh->getIndexBuffer());
 	GraphicsEngine::get()->getImmDeviceContext()->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);

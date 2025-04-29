@@ -1,15 +1,5 @@
 #include "RenderObject.h"
-
-void RenderObject::setConstantBuffer(ConstantBuffer* constantBuffer)
-{
-	if (!isInitialized)
-	{
-		this->init();
-	}
-
-	GraphicsEngine::get()->getImmDeviceContext()->setConstantBuffer(mVertexShader, constantBuffer);
-	GraphicsEngine::get()->getImmDeviceContext()->setConstantBuffer(mPixelShader, constantBuffer);
-}
+#include "Material.h"
 
 Matrix* RenderObject::getModelMatrix()
 {
@@ -20,10 +10,9 @@ void RenderObject::init()
 {
 	this->modelM.setIdentity();
 
-	if (mVertexShader == nullptr) mVertexShader = GraphicsEngine::get()->getVertexShader(L"VertexShader.hlsl", "main");
-	if (mPixelShader == nullptr) mPixelShader = GraphicsEngine::get()->getPixelShader(L"PixelShader.hlsl", "main");
-
 	modelM.setTranslation(this->position);
+
+	if (mMaterial == nullptr) mMaterial = new Material();
 
 	this->isInitialized = true;
 }
@@ -34,11 +23,13 @@ void RenderObject::render()
 	{
 		this->init();
 	}
+
+	GraphicsEngine::get()->setMaterial(mMaterial);
 }
 
-void RenderObject::setTexture(Texture* texture)
+void RenderObject::setMaterial(Material* material)
 {
-	this->mTexture = texture;
+	this->mMaterial = material;
 }
 
 void RenderObject::setMesh(Mesh* mesh)

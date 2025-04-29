@@ -8,6 +8,7 @@
 #include "PixelShader.h"
 #include "TextureManager.h"
 #include "MeshManager.h"
+#include "Material.h"
 #include "DirectXTex.h"
 #include <d3dcompiler.h>
 
@@ -229,6 +230,14 @@ void GraphicsEngine::setRasterizerState(bool cullBack)
 	if (mRasterStateCullBack == nullptr) createRasterizer();
 
 	mImmDeviceContext->setRasterizer(cullBack ? mRasterStateCullBack : mRasterStateCullFront);
+}
+
+void GraphicsEngine::setMaterial(Material* material)
+{
+	material->onMaterialSet();
+	mImmDeviceContext->setVertexShader(material->mVertexShader);
+	mImmDeviceContext->setPixelShader(material->mPixelShader);
+	mImmDeviceContext->setTexture(material->mPixelShader, material->mTextures[0]);
 }
 
 bool GraphicsEngine::createRasterizer()

@@ -14,6 +14,7 @@ class Texture;
 class TextureManager;
 class Mesh;
 class MeshManager;
+class Material;
 
 class GraphicsEngine
 {
@@ -44,6 +45,7 @@ public:
 	void releasePixelShader();
 
 	void setRasterizerState(bool cullBack);
+	void setMaterial(Material* material);
 
 private:
 	bool createRasterizer();

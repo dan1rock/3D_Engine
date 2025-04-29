@@ -75,9 +75,6 @@
     <ClCompile Include="RenderObject.cpp">
       <Filter>Engine\Objects</Filter>
     </ClCompile>
-    <ClCompile Include="Cube.cpp">
-      <Filter>Engine\Objects</Filter>
-    </ClCompile>
     <ClCompile Include="Resource.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
@@ -95,6 +92,9 @@
     </ClCompile>
     <ClCompile Include="SkySphere.cpp">
       <Filter>Engine\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="Material.cpp">
+      <Filter>Engine\Resource managers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -152,9 +152,6 @@
     <ClInclude Include="RenderObject.h">
       <Filter>Engine\Objects</Filter>
     </ClInclude>
-    <ClInclude Include="Cube.h">
-      <Filter>Engine\Objects</Filter>
-    </ClInclude>
     <ClInclude Include="Resource.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
@@ -172,6 +169,9 @@
     </ClInclude>
     <ClInclude Include="SkySphere.h">
       <Filter>Engine\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Material.h">
+      <Filter>Engine\Resource managers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

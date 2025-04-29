@@ -21,6 +21,14 @@ cbuffer constant : register(b0)
     unsigned int time;
 };
 
+cbuffer material : register(b1)
+{
+    float ambient;
+    float diffuse;
+    float specular;
+    float shininess;
+};
+
 float3 calculateLighting(float ambient, float diffuse, float specular, float shininess, float3 lightColor, float3 normal, float3 lightDir, float3 cameraDir)
 {
 	//AMBIENT LIGHT
@@ -46,7 +54,7 @@ float4 main(PS_INPUT input) : SV_TARGET
     float3 Normal = normalize(mul(input.normal, world));
     Normal = normalize(mul(Normal, model));
     
-    float3 lighting = calculateLighting(0.4f, 0.4f, 0.5f, 32.0f, lightColor, Normal, input.lightDir, input.cameraDir);
+    float3 lighting = calculateLighting(ambient, diffuse, specular, shininess, lightColor, Normal, input.lightDir, input.cameraDir);
     
     float4 result = Texture.Sample(TextureSampler, input.texCoord) * float4(lighting, 1.0f);
     

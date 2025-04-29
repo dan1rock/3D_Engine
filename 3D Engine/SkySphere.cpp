@@ -2,6 +2,7 @@
 #include "GraphicsEngine.h"
 #include "MeshManager.h"
 #include "TextureManager.h"
+#include "Material.h"
 
 SkySphere::SkySphere(Matrix* cameraMat)
 {
@@ -14,9 +15,11 @@ SkySphere::~SkySphere()
 
 void SkySphere::init()
 {
-	mTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\sky.jpg");
+	mMaterial = new Material();
+	mMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"UnlitPixelShader.hlsl", "main"));
+	mMaterial->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\sky.jpg"));
+
 	mMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
-	mPixelShader = GraphicsEngine::get()->getPixelShader(L"UnlitPixelShader.hlsl", "main");
 
 	RenderObject::init();
 
@@ -30,11 +33,6 @@ void SkySphere::render()
 	GraphicsEngine::get()->setRasterizerState(false);
 
 	RenderObject::render();
-
-	GraphicsEngine::get()->getImmDeviceContext()->setVertexShader(mVertexShader);
-	GraphicsEngine::get()->getImmDeviceContext()->setPixelShader(mPixelShader);
-
-	GraphicsEngine::get()->getImmDeviceContext()->setTexture(mPixelShader, mTexture);
 
 	GraphicsEngine::get()->getImmDeviceContext()->setVertexBuffer(mMesh->getVertexBuffer());
 	GraphicsEngine::get()->getImmDeviceContext()->setIndexBuffer(mMesh->getIndexBuffer());

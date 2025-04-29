@@ -20,8 +20,6 @@ Cube::Cube(Vector3 position)
 Cube::~Cube()
 {
 	mVertexBuffer->release();
-	mVertexShader->release();
-	mPixelShader->release();
 	mIndexBuffer->release();
 }
 

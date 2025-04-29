@@ -88,14 +88,14 @@ void DeviceContext::setTexture(PixelShader* pixelShader, Texture* texture)
 	mDeviceContext->PSSetShaderResources(0, 1, &texture->mShaderResourceView);
 }
 
-void DeviceContext::setConstantBuffer(VertexShader* vertexShader, ConstantBuffer* buffer)
+void DeviceContext::setConstantBuffer(VertexShader* vertexShader, ConstantBuffer* buffer, UINT slot)
 {
-	mDeviceContext->VSSetConstantBuffers(0, 1, &buffer->mBuffer);
+	mDeviceContext->VSSetConstantBuffers(slot, 1, &buffer->mBuffer);
 }
 
-void DeviceContext::setConstantBuffer(PixelShader* pixelShader, ConstantBuffer* buffer)
+void DeviceContext::setConstantBuffer(PixelShader* pixelShader, ConstantBuffer* buffer, UINT slot)
 {
-	mDeviceContext->PSSetConstantBuffers(0, 1, &buffer->mBuffer);
+	mDeviceContext->PSSetConstantBuffers(slot, 1, &buffer->mBuffer);
 }
 
 bool DeviceContext::release()

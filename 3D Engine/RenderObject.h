@@ -7,14 +7,14 @@
 #include "Matrix.h"
 
 class ConstantBuffer;
+class Material;
 
 class RenderObject
 {
 public:
-	void setConstantBuffer(ConstantBuffer* constantBuffer);
 	Matrix* getModelMatrix();
 	virtual void render() = 0;
-	void setTexture(Texture* texture);
+	void setMaterial(Material* material);
 	void setMesh(Mesh* mesh);
 
 protected:
@@ -23,12 +23,9 @@ protected:
 	Vector3 position;
 	Matrix modelM;
 
-	VertexShader* mVertexShader = nullptr;
-	PixelShader* mPixelShader = nullptr;
+	Material* mMaterial = nullptr;
 
 	Mesh* mMesh = nullptr;
-
-	Texture* mTexture = nullptr;
 
 	bool isInitialized = false;
 };

@@ -6,8 +6,7 @@
 #include "SkySphere.h"
 #include "TextureManager.h"
 #include "MeshManager.h"
-
-#include <iostream>
+#include "Material.h"
 
 __declspec(align(16))
 struct constant {
@@ -169,6 +168,11 @@ void AppWindow::onCreate()
 	::GetCursorPos(&currentMousePos);
 	lastTickMousePos = Vector2(currentMousePos.x, currentMousePos.y);
 
+	mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
+
+	constant data = {};
+	mConstantBuffer->load(&data, sizeof(data));
+
 	worldCam.setTranslation(Vector3(0, 1, -2));
 
 	constantData.lightPos[0] = 50.0f;
@@ -185,14 +189,23 @@ void AppWindow::onCreate()
 	Mesh* penguinMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\penguin.obj");
 	Mesh* rabbitMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\rabbit.obj");
 
+	Material* penguinMaterial = new Material();
+	penguinMaterial->setConstantBuffer(mConstantBuffer);
+	penguinMaterial->addTexture(penguinTexture);
+
+	Material* rabbitMaterial = new Material();
+	rabbitMaterial->setConstantBuffer(mConstantBuffer);
+	rabbitMaterial->addTexture(rabbitTexture);
+	rabbitMaterial->specular = 0;
+
 	auto penguin = std::make_unique<MeshRenderer>(Vector3(-1.0f, 0.0f, 0.0f));
-	penguin->setTexture(penguinTexture);
+	penguin->setMaterial(penguinMaterial);
 	penguin->setMesh(penguinMesh);
 
 	renderObjects.push_front(std::move(penguin));
 
 	auto rabbit = std::make_unique<MeshRenderer>(Vector3(1.0f, 0.0f, 0.0f));
-	rabbit->setTexture(rabbitTexture);
+	rabbit->setMaterial(rabbitMaterial);
 	rabbit->setMesh(rabbitMesh);
 
 	renderObjects.push_front(std::move(rabbit));
@@ -200,11 +213,6 @@ void AppWindow::onCreate()
 	auto skyDome = std::make_unique<SkySphere>(&worldCam);
 
 	renderObjects.push_front(std::move(skyDome));
-
-	mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
-
-	constant data = {};
-	mConstantBuffer->load(&data, sizeof(data));
 
 	GraphicsEngine::get()->setRasterizerState(true);
 }
@@ -225,7 +233,6 @@ void AppWindow::onUpdate()
 	{
 		constantData.model = *renderObject->getModelMatrix();
 		mConstantBuffer->update(GraphicsEngine::get()->getImmDeviceContext(), &constantData);
-		renderObject->setConstantBuffer(mConstantBuffer);
 		renderObject->render();
 	}
 
@@ -245,8 +252,6 @@ void AppWindow::onWindowResized()
 		0.1f,
 		100.0f
 	);
-
-	std::cout << "Resized" << std::endl;
 }
 
 void AppWindow::onFocus()

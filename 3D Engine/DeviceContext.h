@@ -33,8 +33,8 @@ public:
 	void setTexture(VertexShader* vertexShader, Texture* texture);
 	void setTexture(PixelShader* pixelShader, Texture* texture);
 
-	void setConstantBuffer(VertexShader* vertexShader, ConstantBuffer* buffer);
-	void setConstantBuffer(PixelShader* pixelShader, ConstantBuffer* buffer);
+	void setConstantBuffer(VertexShader* vertexShader, ConstantBuffer* buffer, UINT slot = 0);
+	void setConstantBuffer(PixelShader* pixelShader, ConstantBuffer* buffer, UINT slot = 0);
 
 	bool release();
 	~DeviceContext();
