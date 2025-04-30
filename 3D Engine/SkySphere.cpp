@@ -2,11 +2,11 @@
 #include "GraphicsEngine.h"
 #include "MeshManager.h"
 #include "TextureManager.h"
+#include "GlobalResources.h"
 #include "Material.h"
 
-SkySphere::SkySphere(Matrix* cameraMat)
+SkySphere::SkySphere()
 {
-	this->cameraMat = cameraMat;
 }
 
 SkySphere::~SkySphere()
@@ -28,7 +28,8 @@ void SkySphere::init()
 
 void SkySphere::render()
 {
-	modelM.setTranslation(cameraMat->getTranslation());
+	Vector3 cameraTranslation = GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.getTranslation();
+	GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.setTranslation(Vector3());
 
 	GraphicsEngine::get()->setRasterizerState(false);
 
@@ -39,4 +40,5 @@ void SkySphere::render()
 	GraphicsEngine::get()->getImmDeviceContext()->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);
 
 	GraphicsEngine::get()->setRasterizerState(true);
+	GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.setTranslation(cameraTranslation);
 }

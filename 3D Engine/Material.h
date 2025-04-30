@@ -18,9 +18,9 @@ public:
 	void removeTexture(unsigned int id);
 
 	float ambient = 0.4f;
-	float diffuse = 0.4f;
-	float specular = 0.5f;
+	float smoothness = 0.5f;
 	float shininess = 32.0f;
+	float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
 	void setConstantBuffer(ConstantBuffer* constantBuffer, int slot = 0);
 

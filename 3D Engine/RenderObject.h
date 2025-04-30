@@ -2,8 +2,6 @@
 #include "GraphicsEngine.h"
 #include "DeviceContext.h"
 #include "Mesh.h"
-#include "PixelShader.h"
-#include "VertexShader.h"
 #include "Matrix.h"
 
 class ConstantBuffer;

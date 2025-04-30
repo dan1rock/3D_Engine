@@ -7,20 +7,9 @@
 #include "TextureManager.h"
 #include "MeshManager.h"
 #include "Material.h"
+#include "GlobalResources.h"
 
-__declspec(align(16))
-struct constant {
-	Matrix world;
-	Matrix model;
-	Matrix view;
-	Matrix projection;
-	float cameraPos[4];
-	float lightPos[4];
-	float lightColor[4];
-	unsigned int time;
-};
-
-constant constantData = { };
+constant* constantData = nullptr;
 
 AppWindow::AppWindow()
 {
@@ -52,7 +41,7 @@ void AppWindow::updateDeltaMousePos()
 
 void AppWindow::updatePosition()
 {
-	constantData.time = ::GetTickCount64();
+	constantData->time = ::GetTickCount64();
 
 	const float speed = 2.0f;
 	const float mouseSpeed = 0.002f;
@@ -124,7 +113,7 @@ void AppWindow::updatePosition()
 	Matrix temp;
 	Matrix cam;
 
-	constantData.world.setIdentity();
+	constantData->world.setIdentity();
 	cam.setIdentity();
 
 	temp.setIdentity();
@@ -142,15 +131,15 @@ void AppWindow::updatePosition()
 
 	worldCam = cam;
 
-	constantData.cameraPos[0] = worldCam.getTranslation().x;
-	constantData.cameraPos[1] = worldCam.getTranslation().y;
-	constantData.cameraPos[2] = worldCam.getTranslation().z;
+	constantData->cameraPos[0] = worldCam.getTranslation().x;
+	constantData->cameraPos[1] = worldCam.getTranslation().y;
+	constantData->cameraPos[2] = worldCam.getTranslation().z;
 
 	cam.inverse();
 	
-	constantData.view = cam;
+	constantData->view = cam;
 
-	mConstantBuffer->update(GraphicsEngine::get()->getImmDeviceContext(), &constantData);
+	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
 }
 
 AppWindow::~AppWindow()
@@ -162,26 +151,24 @@ void AppWindow::onCreate()
 	GraphicsEngine::get()->init();
 	mSwapChain = GraphicsEngine::get()->createSwapShain();
 
+	constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
+
 	onWindowResized();
 
 	POINT currentMousePos = {};
 	::GetCursorPos(&currentMousePos);
 	lastTickMousePos = Vector2(currentMousePos.x, currentMousePos.y);
 
-	mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
+	worldCam.setTranslation(Vector3(0, 1, 3));
+	rotY = 3.1416f;
 
-	constant data = {};
-	mConstantBuffer->load(&data, sizeof(data));
+	constantData->lightPos[0] = 50.0f;
+	constantData->lightPos[1] = 50.0f;
+	constantData->lightPos[2] = 50.0f;
 
-	worldCam.setTranslation(Vector3(0, 1, -2));
-
-	constantData.lightPos[0] = 50.0f;
-	constantData.lightPos[1] = 50.0f;
-	constantData.lightPos[2] = 50.0f;
-
-	constantData.lightColor[0] = 1.0f;
-	constantData.lightColor[1] = 1.0f;
-	constantData.lightColor[2] = 1.0f;
+	constantData->lightColor[0] = 1.0f;
+	constantData->lightColor[1] = 1.0f;
+	constantData->lightColor[2] = 1.0f;
 
 	Texture* penguinTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\penguin.png");
 	Texture* rabbitTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\256-gradient.png");
@@ -190,13 +177,11 @@ void AppWindow::onCreate()
 	Mesh* rabbitMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\rabbit.obj");
 
 	Material* penguinMaterial = new Material();
-	penguinMaterial->setConstantBuffer(mConstantBuffer);
 	penguinMaterial->addTexture(penguinTexture);
 
 	Material* rabbitMaterial = new Material();
-	rabbitMaterial->setConstantBuffer(mConstantBuffer);
 	rabbitMaterial->addTexture(rabbitTexture);
-	rabbitMaterial->specular = 0;
+	rabbitMaterial->smoothness = 0.1f;
 
 	auto penguin = std::make_unique<MeshRenderer>(Vector3(-1.0f, 0.0f, 0.0f));
 	penguin->setMaterial(penguinMaterial);
@@ -210,7 +195,7 @@ void AppWindow::onCreate()
 
 	renderObjects.push_front(std::move(rabbit));
 
-	auto skyDome = std::make_unique<SkySphere>(&worldCam);
+	auto skyDome = std::make_unique<SkySphere>();
 
 	renderObjects.push_front(std::move(skyDome));
 
@@ -231,8 +216,6 @@ void AppWindow::onUpdate()
 
 	for (auto& renderObject : renderObjects) 
 	{
-		constantData.model = *renderObject->getModelMatrix();
-		mConstantBuffer->update(GraphicsEngine::get()->getImmDeviceContext(), &constantData);
 		renderObject->render();
 	}
 
@@ -246,7 +229,7 @@ void AppWindow::onWindowResized()
 	mSwapChain->init(this->mHwnd, rc.right - rc.left, rc.bottom - rc.top);
 
 	float aspectRatio = (float)(rc.right - rc.left) / (float)(rc.bottom - rc.top);
-	constantData.projection.setPerspectivePM(
+	constantData->projection.setPerspectivePM(
 		1.1f,
 		aspectRatio,
 		0.1f,
@@ -270,6 +253,5 @@ void AppWindow::onDestroy()
 {
 	Window::onDestroy();
 	mSwapChain->release();
-	mConstantBuffer->release();
 	GraphicsEngine::get()->release();
 }

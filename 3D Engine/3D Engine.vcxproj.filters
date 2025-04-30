@@ -96,6 +96,9 @@
     <ClCompile Include="Material.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
+    <ClCompile Include="GlobalResources.cpp">
+      <Filter>Engine\Resource managers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppWindow.h">
@@ -171,6 +174,9 @@
       <Filter>Engine\Objects</Filter>
     </ClInclude>
     <ClInclude Include="Material.h">
+      <Filter>Engine\Resource managers</Filter>
+    </ClInclude>
+    <ClInclude Include="GlobalResources.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
   </ItemGroup>

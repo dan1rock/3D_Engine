@@ -15,6 +15,7 @@ class TextureManager;
 class Mesh;
 class MeshManager;
 class Material;
+class GlobalResources;
 
 class GraphicsEngine
 {
@@ -38,6 +39,7 @@ public:
 
 	TextureManager* getTextureManager();
 	MeshManager* getMeshManager();
+	GlobalResources* getGlobalResources();
 
 	bool compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
 	void releaseVertexShader();
@@ -69,6 +71,7 @@ private:
 
 	TextureManager* mTextureManager = nullptr;
 	MeshManager* mMeshManager = nullptr;
+	GlobalResources* mGlobalResources = nullptr;
 
 	std::unordered_map<std::wstring, VertexShader*> vertexShaderMap;
 	std::unordered_map<std::wstring, PixelShader*> pixelShaderMap;

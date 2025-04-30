@@ -27,6 +27,8 @@ cbuffer material : register(b1)
     float diffuse;
     float specular;
     float shininess;
+    float4 color;
+    bool isTextured;
 };
 
 float3 calculateLighting(float ambient, float diffuse, float specular, float shininess, float3 lightColor, float3 normal, float3 lightDir, float3 cameraDir)
@@ -56,7 +58,14 @@ float4 main(PS_INPUT input) : SV_TARGET
     
     float3 lighting = calculateLighting(ambient, diffuse, specular, shininess, lightColor, Normal, input.lightDir, input.cameraDir);
     
-    float4 result = Texture.Sample(TextureSampler, input.texCoord) * float4(lighting, 1.0f);
+    float4 baseColor = color;
+    
+    if (isTextured)
+    {
+        baseColor *= Texture.Sample(TextureSampler, input.texCoord);
+    }
+    
+    float4 result = baseColor * float4(lighting, 1.0f);
     
     return result;
 }

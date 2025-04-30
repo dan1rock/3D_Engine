@@ -1,5 +1,6 @@
 #include "RenderObject.h"
 #include "Material.h"
+#include "GlobalResources.h"
 
 Matrix* RenderObject::getModelMatrix()
 {
@@ -12,7 +13,7 @@ void RenderObject::init()
 
 	modelM.setTranslation(this->position);
 
-	if (mMaterial == nullptr) mMaterial = new Material();
+	if (mMaterial == nullptr) mMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
 
 	this->isInitialized = true;
 }
@@ -25,6 +26,11 @@ void RenderObject::render()
 	}
 
 	GraphicsEngine::get()->setMaterial(mMaterial);
+	
+	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
+	constantData->model = modelM;
+
+	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
 }
 
 void RenderObject::setMaterial(Material* material)

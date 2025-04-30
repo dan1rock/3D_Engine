@@ -8,6 +8,7 @@
 #include "PixelShader.h"
 #include "TextureManager.h"
 #include "MeshManager.h"
+#include "GlobalResources.h"
 #include "Material.h"
 #include "DirectXTex.h"
 #include <d3dcompiler.h>
@@ -19,6 +20,7 @@ GraphicsEngine::GraphicsEngine()
 	{
 		mTextureManager = new TextureManager();
 		mMeshManager = new MeshManager();
+		mGlobalResources = new GlobalResources();
 	}
 	catch(...) {}
 }
@@ -56,6 +58,8 @@ bool GraphicsEngine::init()
 
 	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
+	mGlobalResources->init();
+
 	return true;
 }
 
@@ -74,6 +78,7 @@ GraphicsEngine::~GraphicsEngine()
 {
 	delete mTextureManager;
 	delete mMeshManager;
+	delete mGlobalResources;
 }
 
 GraphicsEngine* GraphicsEngine::get()
@@ -187,6 +192,11 @@ MeshManager* GraphicsEngine::getMeshManager()
 	return mMeshManager;
 }
 
+GlobalResources* GraphicsEngine::getGlobalResources()
+{
+	return mGlobalResources;
+}
+
 bool GraphicsEngine::compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength)
 {
 	ID3DBlob* errblob = nullptr;
@@ -237,7 +247,11 @@ void GraphicsEngine::setMaterial(Material* material)
 	material->onMaterialSet();
 	mImmDeviceContext->setVertexShader(material->mVertexShader);
 	mImmDeviceContext->setPixelShader(material->mPixelShader);
-	mImmDeviceContext->setTexture(material->mPixelShader, material->mTextures[0]);
+
+	if (material->mTextures.size() > 0)
+	{
+		mImmDeviceContext->setTexture(material->mPixelShader, material->mTextures[0]);
+	}
 }
 
 bool GraphicsEngine::createRasterizer()

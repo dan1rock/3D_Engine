@@ -36,7 +36,6 @@ public:
 	virtual void onDestroy() override;
 private:
 	SwapChain* mSwapChain = nullptr;
-	ConstantBuffer* mConstantBuffer = nullptr;
 
 	ULONGLONG lastTickTime = 0;
 	ULONGLONG currentTickTime = 0;
