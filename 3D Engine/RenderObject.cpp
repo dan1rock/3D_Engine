@@ -1,6 +1,18 @@
 #include "RenderObject.h"
 #include "Material.h"
 #include "GlobalResources.h"
+#include "GraphicsEngine.h"
+#include "ComponentManager.h"
+
+RenderObject::RenderObject()
+{
+	GraphicsEngine::get()->getComponentManager()->registerRenderer(this);
+}
+
+RenderObject::~RenderObject()
+{
+	GraphicsEngine::get()->getComponentManager()->unregisterRenderer(this);
+}
 
 Matrix* RenderObject::getModelMatrix()
 {

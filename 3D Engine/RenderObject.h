@@ -3,13 +3,17 @@
 #include "DeviceContext.h"
 #include "Mesh.h"
 #include "Matrix.h"
+#include "Component.h"
 
 class ConstantBuffer;
 class Material;
 
-class RenderObject
+class RenderObject : public Component
 {
 public:
+	RenderObject();
+	~RenderObject();
+
 	Matrix* getModelMatrix();
 	virtual void render() = 0;
 	void setMaterial(Material* material);

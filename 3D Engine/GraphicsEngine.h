@@ -16,6 +16,7 @@ class Mesh;
 class MeshManager;
 class Material;
 class GlobalResources;
+class ComponentManager;
 
 class GraphicsEngine
 {
@@ -37,6 +38,7 @@ public:
 	VertexShader* getVertexShader(const wchar_t* fileName, const char* entryPoint);
 	PixelShader* getPixelShader(const wchar_t* fileName, const char* entryPoint);
 
+	ComponentManager* getComponentManager();
 	TextureManager* getTextureManager();
 	MeshManager* getMeshManager();
 	GlobalResources* getGlobalResources();
@@ -69,6 +71,7 @@ private:
 	ID3D11VertexShader* mVS = nullptr;
 	ID3D11PixelShader* mPS = nullptr;
 
+	ComponentManager* mComponentManager = nullptr;
 	TextureManager* mTextureManager = nullptr;
 	MeshManager* mMeshManager = nullptr;
 	GlobalResources* mGlobalResources = nullptr;

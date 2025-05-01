@@ -17,7 +17,7 @@ void SkySphere::init()
 {
 	mMaterial = new Material();
 	mMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"UnlitPixelShader.hlsl", "main"));
-	mMaterial->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\sky.jpg"));
+	mMaterial->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\HDR_029_Sky_Cloudy_Bg.jpg"));
 
 	mMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
 

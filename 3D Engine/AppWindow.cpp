@@ -8,6 +8,7 @@
 #include "MeshManager.h"
 #include "Material.h"
 #include "GlobalResources.h"
+#include "ComponentManager.h"
 
 constant* constantData = nullptr;
 
@@ -183,21 +184,23 @@ void AppWindow::onCreate()
 	rabbitMaterial->addTexture(rabbitTexture);
 	rabbitMaterial->smoothness = 0.1f;
 
-	auto penguin = std::make_unique<MeshRenderer>(Vector3(-1.0f, 0.0f, 0.0f));
-	penguin->setMaterial(penguinMaterial);
-	penguin->setMesh(penguinMesh);
+	GameObject* penguin = new GameObject();
+	MeshRenderer* penguinRenderer = penguin->addComponent<MeshRenderer>(Vector3(-1.0f, 0.0f, 0.0f));
+	penguinRenderer->setMaterial(penguinMaterial);
+	penguinRenderer->setMesh(penguinMesh);
 
-	renderObjects.push_front(std::move(penguin));
+	gameObjects.push_front(std::move(penguin));
 
-	auto rabbit = std::make_unique<MeshRenderer>(Vector3(1.0f, 0.0f, 0.0f));
-	rabbit->setMaterial(rabbitMaterial);
-	rabbit->setMesh(rabbitMesh);
+	GameObject* rabbit = new GameObject();
+	MeshRenderer* rabbitRenderer = rabbit->addComponent<MeshRenderer>(Vector3(1.0f, 0.0f, 0.0f));
+	rabbitRenderer->setMaterial(rabbitMaterial);
+	rabbitRenderer->setMesh(rabbitMesh);
 
-	renderObjects.push_front(std::move(rabbit));
+	gameObjects.push_front(std::move(rabbit));
 
-	auto skyDome = std::make_unique<SkySphere>();
+	//auto skyDome = std::make_unique<SkySphere>();
 
-	renderObjects.push_front(std::move(skyDome));
+	//renderObjects.push_front(std::move(skyDome));
 
 	GraphicsEngine::get()->setRasterizerState(true);
 }
@@ -214,10 +217,8 @@ void AppWindow::onUpdate()
 	updateDeltaMousePos();
 	updatePosition();
 
-	for (auto& renderObject : renderObjects) 
-	{
-		renderObject->render();
-	}
+	GraphicsEngine::get()->getComponentManager()->updateComponents();
+	GraphicsEngine::get()->getComponentManager()->updateRenderers();
 
 	mSwapChain->present(false);
 }

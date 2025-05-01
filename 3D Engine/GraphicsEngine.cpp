@@ -9,6 +9,7 @@
 #include "TextureManager.h"
 #include "MeshManager.h"
 #include "GlobalResources.h"
+#include "ComponentManager.h"
 #include "Material.h"
 #include "DirectXTex.h"
 #include <d3dcompiler.h>
@@ -21,6 +22,7 @@ GraphicsEngine::GraphicsEngine()
 		mTextureManager = new TextureManager();
 		mMeshManager = new MeshManager();
 		mGlobalResources = new GlobalResources();
+		mComponentManager = new ComponentManager();
 	}
 	catch(...) {}
 }
@@ -180,6 +182,11 @@ PixelShader* GraphicsEngine::getPixelShader(const wchar_t* fileName, const char*
 	}
 
 	return nullptr;
+}
+
+ComponentManager* GraphicsEngine::getComponentManager()
+{
+	return mComponentManager;
 }
 
 TextureManager* GraphicsEngine::getTextureManager()

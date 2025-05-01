@@ -9,7 +9,7 @@
 #include "Input.h"
 #include "VertexShader.h"
 #include "PixelShader.h"
-#include "RenderObject.h"
+#include "GameObject.h"
 #include "Vector2.h"
 #include "Vector3.h"
 #include "Matrix.h"
@@ -52,7 +52,7 @@ private:
 
 	Matrix worldCam;
 
-	std::list<std::unique_ptr<RenderObject>> renderObjects;
+	std::list<GameObject*> gameObjects;
 
 	bool isFocused = false;
 };

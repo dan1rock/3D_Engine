@@ -28,6 +28,9 @@
     <Filter Include="Engine\Objects">
       <UniqueIdentifier>{df7b6a00-2d1a-474c-a1d7-eecc4a224298}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Component">
+      <UniqueIdentifier>{eb58bc3a-6eba-43a9-b381-74b88e9e16a3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -97,6 +100,18 @@
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
     <ClCompile Include="GlobalResources.cpp">
+      <Filter>Engine\Resource managers</Filter>
+    </ClCompile>
+    <ClCompile Include="Component.cpp">
+      <Filter>Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="GameObject.cpp">
+      <Filter>Engine\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="Transform.cpp">
+      <Filter>Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="ComponentManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
   </ItemGroup>
@@ -177,6 +192,18 @@
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
     <ClInclude Include="GlobalResources.h">
+      <Filter>Engine\Resource managers</Filter>
+    </ClInclude>
+    <ClInclude Include="Component.h">
+      <Filter>Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="GameObject.h">
+      <Filter>Engine\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Transform.h">
+      <Filter>Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentManager.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
   </ItemGroup>

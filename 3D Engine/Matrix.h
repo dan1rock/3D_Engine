@@ -129,6 +129,10 @@ public:
 		return Vector3(mat[3][0], mat[3][1], mat[3][2]);
 	}
 
+	Vector3 getScale() {
+		return Vector3(mat[0][0], mat[1][1], mat[2][2]);
+	}
+
 	void setOrthoPM(float width, float height, float nearPlane, float farPlane) {
 		setIdentity();
 		mat[0][0] = 2.0f / width;
