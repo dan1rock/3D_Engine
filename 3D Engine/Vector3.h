@@ -17,6 +17,10 @@ public:
 
 	}
 
+	bool operator ==(const Vector3& vector) const {
+		return (x == vector.x && y == vector.y && z == vector.z);
+	}
+
 	Vector3 operator *(float num) {
 		return Vector3(x * num, y * num, z * num);
 	}

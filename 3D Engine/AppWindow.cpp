@@ -9,35 +9,14 @@
 #include "Material.h"
 #include "GlobalResources.h"
 #include "ComponentManager.h"
+#include "Time.h"
+
+#include <iostream>
 
 constant* constantData = nullptr;
 
 AppWindow::AppWindow()
 {
-}
-
-void AppWindow::updateDeltaTime()
-{
-	lastTickTime = currentTickTime;
-	currentTickTime = ::GetTickCount64();
-	deltaTime = (lastTickTime > 0) ? ((currentTickTime - lastTickTime) / 1000.0f) : 0;
-}
-
-void AppWindow::updateDeltaMousePos()
-{
-	if (isFocused)
-	{
-		RECT rc = this->getClientWindowRect();
-		POINT currentMousePos = {};
-		::GetCursorPos(&currentMousePos);
-		::SetCursorPos((rc.right - rc.left) / 2, (rc.bottom - rc.top) / 2);
-		deltaMousePos = Vector2(
-			currentMousePos.x - lastTickMousePos.x,
-			currentMousePos.y - lastTickMousePos.y
-		);
-		lastTickMousePos = Vector2((rc.right - rc.left) / 2, (rc.bottom - rc.top) / 2);
-	}
-	else deltaMousePos = Vector2(0.0f, 0.0f);
 }
 
 void AppWindow::updatePosition()
@@ -50,23 +29,23 @@ void AppWindow::updatePosition()
 
 	if (isFocused)
 	{
-		rotX += deltaMousePos.y * mouseSpeed;
-		rotY += deltaMousePos.x * mouseSpeed;
+		rotX += Input::getDeltaMousePos().y * mouseSpeed;
+		rotY += Input::getDeltaMousePos().x * mouseSpeed;
 
 		if (GetKeyState(VK_LBUTTON) & 0x8000)
 		{
 			scale = Vector3(
-				scale.x + deltaTime * scaleSpeed,
-				scale.y + deltaTime * scaleSpeed,
-				scale.z + deltaTime * scaleSpeed
+				scale.x + Time::getDeltaTime() * scaleSpeed,
+				scale.y + Time::getDeltaTime() * scaleSpeed,
+				scale.z + Time::getDeltaTime() * scaleSpeed
 			);
 		}
 		if (GetKeyState(VK_RBUTTON) & 0x8000)
 		{
 			scale = Vector3(
-				scale.x - deltaTime * scaleSpeed,
-				scale.y - deltaTime * scaleSpeed,
-				scale.z - deltaTime * scaleSpeed
+				scale.x - Time::getDeltaTime() * scaleSpeed,
+				scale.y - Time::getDeltaTime() * scaleSpeed,
+				scale.z - Time::getDeltaTime() * scaleSpeed
 			);
 		}
 	}
@@ -125,9 +104,9 @@ void AppWindow::updatePosition()
 	temp.setRotationY(rotY);
 	cam *= temp;
 
-	Vector3 newPos = worldCam.getTranslation() + cam.getZDirection() * direction.x * deltaTime +
-		cam.getXDirection() * direction.y * deltaTime +
-		Vector3(0, direction.z * deltaTime, 0);
+	Vector3 newPos = worldCam.getTranslation() + cam.getZDirection() * direction.x * Time::getDeltaTime() +
+		cam.getXDirection() * direction.y * Time::getDeltaTime() +
+		Vector3(0, direction.z * Time::getDeltaTime(), 0);
 	cam.setTranslation(newPos);
 
 	worldCam = cam;
@@ -156,10 +135,6 @@ void AppWindow::onCreate()
 
 	onWindowResized();
 
-	POINT currentMousePos = {};
-	::GetCursorPos(&currentMousePos);
-	lastTickMousePos = Vector2(currentMousePos.x, currentMousePos.y);
-
 	worldCam.setTranslation(Vector3(0, 1, 3));
 	rotY = 3.1416f;
 
@@ -184,23 +159,20 @@ void AppWindow::onCreate()
 	rabbitMaterial->addTexture(rabbitTexture);
 	rabbitMaterial->smoothness = 0.1f;
 
-	GameObject* penguin = new GameObject();
-	MeshRenderer* penguinRenderer = penguin->addComponent<MeshRenderer>(Vector3(-1.0f, 0.0f, 0.0f));
-	penguinRenderer->setMaterial(penguinMaterial);
-	penguinRenderer->setMesh(penguinMesh);
+	GameObject* penguin = new GameObject(Vector3(1.0f, 0.0f, 0.0f));
+	penguin->addComponent<MeshRenderer>(penguinMesh, penguinMaterial);
 
 	gameObjects.push_front(std::move(penguin));
 
-	GameObject* rabbit = new GameObject();
-	MeshRenderer* rabbitRenderer = rabbit->addComponent<MeshRenderer>(Vector3(1.0f, 0.0f, 0.0f));
-	rabbitRenderer->setMaterial(rabbitMaterial);
-	rabbitRenderer->setMesh(rabbitMesh);
+	GameObject* rabbit = new GameObject(Vector3(-1.0f, 0.0f, 0.0f));
+	rabbit->addComponent<MeshRenderer>(rabbitMesh, rabbitMaterial);
 
 	gameObjects.push_front(std::move(rabbit));
 
-	//auto skyDome = std::make_unique<SkySphere>();
+	GameObject* skyDome = new GameObject();
+	skyDome->addComponent<SkySphere>();
 
-	//renderObjects.push_front(std::move(skyDome));
+	gameObjects.push_front(std::move(skyDome));
 
 	GraphicsEngine::get()->setRasterizerState(true);
 }
@@ -211,10 +183,11 @@ void AppWindow::onUpdate()
 	RECT windowSize = this->getClientWindowRect();
 	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
 
-	Input::get()->update();
+	Time::update();
 
-	updateDeltaTime();
-	updateDeltaMousePos();
+	Input::update();
+	Input::updateMouse(this->getClientWindowRect(), isFocused);
+
 	updatePosition();
 
 	GraphicsEngine::get()->getComponentManager()->updateComponents();

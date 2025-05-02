@@ -18,5 +18,10 @@ public:
 
 	}
 
+	bool operator==(const Vector2& vector) const
+	{
+		return (x == vector.x && y == vector.y);
+	}
+
 	float x, y;
 };

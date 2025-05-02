@@ -6,6 +6,7 @@ class GameObject
 {
 public:
 	GameObject();
+	GameObject(Vector3 position);
 	~GameObject();
 
 	Transform* getTransform();
@@ -15,7 +16,7 @@ public:
 	bool removeComponent(Component* component);
 
 private:
-	Transform mTransform;
+	Transform mTransform = {};
 
 	std::list<std::unique_ptr<Component>> mComponents;
 };

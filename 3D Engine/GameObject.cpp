@@ -6,6 +6,13 @@ GameObject::GameObject()
 {
 }
 
+GameObject::GameObject(Vector3 position)
+{
+	mTransform.setPosition(position);
+	mTransform.setScale(Vector3(1.0f, 1.0f, 1.0f));
+	mTransform.setRotation(Vector3(0.0f, 0.0f, 0.0f));
+}
+
 GameObject::~GameObject()
 {
 }

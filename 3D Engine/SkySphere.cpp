@@ -4,6 +4,7 @@
 #include "TextureManager.h"
 #include "GlobalResources.h"
 #include "Material.h"
+#include "GameObject.h"
 
 SkySphere::SkySphere()
 {
@@ -23,7 +24,7 @@ void SkySphere::init()
 
 	RenderObject::init();
 
-	modelM.setScale(Vector3(100.0f, 100.0f, 100.0f));
+	mOwner->getTransform()->setScale(Vector3(100.0f, 100.0f, 100.0f));
 }
 
 void SkySphere::render()

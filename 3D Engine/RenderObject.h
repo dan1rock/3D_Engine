@@ -22,7 +22,6 @@ public:
 protected:
 	virtual void init() = 0;
 
-	Vector3 position;
 	Matrix modelM;
 
 	Material* mMaterial = nullptr;

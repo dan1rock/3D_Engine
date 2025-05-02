@@ -22,8 +22,6 @@ class AppWindow: public Window
 {
 public:
 	AppWindow();
-	void updateDeltaTime();
-	void updateDeltaMousePos();
 	void updatePosition();
 	~AppWindow();
 
@@ -36,14 +34,6 @@ public:
 	virtual void onDestroy() override;
 private:
 	SwapChain* mSwapChain = nullptr;
-
-	ULONGLONG lastTickTime = 0;
-	ULONGLONG currentTickTime = 0;
-	float deltaTime = 0;
-
-	Vector2 lastTickMousePos = {};
-	Vector2 currentTickMousePos = {};
-	Vector2 deltaMousePos = {};
 
 	Vector3 scale = Vector3(1, 1, 1);
 	float rotX = 0;

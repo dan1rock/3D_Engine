@@ -10,9 +10,10 @@ public:
 
 	GameObject* getOwner();
 
-private:
+protected:
 	GameObject* mOwner = nullptr;
 
+private:
 	void setOwner(GameObject* gameObject);
 	virtual void update();
 

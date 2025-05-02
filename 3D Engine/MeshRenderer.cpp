@@ -2,24 +2,17 @@
 
 MeshRenderer::MeshRenderer()
 {
-	this->position = Vector3(0.0f, 0.0f, 0.0f);
-}
-
-MeshRenderer::MeshRenderer(Vector3 position)
-{
-	this->position = position;
 }
 
 MeshRenderer::MeshRenderer(Mesh* mesh)
 {
 	this->mMesh = mesh;
-	this->position = Vector3(0.0f, 0.0f, 0.0f);
 }
 
-MeshRenderer::MeshRenderer(Mesh* mesh, Vector3 position)
+MeshRenderer::MeshRenderer(Mesh* mesh, Material* material)
 {
 	this->mMesh = mesh;
-	this->position = position;
+	this->mMaterial = material;
 }
 
 MeshRenderer::~MeshRenderer()

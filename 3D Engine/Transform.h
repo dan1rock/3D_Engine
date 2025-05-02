@@ -8,6 +8,7 @@ public:
 	Transform();
 	~Transform();
 
+	Matrix* getMatrix();
 	Vector3 getPosition();
 	Vector3 getScale();
 	Vector3 getRotation();
@@ -17,6 +18,6 @@ public:
 	void setRotation(Vector3 rotation);
 
 private:
-	Matrix mMatrix;
+	Matrix mMatrix = {};
 };
 

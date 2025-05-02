@@ -3,6 +3,7 @@
 #include "GlobalResources.h"
 #include "GraphicsEngine.h"
 #include "ComponentManager.h"
+#include "GameObject.h"
 
 RenderObject::RenderObject()
 {
@@ -21,10 +22,6 @@ Matrix* RenderObject::getModelMatrix()
 
 void RenderObject::init()
 {
-	this->modelM.setIdentity();
-
-	modelM.setTranslation(this->position);
-
 	if (mMaterial == nullptr) mMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
 
 	this->isInitialized = true;
@@ -40,7 +37,7 @@ void RenderObject::render()
 	GraphicsEngine::get()->setMaterial(mMaterial);
 	
 	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
-	constantData->model = modelM;
+	constantData->model = *mOwner->getTransform()->getMatrix();
 
 	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
 }

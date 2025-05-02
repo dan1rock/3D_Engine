@@ -1,20 +1,28 @@
-#pragma once
-class Input
-{
-public:
-	Input();
-	~Input();
+#pragma once  
+#include "Vector2.h"  
+#include <Windows.h>
 
-	static bool getKey(int keycode);
-	static bool getKeyDown(int keycode);
-	static bool getKeyUp(int keycode);
+class Input  
+{  
+public:  
+   Input();  
+   ~Input();  
 
-	void update();
+   static bool getKey(int keycode);  
+   static bool getKeyDown(int keycode);  
+   static bool getKeyUp(int keycode);  
+   static Vector2 getDeltaMousePos();  
 
-	static Input* get();
+private:  
+   static unsigned char keys_state[256];  
+   static unsigned char old_keys_state[256];  
 
-private:
-	unsigned char keys_state[256] = {};
-	unsigned char old_keys_state[256] = {};
+   static Vector2 lastTickMousePos;  
+   static Vector2 currentTickMousePos;  
+   static Vector2 deltaMousePos;  
+
+   static void update();  
+   static void updateMouse(RECT windowRect, bool isFocused);  
+
+   friend class AppWindow;  
 };
-

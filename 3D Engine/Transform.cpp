@@ -9,6 +9,11 @@ Transform::~Transform()
 {
 }
 
+Matrix* Transform::getMatrix()
+{
+	return &mMatrix;
+}
+
 Vector3 Transform::getPosition()
 {
 	return mMatrix.getTranslation();

@@ -86,7 +86,6 @@ public:
 	}
 
 	void setScale(const Vector3& scale) {
-		setIdentity();
 		mat[0][0] = scale.x;
 		mat[1][1] = scale.y;
 		mat[2][2] = scale.z;

@@ -5,10 +5,8 @@ class MeshRenderer : public RenderObject
 {
 public:
 	MeshRenderer();
-	MeshRenderer(Vector3 position);
-
 	MeshRenderer(Mesh* mesh);
-	MeshRenderer(Mesh* mesh, Vector3 position);
+	MeshRenderer(Mesh* mesh, Material* material);
 
 	~MeshRenderer();
 
