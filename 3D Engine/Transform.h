@@ -19,5 +19,9 @@ public:
 
 private:
 	Matrix mMatrix = {};
+
+	Vector3 mPosition = {};
+	Vector3 mScale = { 1.0f, 1.0f, 1.0f };
+	Vector3 mRotation = { 0.0f, 0.0f, 0.0f };
 };
 

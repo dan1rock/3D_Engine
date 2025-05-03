@@ -16,29 +16,33 @@ Matrix* Transform::getMatrix()
 
 Vector3 Transform::getPosition()
 {
-	return mMatrix.getTranslation();
+	return mPosition;
 }
 
 Vector3 Transform::getScale()
 {
-	return mMatrix.getScale();
+	return mScale;
 }
 
 Vector3 Transform::getRotation()
 {
-	return Vector3();
+	return mRotation;
 }
 
 void Transform::setPosition(Vector3 position)
 {
 	mMatrix.setTranslation(position);
+	mPosition = position;
 }
 
 void Transform::setScale(Vector3 scale)
 {
 	mMatrix.setScale(scale);
+	mScale = scale;
 }
 
 void Transform::setRotation(Vector3 rotation)
 {
+	mMatrix.setRotation(rotation);
+	mRotation = rotation;
 }

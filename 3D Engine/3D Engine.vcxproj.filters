@@ -114,6 +114,15 @@
     <ClCompile Include="ComponentManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
+    <ClCompile Include="Time.cpp">
+      <Filter>Engine\Main parts</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="FreelookCameraController.cpp">
+      <Filter>Engine\Component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppWindow.h">
@@ -205,6 +214,15 @@
     </ClInclude>
     <ClInclude Include="ComponentManager.h">
       <Filter>Engine\Resource managers</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Time.h">
+      <Filter>Engine\Main parts</Filter>
+    </ClInclude>
+    <ClInclude Include="FreelookCameraController.h">
+      <Filter>Engine\Component</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

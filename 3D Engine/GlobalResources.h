@@ -8,6 +8,7 @@ __declspec(align(16))
 struct constant {
 	Matrix world;
 	Matrix model;
+	Matrix invTransModel;
 	Matrix view;
 	Matrix projection;
 	float cameraPos[4];

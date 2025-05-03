@@ -15,11 +15,6 @@ RenderObject::~RenderObject()
 	GraphicsEngine::get()->getComponentManager()->unregisterRenderer(this);
 }
 
-Matrix* RenderObject::getModelMatrix()
-{
-	return &modelM;
-}
-
 void RenderObject::init()
 {
 	if (mMaterial == nullptr) mMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
@@ -38,6 +33,11 @@ void RenderObject::render()
 	
 	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
 	constantData->model = *mOwner->getTransform()->getMatrix();
+
+	Matrix invTransModel = *mOwner->getTransform()->getMatrix();
+	invTransModel.inverse();
+	invTransModel.transpose();
+	constantData->invTransModel = invTransModel;
 
 	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
 }

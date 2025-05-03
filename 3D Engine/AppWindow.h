@@ -22,7 +22,6 @@ class AppWindow: public Window
 {
 public:
 	AppWindow();
-	void updatePosition();
 	~AppWindow();
 
 	// Inherited via Window
@@ -34,13 +33,6 @@ public:
 	virtual void onDestroy() override;
 private:
 	SwapChain* mSwapChain = nullptr;
-
-	Vector3 scale = Vector3(1, 1, 1);
-	float rotX = 0;
-	float rotY = 0;
-	float rotZ = 0;
-
-	Matrix worldCam;
 
 	std::list<GameObject*> gameObjects;
 

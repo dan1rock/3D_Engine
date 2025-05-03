@@ -44,6 +44,10 @@ public:
 		}
 	}
 
+	float length() const {
+		return (float)sqrt(x * x + y * y + z * z);
+	}
+
 	static Vector3 lerp(const Vector3& startPos, const Vector3& endPos, float delta) {
 		Vector3 res;
 		res.x = startPos.x * (1.0f - delta) + endPos.x * delta;

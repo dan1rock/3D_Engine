@@ -10,116 +10,13 @@
 #include "GlobalResources.h"
 #include "ComponentManager.h"
 #include "Time.h"
-
-#include <iostream>
+#include "Camera.h"
+#include "FreelookCameraController.h"
 
 constant* constantData = nullptr;
 
 AppWindow::AppWindow()
 {
-}
-
-void AppWindow::updatePosition()
-{
-	constantData->time = ::GetTickCount64();
-
-	const float speed = 2.0f;
-	const float mouseSpeed = 0.002f;
-	const float scaleSpeed = 1.0f;
-
-	if (isFocused)
-	{
-		rotX += Input::getDeltaMousePos().y * mouseSpeed;
-		rotY += Input::getDeltaMousePos().x * mouseSpeed;
-
-		if (GetKeyState(VK_LBUTTON) & 0x8000)
-		{
-			scale = Vector3(
-				scale.x + Time::getDeltaTime() * scaleSpeed,
-				scale.y + Time::getDeltaTime() * scaleSpeed,
-				scale.z + Time::getDeltaTime() * scaleSpeed
-			);
-		}
-		if (GetKeyState(VK_RBUTTON) & 0x8000)
-		{
-			scale = Vector3(
-				scale.x - Time::getDeltaTime() * scaleSpeed,
-				scale.y - Time::getDeltaTime() * scaleSpeed,
-				scale.z - Time::getDeltaTime() * scaleSpeed
-			);
-		}
-	}
-
-	Vector3 direction = Vector3(0, 0, 0);
-
-	if (Input::getKey('W'))
-	{
-		direction.x += 1.0f;
-	}
-	if (Input::getKey('S'))
-	{
-		direction.x -= 1.0f;
-	}
-	if (Input::getKey('A'))
-	{
-		direction.y -= 1.0f;
-	}
-	if (Input::getKey('D'))
-	{
-		direction.y += 1.0f;
-	}
-	if (Input::getKey(VK_CONTROL))
-	{
-		direction.z -= 1.0f;
-	}
-	if (Input::getKey(VK_SPACE))
-	{
-		direction.z += 1.0f;
-	}
-
-	direction.normalize();
-	direction *= speed;
-
-	if (Input::getKey(VK_SHIFT)) 
-	{
-		direction *= 2.0f;
-	}
-
-	if (Input::getKeyDown(VK_ESCAPE)) 
-	{
-		appIsRunning = false;
-	}
-
-	Matrix temp;
-	Matrix cam;
-
-	constantData->world.setIdentity();
-	cam.setIdentity();
-
-	temp.setIdentity();
-	temp.setRotationX(rotX);
-	cam *= temp;
-
-	temp.setIdentity();
-	temp.setRotationY(rotY);
-	cam *= temp;
-
-	Vector3 newPos = worldCam.getTranslation() + cam.getZDirection() * direction.x * Time::getDeltaTime() +
-		cam.getXDirection() * direction.y * Time::getDeltaTime() +
-		Vector3(0, direction.z * Time::getDeltaTime(), 0);
-	cam.setTranslation(newPos);
-
-	worldCam = cam;
-
-	constantData->cameraPos[0] = worldCam.getTranslation().x;
-	constantData->cameraPos[1] = worldCam.getTranslation().y;
-	constantData->cameraPos[2] = worldCam.getTranslation().z;
-
-	cam.inverse();
-	
-	constantData->view = cam;
-
-	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
 }
 
 AppWindow::~AppWindow()
@@ -133,10 +30,9 @@ void AppWindow::onCreate()
 
 	constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
 
-	onWindowResized();
+	constantData->world.setIdentity();
 
-	worldCam.setTranslation(Vector3(0, 1, 3));
-	rotY = 3.1416f;
+	onWindowResized();
 
 	constantData->lightPos[0] = 50.0f;
 	constantData->lightPos[1] = 50.0f;
@@ -174,6 +70,13 @@ void AppWindow::onCreate()
 
 	gameObjects.push_front(std::move(skyDome));
 
+	GameObject* camera = new GameObject(Vector3(0, 1, 3));
+	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
+	camera->addComponent<Camera>();
+	camera->addComponent<FreelookCameraController>(2.0f, 0.002f);
+
+	gameObjects.push_front(std::move(camera));
+
 	GraphicsEngine::get()->setRasterizerState(true);
 }
 
@@ -183,14 +86,19 @@ void AppWindow::onUpdate()
 	RECT windowSize = this->getClientWindowRect();
 	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
 
+	if (Input::getKeyDown(VK_ESCAPE))
+	{
+		appIsRunning = false;
+	}
+
 	Time::update();
+	constantData->time = Time::currentTickTime;
 
 	Input::update();
 	Input::updateMouse(this->getClientWindowRect(), isFocused);
 
-	updatePosition();
-
 	GraphicsEngine::get()->getComponentManager()->updateComponents();
+	GraphicsEngine::get()->getComponentManager()->updateCameras();
 	GraphicsEngine::get()->getComponentManager()->updateRenderers();
 
 	mSwapChain->present(false);

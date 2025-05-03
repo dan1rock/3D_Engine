@@ -3,6 +3,7 @@
 
 class Component;
 class RenderObject;
+class Camera;
 
 class ComponentManager
 {
@@ -14,11 +15,15 @@ public:
 	void unregisterComponent(Component* component);
 	void registerRenderer(RenderObject* renderer);
 	void unregisterRenderer(RenderObject* renderer);
+	void registerCamera(Camera* camera);
+	void unregisterCamera(Camera* camera);
 
 	void updateComponents();
 	void updateRenderers();
+	void updateCameras();
 private:
 	std::list<Component*> mComponents = {};
 	std::list<RenderObject*> mRenderers = {};
+	std::list<Camera*> mCameras = {};
 };
 

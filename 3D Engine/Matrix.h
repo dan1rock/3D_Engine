@@ -22,6 +22,11 @@ public:
 		::memcpy(mat, res.mat, sizeof(float) * 16);
 	}
 
+	friend Matrix operator*(Matrix lhs, const Matrix& rhs) {
+		lhs *= rhs;
+		return lhs;
+	}
+
 	float getDeterminant() {
 		Vector4 minor, v1, v2, v3;
 		float det;
@@ -71,6 +76,16 @@ public:
 		::memcpy(mat, out.mat, sizeof(float) * 16);
 	}
 
+	void transpose() {
+		Matrix out;
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				out.mat[i][j] = mat[j][i];
+			}
+		}
+		::memcpy(mat, out.mat, sizeof(float) * 16);
+	}
+
 	void setIdentity() {
 		::memset(mat, 0, sizeof(float) * 16);
 		mat[0][0] = 1;
@@ -112,6 +127,49 @@ public:
 		mat[1][1] = cos(z);
 	}
 
+	void setRotation(const Vector3& r)
+	{
+		Vector3 oldTrans = getTranslation();
+		Vector3 oldScale = getScale();
+
+		float cx = cosf(r.x), sx = sinf(r.x);
+		float cy = cosf(r.y), sy = sinf(r.y);
+		float cz = cosf(r.z), sz = sinf(r.z);
+
+		Matrix R;
+
+		R.setIdentity();
+
+		R.mat[0][0] = cy * cz;
+		R.mat[0][1] = cy * sz;
+		R.mat[0][2] = -sy;
+
+		R.mat[1][0] = sx * sy * cz - cx * sz;
+		R.mat[1][1] = sx * sy * sz + cx * cz;
+		R.mat[1][2] = sx * cy;
+
+		R.mat[2][0] = cx * sy * cz + sx * sz;
+		R.mat[2][1] = cx * sy * sz - sx * cz;
+		R.mat[2][2] = cx * cy;
+
+		Matrix res;
+		res.setIdentity();
+		res.setScale(oldScale);
+		res *= R;
+
+		res.setTranslation(oldTrans);
+
+		::memcpy(mat, res.mat, sizeof(float) * 16);
+	}
+
+	Vector3 getRotation() {
+		Vector3 rotation;
+		rotation.x = atan2f(mat[2][1], mat[2][2]);
+		rotation.y = atan2f(-mat[2][0], sqrtf(mat[2][1] * mat[2][1] + mat[2][2] * mat[2][2]));
+		rotation.z = atan2f(mat[1][0], mat[0][0]);
+		return rotation;
+	}
+
 	Vector3 getXDirection() {
 		return Vector3(mat[0][0], mat[0][1], mat[0][2]);
 	}
@@ -129,7 +187,11 @@ public:
 	}
 
 	Vector3 getScale() {
-		return Vector3(mat[0][0], mat[1][1], mat[2][2]);
+		return Vector3(
+			Vector3(mat[0][0], mat[0][1], mat[0][2]).length(),
+			Vector3(mat[1][0], mat[1][1], mat[1][2]).length(),
+			Vector3(mat[2][0], mat[2][1], mat[2][2]).length()
+		);
 	}
 
 	void setOrthoPM(float width, float height, float nearPlane, float farPlane) {
