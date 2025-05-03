@@ -4,10 +4,15 @@
 
 GameObject::GameObject()
 {
+	GraphicsEngine::get()->getComponentManager()->registerGameObject(this);
+	mTransform.setPosition(Vector3(0.0f, 0.0f, 0.0f));
+	mTransform.setScale(Vector3(1.0f, 1.0f, 1.0f));
+	mTransform.setRotation(Vector3(0.0f, 0.0f, 0.0f));
 }
 
 GameObject::GameObject(Vector3 position)
 {
+	GraphicsEngine::get()->getComponentManager()->registerGameObject(this);
 	mTransform.setPosition(position);
 	mTransform.setScale(Vector3(1.0f, 1.0f, 1.0f));
 	mTransform.setRotation(Vector3(0.0f, 0.0f, 0.0f));
@@ -15,11 +20,18 @@ GameObject::GameObject(Vector3 position)
 
 GameObject::~GameObject()
 {
+	GraphicsEngine::get()->getComponentManager()->unregisterGameObject(this);
 }
 
 Transform* GameObject::getTransform()
 {
     return &mTransform;
+}
+
+void GameObject::destroy()
+{
+	mComponents.clear();
+    delete this;
 }
 
 bool GameObject::removeComponent(Component* component)

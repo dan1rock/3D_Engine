@@ -123,6 +123,9 @@
     <ClCompile Include="FreelookCameraController.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="InstantiationTest.cpp">
+      <Filter>Engine\Component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppWindow.h">
@@ -222,6 +225,9 @@
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
     <ClInclude Include="FreelookCameraController.h">
+      <Filter>Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="InstantiationTest.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
   </ItemGroup>

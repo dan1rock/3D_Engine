@@ -10,6 +10,7 @@ public:
 	~GameObject();
 
 	Transform* getTransform();
+	void destroy();
 
 	template<typename T, typename... Args>
 	T* addComponent(Args&&... args);

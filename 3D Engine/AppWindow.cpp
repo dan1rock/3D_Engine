@@ -12,6 +12,7 @@
 #include "Time.h"
 #include "Camera.h"
 #include "FreelookCameraController.h"
+#include "InstantiationTest.h"
 
 constant* constantData = nullptr;
 
@@ -55,27 +56,22 @@ void AppWindow::onCreate()
 	rabbitMaterial->addTexture(rabbitTexture);
 	rabbitMaterial->smoothness = 0.1f;
 
-	GameObject* penguin = new GameObject(Vector3(1.0f, 0.0f, 0.0f));
+	/*GameObject* penguin = new GameObject(Vector3(1.0f, 0.0f, 0.0f));
 	penguin->addComponent<MeshRenderer>(penguinMesh, penguinMaterial);
-
-	gameObjects.push_front(std::move(penguin));
 
 	GameObject* rabbit = new GameObject(Vector3(-1.0f, 0.0f, 0.0f));
 	rabbit->addComponent<MeshRenderer>(rabbitMesh, rabbitMaterial);
 
-	gameObjects.push_front(std::move(rabbit));
-
 	GameObject* skyDome = new GameObject();
-	skyDome->addComponent<SkySphere>();
-
-	gameObjects.push_front(std::move(skyDome));
+	skyDome->addComponent<SkySphere>();*/
 
 	GameObject* camera = new GameObject(Vector3(0, 1, 3));
 	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
 	camera->addComponent<Camera>();
 	camera->addComponent<FreelookCameraController>(2.0f, 0.002f);
 
-	gameObjects.push_front(std::move(camera));
+	GameObject* test = new GameObject(Vector3(0, 0, 0));
+	test->addComponent<InstantiationTest>();
 
 	GraphicsEngine::get()->setRasterizerState(true);
 }

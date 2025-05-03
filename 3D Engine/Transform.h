@@ -6,7 +6,7 @@ class Transform : public Component
 {
 public:
 	Transform();
-	~Transform();
+	~Transform() override;
 
 	Matrix* getMatrix();
 	Vector3 getPosition();

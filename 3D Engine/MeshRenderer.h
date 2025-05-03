@@ -8,7 +8,7 @@ public:
 	MeshRenderer(Mesh* mesh);
 	MeshRenderer(Mesh* mesh, Material* material);
 
-	~MeshRenderer();
+	~MeshRenderer() override;
 
 	virtual void render() override;
 

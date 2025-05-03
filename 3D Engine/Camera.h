@@ -5,7 +5,7 @@ class Camera : public Component
 {
 public:
 	Camera();
-	~Camera();
+	~Camera() override;
 
 private:
 	void updateCamera();

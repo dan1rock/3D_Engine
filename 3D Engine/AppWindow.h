@@ -34,7 +34,5 @@ public:
 private:
 	SwapChain* mSwapChain = nullptr;
 
-	std::list<GameObject*> gameObjects;
-
 	bool isFocused = false;
 };

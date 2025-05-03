@@ -6,7 +6,7 @@ class FreelookCameraController : public Component
 public:
 	FreelookCameraController();
 	FreelookCameraController(float speed, float mouseSpeed);
-	~FreelookCameraController();
+	~FreelookCameraController() override;
 
 private:
 	void update() override;

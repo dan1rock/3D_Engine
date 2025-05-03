@@ -11,6 +11,16 @@ ComponentManager::~ComponentManager()
 {
 }
 
+void ComponentManager::registerGameObject(GameObject* gameObject)
+{
+	mGameObjects.push_back(gameObject);
+}
+
+void ComponentManager::unregisterGameObject(GameObject* gameObject)
+{
+	mGameObjects.remove(gameObject);
+}
+
 void ComponentManager::registerComponent(Component* component)
 {
 	mComponents.push_back(component);

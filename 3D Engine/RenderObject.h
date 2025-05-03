@@ -12,7 +12,7 @@ class RenderObject : public Component
 {
 public:
 	RenderObject();
-	~RenderObject();
+	~RenderObject() override;
 
 	virtual void render() = 0;
 	void setMaterial(Material* material);

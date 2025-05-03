@@ -5,7 +5,7 @@ class SkySphere : public RenderObject
 {
 public:
 	SkySphere();
-	~SkySphere();
+	~SkySphere() override;
 
 	virtual void render() override;
 
