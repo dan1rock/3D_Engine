@@ -38,7 +38,7 @@ float3 calculateLighting(float ambient, float diffuse, float specular, float shi
     float3 ambient_light = ambient * lightColor;
 
 	//DIFFUSE LIGHT
-    float amount_diffuse_light = dot(lightDir, normal);
+    float amount_diffuse_light = (dot(lightDir, normal) + 1.0f) * 0.5f;
     float3 diffuse_light = diffuse * lightColor * amount_diffuse_light;
 
 	//SPECULAR LIGHT

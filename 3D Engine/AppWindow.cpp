@@ -26,6 +26,8 @@ AppWindow::~AppWindow()
 
 void AppWindow::onCreate()
 {
+	PhysicsEngine::get()->init();
+
 	GraphicsEngine::get()->init();
 	mSwapChain = GraphicsEngine::get()->createSwapShain();
 
@@ -56,14 +58,14 @@ void AppWindow::onCreate()
 	rabbitMaterial->addTexture(rabbitTexture);
 	rabbitMaterial->smoothness = 0.1f;
 
-	/*GameObject* penguin = new GameObject(Vector3(1.0f, 0.0f, 0.0f));
+	GameObject* penguin = new GameObject(Vector3(1.0f, 0.0f, 0.0f));
 	penguin->addComponent<MeshRenderer>(penguinMesh, penguinMaterial);
 
 	GameObject* rabbit = new GameObject(Vector3(-1.0f, 0.0f, 0.0f));
 	rabbit->addComponent<MeshRenderer>(rabbitMesh, rabbitMaterial);
 
 	GameObject* skyDome = new GameObject();
-	skyDome->addComponent<SkySphere>();*/
+	skyDome->addComponent<SkySphere>();
 
 	GameObject* camera = new GameObject(Vector3(0, 1, 3));
 	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
@@ -94,6 +96,9 @@ void AppWindow::onUpdate()
 	Input::updateMouse(this->getClientWindowRect(), isFocused);
 
 	GraphicsEngine::get()->getComponentManager()->updateComponents();
+
+	PhysicsEngine::get()->update(Time::deltaTime);
+
 	GraphicsEngine::get()->getComponentManager()->updateCameras();
 	GraphicsEngine::get()->getComponentManager()->updateRenderers();
 
@@ -131,5 +136,6 @@ void AppWindow::onDestroy()
 {
 	Window::onDestroy();
 	mSwapChain->release();
+	PhysicsEngine::get()->shutdown();
 	GraphicsEngine::get()->release();
 }

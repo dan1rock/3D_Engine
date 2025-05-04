@@ -44,6 +44,12 @@ public:
 		}
 	}
 
+	Vector3 normalized() const {
+		Vector3 res = Vector3(*this);
+		res.normalize();
+		return res;
+	}
+
 	float length() const {
 		return (float)sqrt(x * x + y * y + z * z);
 	}

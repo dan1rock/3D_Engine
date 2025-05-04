@@ -13,10 +13,7 @@
 #include "Vector2.h"
 #include "Vector3.h"
 #include "Matrix.h"
-#include <list>
-
-class Texture;
-class Mesh;
+#include "PhysicsEngine.h"
 
 class AppWindow: public Window
 {

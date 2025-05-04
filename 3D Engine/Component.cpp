@@ -25,3 +25,7 @@ void Component::setOwner(GameObject* gameObject)
 void Component::update()
 {
 }
+
+void Component::awake()
+{
+}

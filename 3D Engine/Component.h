@@ -15,6 +15,8 @@ protected:
 
 private:
 	void setOwner(GameObject* gameObject);
+
+	virtual void awake();
 	virtual void update();
 
 	friend class GameObject;

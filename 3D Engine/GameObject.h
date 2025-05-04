@@ -35,5 +35,7 @@ T* GameObject::addComponent(Args&&... args)
 
 	mComponents.push_back(std::move(comp));
 
+	ptr->awake();
+
 	return ptr;
 }

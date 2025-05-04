@@ -31,6 +31,9 @@
     <Filter Include="Engine\Component">
       <UniqueIdentifier>{eb58bc3a-6eba-43a9-b381-74b88e9e16a3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Physics">
+      <UniqueIdentifier>{dc36393a-620b-41d3-8e94-78aad584b17c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -124,6 +127,12 @@
       <Filter>Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="InstantiationTest.cpp">
+      <Filter>Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="PhysicsEngine.cpp">
+      <Filter>Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="RigidBody.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
   </ItemGroup>
@@ -229,6 +238,15 @@
     </ClInclude>
     <ClInclude Include="InstantiationTest.h">
       <Filter>Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicsEngine.h">
+      <Filter>Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="RigidBody.h">
+      <Filter>Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Quaternion.h">
+      <Filter>Math</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

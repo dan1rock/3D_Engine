@@ -5,6 +5,7 @@
 #include "TextureManager.h"
 #include "MeshManager.h"
 #include "MeshRenderer.h"
+#include "RigidBody.h"
 #include "Material.h"
 
 InstantiationTest::InstantiationTest()
@@ -17,7 +18,7 @@ InstantiationTest::~InstantiationTest()
 
 void InstantiationTest::update()
 {
-	if (Input::getKey('I'))
+	if (Input::getKeyDown('I'))
 	{
 		if (mMaterial == nullptr)
 		{
@@ -30,12 +31,13 @@ void InstantiationTest::update()
 
 		GameObject* newObject = new GameObject(mPosition);
 		newObject->addComponent<MeshRenderer>(penguinMesh, mMaterial);
+		newObject->addComponent<RigidBody>(1.0f, 2.0f);
 
 		mGameObjects.push_back(newObject);
 
 		mPosition.x += 1.0f;
 	}
-	if (Input::getKey('O'))
+	if (Input::getKeyDown('O'))
 	{
 		if (!mGameObjects.empty())
 		{
