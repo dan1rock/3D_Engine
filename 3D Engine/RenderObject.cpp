@@ -51,3 +51,8 @@ void RenderObject::setMesh(Mesh* mesh)
 {
 	this->mMesh = mesh;
 }
+
+Mesh* RenderObject::getMesh()
+{
+	return mMesh;
+}

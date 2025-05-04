@@ -1,18 +1,22 @@
 #include "RigidBody.h"
 #include "PhysicsEngine.h"
+#include "ConvexMeshManager.h"
 #include "GameObject.h"
 #include "Quaternion.h"
+#include "MeshRenderer.h"
 
 using namespace physx;
 
-RigidBody::RigidBody()
+RigidBody::RigidBody(bool isStatic)
 {
+	mIsStatic = isStatic;
 }
 
-RigidBody::RigidBody(float radius, float mass)
+RigidBody::RigidBody(float radius, float mass, bool isStatic)
 {
 	mRadius = radius;
 	mMass = mass;
+	mIsStatic = isStatic;
 }
 
 RigidBody::~RigidBody()
@@ -36,13 +40,37 @@ void RigidBody::awake()
     PxTransform pose(PxVec3(pos.x, pos.y, pos.z), q);
 
     PhysicsEngine* physics = PhysicsEngine::get();
-    mActor = physics->getPhysics()->createRigidDynamic(pose);
+
+	if (mIsStatic)
+	{
+		mActor = physics->getPhysics()->createRigidStatic(pose);
+	}
+	else
+	{
+		mActor = physics->getPhysics()->createRigidDynamic(pose);
+	}
+
+	PxGeometry* geometry = nullptr;
+
+	MeshRenderer* meshRenderer = mOwner->getComponent<MeshRenderer>();
+	if (meshRenderer) {
+		ConvexMesh* convexMesh = PhysicsEngine::get()->getConvexMeshManager()->createConvexMeshFromFile(meshRenderer->getMesh()->getFullPath().c_str());
+		geometry = new PxConvexMeshGeometry(static_cast<PxConvexMesh*>(convexMesh->getConvexMesh()));
+	}
+	else {
+		geometry = new PxSphereGeometry(mRadius);
+	}
 
     PxMaterial* mat = physics->getMaterial();
-    PxShape* shape = physics->getPhysics()->createShape(PxSphereGeometry(mRadius), *mat);
+    PxShape* shape = physics->getPhysics()->createShape(*geometry, *mat);
     mActor->attachShape(*shape);
 
-    PxRigidBodyExt::updateMassAndInertia(*mActor, mMass);
+	if (!mIsStatic)
+	{
+		PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+		dynamicActor->setMass(mMass);
+		dynamicActor->setMassSpaceInertiaTensor(PxVec3(1, 1, 1));
+	}
 
     physics->getScene()->addActor(*mActor);
 }

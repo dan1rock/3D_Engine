@@ -149,6 +149,8 @@
     <ClCompile Include="Component.cpp" />
     <ClCompile Include="ComponentManager.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
+    <ClCompile Include="ConvexMesh.cpp" />
+    <ClCompile Include="ConvexMeshManager.cpp" />
     <ClCompile Include="DeviceContext.cpp" />
     <ClCompile Include="FreelookCameraController.cpp" />
     <ClCompile Include="GameObject.cpp" />
@@ -184,6 +186,8 @@
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentManager.h" />
     <ClInclude Include="ConstantBuffer.h" />
+    <ClInclude Include="ConvexMesh.h" />
+    <ClInclude Include="ConvexMeshManager.h" />
     <ClInclude Include="DeviceContext.h" />
     <ClInclude Include="FreelookCameraController.h" />
     <ClInclude Include="GameObject.h" />

@@ -1,14 +1,18 @@
 #include "PhysicsEngine.h"
 #include <ctype.h>
+#include "ConvexMeshManager.h"
+#include <stdexcept>
 
 using namespace physx;
 
 PhysicsEngine::PhysicsEngine()
 {
+	mConvexMeshManager = new ConvexMeshManager();
 }
 
 PhysicsEngine::~PhysicsEngine()
 {
+    delete mConvexMeshManager;
 }
 
 void PhysicsEngine::init()
@@ -108,6 +112,36 @@ PxScene* PhysicsEngine::getScene()
 PxMaterial* PhysicsEngine::getMaterial()
 {
     return gMaterial;
+}
+
+ConvexMeshManager* PhysicsEngine::getConvexMeshManager()
+{
+    return mConvexMeshManager;
+}
+
+PxConvexMesh* PhysicsEngine::cookConvexMesh(const std::vector<PxVec3>& points)
+{
+	if (!gCooking)
+	{
+		PxCookingParams params(gPhysics->getTolerancesScale());
+		gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, params);
+	}
+
+    PxConvexMeshDesc desc;
+    desc.points.count = static_cast<PxU32>(points.size());
+    desc.points.stride = sizeof(PxVec3);
+    desc.points.data = points.data();
+    desc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+
+    PxDefaultMemoryOutputStream buf;
+    if (!gCooking->cookConvexMesh(desc, buf)) {
+        throw std::runtime_error("Convex cooking failed");
+    }
+
+    PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
+    PxConvexMesh* convexMesh = gPhysics->createConvexMesh(input);
+
+    return convexMesh;
 }
 
 PhysicsEngine* PhysicsEngine::get()

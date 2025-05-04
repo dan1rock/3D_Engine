@@ -17,6 +17,7 @@ public:
 	virtual void render() = 0;
 	void setMaterial(Material* material);
 	void setMesh(Mesh* mesh);
+	Mesh* getMesh();
 
 protected:
 	virtual void init() = 0;

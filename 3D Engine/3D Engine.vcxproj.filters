@@ -135,6 +135,12 @@
     <ClCompile Include="RigidBody.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="ConvexMesh.cpp">
+      <Filter>Engine\Resource managers</Filter>
+    </ClCompile>
+    <ClCompile Include="ConvexMeshManager.cpp">
+      <Filter>Engine\Resource managers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppWindow.h">
@@ -247,6 +253,12 @@
     </ClInclude>
     <ClInclude Include="Quaternion.h">
       <Filter>Math</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvexMesh.h">
+      <Filter>Engine\Resource managers</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvexMeshManager.h">
+      <Filter>Engine\Resource managers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

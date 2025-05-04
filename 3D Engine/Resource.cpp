@@ -7,3 +7,8 @@ Resource::Resource(const wchar_t* fullPath) : fullPath(fullPath)
 Resource::~Resource()
 {
 }
+
+std::wstring Resource::getFullPath()
+{
+	return fullPath;
+}

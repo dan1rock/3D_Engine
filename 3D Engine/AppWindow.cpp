@@ -13,6 +13,7 @@
 #include "Camera.h"
 #include "FreelookCameraController.h"
 #include "InstantiationTest.h"
+#include "RigidBody.h"
 
 constant* constantData = nullptr;
 
@@ -50,6 +51,7 @@ void AppWindow::onCreate()
 
 	Mesh* penguinMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\penguin.obj");
 	Mesh* rabbitMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\rabbit.obj");
+	Mesh* planeMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\plane.obj");
 
 	Material* penguinMaterial = new Material();
 	penguinMaterial->addTexture(penguinTexture);
@@ -57,6 +59,11 @@ void AppWindow::onCreate()
 	Material* rabbitMaterial = new Material();
 	rabbitMaterial->addTexture(rabbitTexture);
 	rabbitMaterial->smoothness = 0.1f;
+
+	GameObject* plane = new GameObject(Vector3(0.0f, -2.0f, 0.0f));
+	plane->getTransform()->setScale(Vector3(10.0f, 1.0f, 10.0f));
+	plane->addComponent<MeshRenderer>(planeMesh);
+	plane->addComponent<RigidBody>(true);
 
 	GameObject* penguin = new GameObject(Vector3(1.0f, 0.0f, 0.0f));
 	penguin->addComponent<MeshRenderer>(penguinMesh, penguinMaterial);

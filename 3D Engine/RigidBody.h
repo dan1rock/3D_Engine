@@ -5,17 +5,18 @@
 class RigidBody : public Component
 {
 public:
-	RigidBody();
-    RigidBody(float radius, float mass);
+	RigidBody(bool isStatic = false);
+    RigidBody(float radius, float mass, bool isStatic = false);
     ~RigidBody() override;
 
     void awake() override;
     void update() override;
 
 private:
-    physx::PxRigidDynamic* mActor = nullptr;
+    physx::PxRigidActor* mActor = nullptr;
 
 	float mRadius = 1.0f;
 	float mMass = 1.0f;
+	bool mIsStatic = false;
 };
 
