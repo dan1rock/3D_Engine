@@ -33,6 +33,7 @@ void RigidBody::awake()
     Transform* t = mOwner->getTransform();
     Vector3 pos = t->getPosition();
     Vector3 euler = t->getRotation();
+	mScale = t->getScale();
 
     PxQuat q = PxQuat(euler.x, PxVec3(1, 0, 0))
         * PxQuat(euler.y, PxVec3(0, 1, 0))
@@ -50,26 +51,16 @@ void RigidBody::awake()
 		mActor = physics->getPhysics()->createRigidDynamic(pose);
 	}
 
-	PxGeometry* geometry = nullptr;
+	mMaterial = physics->getMaterial();
 
-	MeshRenderer* meshRenderer = mOwner->getComponent<MeshRenderer>();
-	if (meshRenderer) {
-		ConvexMesh* convexMesh = PhysicsEngine::get()->getConvexMeshManager()->createConvexMeshFromFile(meshRenderer->getMesh()->getFullPath().c_str());
-		geometry = new PxConvexMeshGeometry(static_cast<PxConvexMesh*>(convexMesh->getConvexMesh()));
-	}
-	else {
-		geometry = new PxSphereGeometry(mRadius);
-	}
+	updateShape();
 
-    PxMaterial* mat = physics->getMaterial();
-    PxShape* shape = physics->getPhysics()->createShape(*geometry, *mat);
-    mActor->attachShape(*shape);
+    mActor->attachShape(*mShape);
 
 	if (!mIsStatic)
 	{
 		PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
-		dynamicActor->setMass(mMass);
-		dynamicActor->setMassSpaceInertiaTensor(PxVec3(1, 1, 1));
+		PxRigidBodyExt::updateMassAndInertia(*dynamicActor, mMass);
 	}
 
     physics->getScene()->addActor(*mActor);
@@ -77,14 +68,58 @@ void RigidBody::awake()
 
 void RigidBody::update()
 {
-    if (!mActor) return;
+}
 
-    PxTransform p = mActor->getGlobalPose();
+void RigidBody::fixedUpdate()
+{
+	if (!mActor) return;
 
-    Transform* t = getOwner()->getTransform();
-    t->setPosition({ p.p.x, p.p.y, p.p.z });
+	PxTransform p = mActor->getGlobalPose();
 
-    Quaternion quat{ p.q.x, p.q.y, p.q.z, p.q.w };
-    Vector3 euler = quat.toEuler();
-    t->setRotation(euler);
+	Transform* t = getOwner()->getTransform();
+	t->setPosition({ p.p.x, p.p.y, p.p.z });
+
+	Quaternion quat{ p.q.x, p.q.y, p.q.z, p.q.w };
+	Vector3 euler = quat.toEuler();
+	t->setRotation(euler);
+
+	if (!(mOwner->getTransform()->getScale() == mScale))
+	{
+		mScale = mOwner->getTransform()->getScale();
+
+		mActor->detachShape(*mShape);
+		updateShape();
+		mActor->attachShape(*mShape);
+	}
+}
+
+void RigidBody::updateShape()
+{
+	PxGeometry* geometry = nullptr;
+	PxMeshScale meshScale(PxVec3(mScale.x, mScale.y, mScale.z), PxQuat(PxIdentity));
+
+	MeshRenderer* meshRenderer = mOwner->getComponent<MeshRenderer>();
+	if (meshRenderer) {
+		ConvexMesh* convexMesh = PhysicsEngine::get()->getConvexMeshManager()->createConvexMeshFromFile(meshRenderer->getMesh()->getFullPath().c_str());
+
+		if (mIsStatic)
+		{
+			geometry = new PxTriangleMeshGeometry(static_cast<PxTriangleMesh*>(convexMesh->getTriangleMesh()), meshScale);
+		}
+		else
+		{
+			geometry = new PxConvexMeshGeometry(static_cast<PxConvexMesh*>(convexMesh->getConvexMesh()), meshScale);
+		}
+	}
+	else {
+		geometry = new PxSphereGeometry(mRadius);
+	}
+
+	if (mShape)
+	{
+		mShape->release();
+		mShape = nullptr;
+	}
+
+	mShape = PhysicsEngine::get()->getPhysics()->createShape(*geometry, *mMaterial);
 }

@@ -57,6 +57,9 @@ void PhysicsEngine::init()
         client->setScenePvdFlag(
             PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
     }
+
+    PxCookingParams params(gPhysics->getTolerancesScale());
+    gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, params);
 }
 
 void PhysicsEngine::update(float deltaTime)
@@ -121,12 +124,6 @@ ConvexMeshManager* PhysicsEngine::getConvexMeshManager()
 
 PxConvexMesh* PhysicsEngine::cookConvexMesh(const std::vector<PxVec3>& points)
 {
-	if (!gCooking)
-	{
-		PxCookingParams params(gPhysics->getTolerancesScale());
-		gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, params);
-	}
-
     PxConvexMeshDesc desc;
     desc.points.count = static_cast<PxU32>(points.size());
     desc.points.stride = sizeof(PxVec3);
@@ -142,6 +139,26 @@ PxConvexMesh* PhysicsEngine::cookConvexMesh(const std::vector<PxVec3>& points)
     PxConvexMesh* convexMesh = gPhysics->createConvexMesh(input);
 
     return convexMesh;
+}
+
+PxTriangleMesh* PhysicsEngine::cookTriangleMesh(const std::vector<PxVec3>& points, const std::vector<PxU32>& indices)
+{
+    PxTriangleMeshDesc meshDesc;
+    meshDesc.points.count = PxU32(points.size());
+    meshDesc.points.stride = sizeof(PxVec3);
+    meshDesc.points.data = points.data();
+    meshDesc.triangles.count = PxU32(indices.size() / 3);
+    meshDesc.triangles.stride = 3 * sizeof(uint32_t);
+    meshDesc.triangles.data = indices.data();
+
+    PxDefaultMemoryOutputStream buf;
+    if (!gCooking->cookTriangleMesh(meshDesc, buf))
+        throw std::runtime_error("Failed to cook triangle mesh");
+
+    PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
+    PxTriangleMesh* triangleMesh = gPhysics->createTriangleMesh(input);
+
+    return triangleMesh;
 }
 
 PhysicsEngine* PhysicsEngine::get()

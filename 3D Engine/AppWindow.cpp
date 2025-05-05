@@ -104,7 +104,11 @@ void AppWindow::onUpdate()
 
 	GraphicsEngine::get()->getComponentManager()->updateComponents();
 
-	PhysicsEngine::get()->update(Time::deltaTime);
+	if (Time::deltaTime >= 0.0f)
+	{
+		GraphicsEngine::get()->getComponentManager()->fixedUpdateComponents();
+		PhysicsEngine::get()->update(Time::deltaTime);
+	}
 
 	GraphicsEngine::get()->getComponentManager()->updateCameras();
 	GraphicsEngine::get()->getComponentManager()->updateRenderers();

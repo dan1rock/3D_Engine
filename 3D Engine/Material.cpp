@@ -45,6 +45,7 @@ void Material::setPixelShader(PixelShader* pixelShader)
 
 void Material::addTexture(Texture* texture)
 {
+	if (texture == nullptr) return;
 	mTextures.push_back(texture);
 }
 

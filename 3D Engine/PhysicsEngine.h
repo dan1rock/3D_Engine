@@ -23,6 +23,7 @@ public:
 	ConvexMeshManager* getConvexMeshManager();
 
 	PxConvexMesh* cookConvexMesh(const std::vector<PxVec3>& points);
+	PxTriangleMesh* cookTriangleMesh(const std::vector<PxVec3>& points, const std::vector<PxU32>& indices);
 
 	static PhysicsEngine* get();
 

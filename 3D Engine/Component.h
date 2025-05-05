@@ -18,6 +18,7 @@ private:
 
 	virtual void awake();
 	virtual void update();
+	virtual void fixedUpdate();
 
 	friend class GameObject;
 	friend class ComponentManager;

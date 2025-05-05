@@ -58,6 +58,13 @@ void ComponentManager::updateComponents()
 	}
 }
 
+void ComponentManager::fixedUpdateComponents()
+{
+	for (auto* c : mComponents) {
+		c->fixedUpdate();
+	}
+}
+
 void ComponentManager::updateRenderers()
 {
 	for (auto* r : mRenderers) {

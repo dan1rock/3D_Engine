@@ -26,6 +26,10 @@ void Component::update()
 {
 }
 
+void Component::fixedUpdate()
+{
+}
+
 void Component::awake()
 {
 }

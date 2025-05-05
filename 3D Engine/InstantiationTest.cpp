@@ -22,12 +22,12 @@ void InstantiationTest::update()
 	{
 		if (mMaterial == nullptr)
 		{
-			Texture* penguinTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\penguin.png");
+			Texture* penguinTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\rabbit.png");
 			mMaterial = new Material();
 			mMaterial->addTexture(penguinTexture);
 		}
 
-		Mesh* penguinMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\penguin.obj");
+		Mesh* penguinMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\rabbit.obj");
 
 		GameObject* newObject = new GameObject(mPosition);
 		newObject->addComponent<MeshRenderer>(penguinMesh, mMaterial);

@@ -8,8 +8,13 @@ public:
 	~ConvexMesh();
 
 	void* getConvexMesh();
+	void* getTriangleMesh();
 
 private:
 	void* mConvexMesh = nullptr;
+	void* mTriangleMesh = nullptr;
+
+	void createConvexMesh();
+	void createTriangleMesh();
 };
 

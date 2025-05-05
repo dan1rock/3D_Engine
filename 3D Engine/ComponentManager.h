@@ -22,6 +22,7 @@ public:
 	void unregisterCamera(Camera* camera);
 
 	void updateComponents();
+	void fixedUpdateComponents();
 	void updateRenderers();
 	void updateCameras();
 private:
