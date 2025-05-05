@@ -43,6 +43,9 @@ void PhysicsEngine::init()
 
     PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
     sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f);
+	sceneDesc.flags |= PxSceneFlag::eENABLE_CCD;
+    sceneDesc.ccdThreshold = 0.001f;
+    sceneDesc.ccdMaxPasses = 4;
     gDispatcher = PxDefaultCpuDispatcherCreate(2);
     sceneDesc.cpuDispatcher = gDispatcher;
     sceneDesc.filterShader = PxDefaultSimulationFilterShader;

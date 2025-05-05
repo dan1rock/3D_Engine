@@ -151,6 +151,7 @@
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="ConvexMesh.cpp" />
     <ClCompile Include="ConvexMeshManager.cpp" />
+    <ClCompile Include="DemoPlayer.cpp" />
     <ClCompile Include="DeviceContext.cpp" />
     <ClCompile Include="FreelookCameraController.cpp" />
     <ClCompile Include="GameObject.cpp" />
@@ -188,6 +189,7 @@
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="ConvexMesh.h" />
     <ClInclude Include="ConvexMeshManager.h" />
+    <ClInclude Include="DemoPlayer.h" />
     <ClInclude Include="DeviceContext.h" />
     <ClInclude Include="FreelookCameraController.h" />
     <ClInclude Include="GameObject.h" />
@@ -227,6 +229,9 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="PrototypePixelShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="UnlitPixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>

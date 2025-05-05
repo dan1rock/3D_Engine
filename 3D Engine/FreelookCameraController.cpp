@@ -56,7 +56,12 @@ void FreelookCameraController::update()
 
 	if (Input::getKey(VK_SHIFT))
 	{
-		direction *= 2.0f;
+		direction *= 2.0f * speedIncrement;
+		speedIncrement *= 1.0f + Time::getDeltaTime();
+	}
+	else
+	{
+		speedIncrement = 1.0f;
 	}
 
 	mOwner->getTransform()->setRotation(rotation);

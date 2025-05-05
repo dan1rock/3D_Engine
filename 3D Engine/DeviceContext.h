@@ -17,6 +17,7 @@ public:
 
 	void clearRenderTarget(SwapChain* swapChain, float r, float g, float b, float a);
 
+	void setSamplerState(ID3D11SamplerState* samplerState);
 	void setRasterizer(ID3D11RasterizerState* rasterState);
 	void setVertexBuffer(VertexBuffer* vertexBuffer);
 	void setIndexBuffer(IndexBuffer* indexBuffer);

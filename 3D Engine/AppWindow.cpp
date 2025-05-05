@@ -11,7 +11,7 @@
 #include "ComponentManager.h"
 #include "Time.h"
 #include "Camera.h"
-#include "FreelookCameraController.h"
+#include "DemoPlayer.h"
 #include "InstantiationTest.h"
 #include "RigidBody.h"
 
@@ -48,10 +48,18 @@ void AppWindow::onCreate()
 
 	Texture* penguinTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\penguin.png");
 	Texture* rabbitTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\256-gradient.png");
+	Texture* prototypeTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\1x1_grid_quarter_lines_numbered.png");
 
 	Mesh* penguinMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\penguin.obj");
 	Mesh* rabbitMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\rabbit.obj");
 	Mesh* planeMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\plane.obj");
+
+	Material* prototypeMaterial = new Material();
+	prototypeMaterial->addTexture(prototypeTexture);
+	prototypeMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"PrototypePixelShader.hlsl", "main"));
+	prototypeMaterial->setColor(0.5f, 0.5f, 0.5f, 1.0f);
+	prototypeMaterial->textureScale = 20.0f;
+	prototypeMaterial->clampTexture = false;
 
 	Material* penguinMaterial = new Material();
 	penguinMaterial->addTexture(penguinTexture);
@@ -61,8 +69,8 @@ void AppWindow::onCreate()
 	rabbitMaterial->smoothness = 0.1f;
 
 	GameObject* plane = new GameObject(Vector3(0.0f, -2.0f, 0.0f));
-	plane->getTransform()->setScale(Vector3(10.0f, 1.0f, 10.0f));
-	plane->addComponent<MeshRenderer>(planeMesh);
+	plane->getTransform()->setScale(Vector3(20.0f, 1.0f, 20.0f));
+	plane->addComponent<MeshRenderer>(planeMesh, prototypeMaterial);
 	plane->addComponent<RigidBody>(true);
 
 	GameObject* penguin = new GameObject(Vector3(1.0f, 0.0f, 0.0f));
@@ -77,12 +85,10 @@ void AppWindow::onCreate()
 	GameObject* camera = new GameObject(Vector3(0, 1, 3));
 	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
 	camera->addComponent<Camera>();
-	camera->addComponent<FreelookCameraController>(2.0f, 0.002f);
+	camera->addComponent<DemoPlayer>(2.0f, 0.002f);
 
 	GameObject* test = new GameObject(Vector3(0, 0, 0));
 	test->addComponent<InstantiationTest>();
-
-	GraphicsEngine::get()->setRasterizerState(true);
 }
 
 void AppWindow::onUpdate()

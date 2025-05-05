@@ -35,6 +35,13 @@ public:
 		return Vector3(x + vector.x, y + vector.y, z + vector.z);
 	}
 
+	Vector3 cross(const Vector3& vector) {
+		return Vector3(
+			y * vector.z - z * vector.y,
+			z * vector.x - x * vector.z,
+			x * vector.y - y * vector.x);
+	}
+
 	void normalize() {
 		float length = (float)sqrt(x * x + y * y + z * z);
 		if (length != 0) {

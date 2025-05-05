@@ -141,6 +141,9 @@
     <ClCompile Include="ConvexMeshManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
+    <ClCompile Include="DemoPlayer.cpp">
+      <Filter>Engine\Component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppWindow.h">
@@ -260,6 +263,9 @@
     <ClInclude Include="ConvexMeshManager.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
+    <ClInclude Include="DemoPlayer.h">
+      <Filter>Engine\Component</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl">
@@ -272,6 +278,9 @@
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="UnlitPixelShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PrototypePixelShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
   </ItemGroup>

@@ -53,7 +53,7 @@ T* GameObject::addComponent(Args&&... args)
 		mRigidBody = rb;
 	}
 
-	ptr->awake();
+	static_cast<Component*>(ptr)->awake();
 
 	return ptr;
 }

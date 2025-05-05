@@ -29,6 +29,11 @@ Vector3 Transform::getRotation()
 	return mRotation;
 }
 
+Vector3 Transform::getForward()
+{
+	return mMatrix.getZDirection().normalized();
+}
+
 void Transform::setPosition(Vector3 position)
 {
 	mMatrix.setTranslation(position);
@@ -45,4 +50,9 @@ void Transform::setRotation(Vector3 rotation)
 {
 	mMatrix.setRotation(rotation);
 	mRotation = rotation;
+}
+
+void Transform::setForward(Vector3 forward)
+{
+	mMatrix.setForward(forward);
 }

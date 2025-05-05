@@ -28,6 +28,24 @@ RigidBody::~RigidBody()
 	}
 }
 
+void RigidBody::addForce(const Vector3& force)
+{
+	if (!mActor) return;
+	if (mIsStatic) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	dynamicActor->addForce(PxVec3(force.x, force.y, force.z), PxForceMode::eFORCE, true);
+}
+
+void RigidBody::setContinousCollisionDetection(bool ccd)
+{
+	if (!mActor) return;
+	if (mIsStatic) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, ccd);
+}
+
 void RigidBody::awake()
 {
     Transform* t = mOwner->getTransform();

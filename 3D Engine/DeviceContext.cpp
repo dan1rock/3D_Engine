@@ -20,6 +20,12 @@ void DeviceContext::clearRenderTarget(SwapChain* swapChain, float r, float g, fl
 	mDeviceContext->OMSetRenderTargets(1, &swapChain->mRenderTargetView, swapChain->mDepthStencilView);
 }
 
+void DeviceContext::setSamplerState(ID3D11SamplerState* samplerState)
+{
+	mDeviceContext->PSSetSamplers(0, 1, &samplerState);
+	mDeviceContext->VSSetSamplers(0, 1, &samplerState);
+}
+
 void DeviceContext::setRasterizer(ID3D11RasterizerState* rasterState)
 {
 	mDeviceContext->RSSetState(rasterState);

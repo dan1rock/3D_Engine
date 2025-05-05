@@ -60,6 +60,9 @@ bool GraphicsEngine::init()
 
 	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
+	createSamplerStates();
+	createRasterizerStates();
+
 	mGlobalResources->init();
 
 	return true;
@@ -73,6 +76,12 @@ bool GraphicsEngine::release()
 
 	mImmDeviceContext->release();
 	mD3dDevice->Release();
+
+	mRasterStateCullFront->Release();
+	mRasterStateCullBack->Release();
+	mSamplerWrap->Release();
+	mSamplerClamp->Release();
+
 	return true;
 }
 
@@ -242,26 +251,22 @@ void GraphicsEngine::releasePixelShader()
 	if (mPSBlob) mPSBlob->Release();
 }
 
-void GraphicsEngine::setRasterizerState(bool cullBack)
-{
-	if (mRasterStateCullBack == nullptr) createRasterizer();
-
-	mImmDeviceContext->setRasterizer(cullBack ? mRasterStateCullBack : mRasterStateCullFront);
-}
-
 void GraphicsEngine::setMaterial(Material* material)
 {
 	material->onMaterialSet();
 	mImmDeviceContext->setVertexShader(material->mVertexShader);
 	mImmDeviceContext->setPixelShader(material->mPixelShader);
+	mImmDeviceContext->setRasterizer(material->cullBack ? mRasterStateCullBack : mRasterStateCullFront);
 
 	if (material->mTextures.size() > 0)
 	{
 		mImmDeviceContext->setTexture(material->mPixelShader, material->mTextures[0]);
+
+		mImmDeviceContext->setSamplerState(material->clampTexture ? mSamplerClamp : mSamplerWrap);
 	}
 }
 
-bool GraphicsEngine::createRasterizer()
+bool GraphicsEngine::createRasterizerStates()
 {
 	CD3D11_RASTERIZER_DESC rastDesc(D3D11_FILL_SOLID, D3D11_CULL_BACK, FALSE,
 		D3D11_DEFAULT_DEPTH_BIAS, D3D11_DEFAULT_DEPTH_BIAS_CLAMP,
@@ -276,5 +281,31 @@ bool GraphicsEngine::createRasterizer()
 	hr = GraphicsEngine::get()->mD3dDevice->CreateRasterizerState(&rastDesc, &mRasterStateCullFront);
 
 	if (!SUCCEEDED(hr)) return false;
+	return true;
+}
+
+bool GraphicsEngine::createSamplerStates()
+{
+	D3D11_SAMPLER_DESC sampDesc = {};
+	sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampDesc.MinLOD = 0;
+	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	HRESULT hr = GraphicsEngine::get()->mD3dDevice->CreateSamplerState(&sampDesc, &mSamplerWrap);
+
+	if (FAILED(hr)) return false;
+
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+
+	hr = GraphicsEngine::get()->mD3dDevice->CreateSamplerState(&sampDesc, &mSamplerClamp);
+
+	if (FAILED(hr)) return false;
+
 	return true;
 }

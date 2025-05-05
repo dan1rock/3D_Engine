@@ -48,11 +48,11 @@ public:
 	bool compilePixelShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
 	void releasePixelShader();
 
-	void setRasterizerState(bool cullBack);
 	void setMaterial(Material* material);
 
 private:
-	bool createRasterizer();
+	bool createRasterizerStates();
+	bool createSamplerStates();
 
 	ID3D11Device* mD3dDevice = nullptr;
 	D3D_FEATURE_LEVEL mFeatureLevel = {};
@@ -60,6 +60,9 @@ private:
 
 	ID3D11RasterizerState* mRasterStateCullFront = nullptr;
 	ID3D11RasterizerState* mRasterStateCullBack = nullptr;
+
+	ID3D11SamplerState* mSamplerWrap = nullptr;
+	ID3D11SamplerState* mSamplerClamp = nullptr;
 
 	IDXGIDevice* mDxgiDevice = nullptr;
 	IDXGIAdapter* mDxgiAdapter = nullptr;

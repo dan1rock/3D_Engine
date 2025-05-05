@@ -10,6 +10,9 @@ public:
     RigidBody(float radius, float mass, bool isStatic = false);
     ~RigidBody() override;
 
+	void addForce(const Vector3& force);
+	void setContinousCollisionDetection(bool ccd);
+
 private:
 	void awake() override;
 	void update() override;

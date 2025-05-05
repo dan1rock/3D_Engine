@@ -12,10 +12,12 @@ public:
 	Vector3 getPosition();
 	Vector3 getScale();
 	Vector3 getRotation();
+	Vector3 getForward();
 
 	void setPosition(Vector3 position);
 	void setScale(Vector3 scale);
 	void setRotation(Vector3 rotation);
+	void setForward(Vector3 forward);
 
 private:
 	Matrix mMatrix = {};

@@ -8,10 +8,11 @@ public:
 	FreelookCameraController(float speed, float mouseSpeed);
 	~FreelookCameraController() override;
 
-private:
+protected:
 	void update() override;
 
 	float speed = 2.0f;
+	float speedIncrement = 1.0f;
 	float mouseSpeed = 0.002f;
 };
 

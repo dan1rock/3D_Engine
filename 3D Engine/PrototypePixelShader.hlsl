@@ -1,8 +1,9 @@
 Texture2D Texture : register(t0);
 sampler TextureSampler : register(s0);
 
-struct PS_INPUT {
-	float4 pos: SV_POSITION0;
+struct PS_INPUT
+{
+    float4 pos : SV_POSITION0;
     float3 normal : TEXCOORD1;
     float2 texCoord : TEXCOORD0;
     float3 cameraDir : TEXCOORD2;
@@ -63,7 +64,11 @@ float4 main(PS_INPUT input) : SV_TARGET
     
     if (isTextured)
     {
-        baseColor *= Texture.Sample(TextureSampler, input.texCoord * textureScale);
+        float4 textureSample = Texture.Sample(TextureSampler, input.texCoord * textureScale);
+        if (textureSample.a > 0.1f)
+        {
+            baseColor = textureSample;
+        }
     }
     
     float4 result = baseColor * float4(lighting, 1.0f);
