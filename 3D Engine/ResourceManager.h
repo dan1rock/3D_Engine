@@ -12,6 +12,9 @@ public:
 
 	Resource* createResourceFromFile(const wchar_t* path);
 
+	void markResourcesAsUnused();
+	void unloadUnusedResources();
+
 protected:
 	virtual Resource* createResourceFromFileConcrete(const wchar_t* filePath) = 0;
 

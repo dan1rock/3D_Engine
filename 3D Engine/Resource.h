@@ -11,4 +11,8 @@ public:
 
 private:
 	std::wstring fullPath;
+
+	bool isUsed = false;
+
+	friend class ResourceManager;
 };

@@ -22,7 +22,6 @@ GraphicsEngine::GraphicsEngine()
 		mTextureManager = new TextureManager();
 		mMeshManager = new MeshManager();
 		mGlobalResources = new GlobalResources();
-		mComponentManager = new ComponentManager();
 	}
 	catch(...) {}
 }
@@ -191,11 +190,6 @@ PixelShader* GraphicsEngine::getPixelShader(const wchar_t* fileName, const char*
 	}
 
 	return nullptr;
-}
-
-ComponentManager* GraphicsEngine::getComponentManager()
-{
-	return mComponentManager;
 }
 
 TextureManager* GraphicsEngine::getTextureManager()

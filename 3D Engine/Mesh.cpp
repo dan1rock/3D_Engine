@@ -85,6 +85,16 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
 
 Mesh::~Mesh()
 {
+	if (mVertexBuffer)
+	{
+		mVertexBuffer->release();
+		mVertexBuffer = nullptr;
+	}
+	if (mIndexBuffer)
+	{
+		mIndexBuffer->release();
+		mIndexBuffer = nullptr;
+	}
 }
 
 VertexBuffer* Mesh::getVertexBuffer()

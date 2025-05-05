@@ -1,7 +1,7 @@
 #pragma once
-#include "RenderObject.h"
+#include "RenderComponent.h"
 
-class MeshRenderer : public RenderObject
+class MeshRenderer : public RenderComponent
 {
 public:
 	MeshRenderer();
@@ -13,5 +13,5 @@ public:
 	virtual void render() override;
 
 private:
-	virtual void init() override;
+	virtual void awake() override;
 };

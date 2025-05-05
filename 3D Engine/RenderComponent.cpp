@@ -1,34 +1,27 @@
-#include "RenderObject.h"
+#include "RenderComponent.h"
 #include "Material.h"
 #include "GlobalResources.h"
 #include "GraphicsEngine.h"
 #include "ComponentManager.h"
 #include "GameObject.h"
 
-RenderObject::RenderObject()
+RenderComponent::RenderComponent()
 {
-	GraphicsEngine::get()->getComponentManager()->registerRenderer(this);
+	ComponentManager::get()->registerRenderer(this);
 }
 
-RenderObject::~RenderObject()
+RenderComponent::~RenderComponent()
 {
-	GraphicsEngine::get()->getComponentManager()->unregisterRenderer(this);
+	ComponentManager::get()->unregisterRenderer(this);
 }
 
-void RenderObject::init()
+void RenderComponent::awake()
 {
 	if (mMaterial == nullptr) mMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
-
-	this->isInitialized = true;
 }
 
-void RenderObject::render()
+void RenderComponent::render()
 {
-	if (!isInitialized)
-	{
-		this->init();
-	}
-
 	GraphicsEngine::get()->setMaterial(mMaterial);
 	
 	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
@@ -42,17 +35,17 @@ void RenderObject::render()
 	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
 }
 
-void RenderObject::setMaterial(Material* material)
+void RenderComponent::setMaterial(Material* material)
 {
 	this->mMaterial = material;
 }
 
-void RenderObject::setMesh(Mesh* mesh)
+void RenderComponent::setMesh(Mesh* mesh)
 {
 	this->mMesh = mesh;
 }
 
-Mesh* RenderObject::getMesh()
+Mesh* RenderComponent::getMesh()
 {
 	return mMesh;
 }

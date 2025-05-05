@@ -1,7 +1,7 @@
 #pragma once
-#include "RenderObject.h"
+#include "RenderComponent.h"
 
-class SkySphere : public RenderObject
+class SkySphere : public RenderComponent
 {
 public:
 	SkySphere();
@@ -10,5 +10,5 @@ public:
 	virtual void render() override;
 
 private:
-	virtual void init() override;
+	void awake() override;
 };

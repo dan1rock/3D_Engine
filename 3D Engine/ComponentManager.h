@@ -2,7 +2,7 @@
 #include <list>
 
 class Component;
-class RenderObject;
+class RenderComponent;
 class Camera;
 class GameObject;
 
@@ -16,8 +16,8 @@ public:
 	void unregisterGameObject(GameObject* gameObject);
 	void registerComponent(Component* component);
 	void unregisterComponent(Component* component);
-	void registerRenderer(RenderObject* renderer);
-	void unregisterRenderer(RenderObject* renderer);
+	void registerRenderer(RenderComponent* renderer);
+	void unregisterRenderer(RenderComponent* renderer);
 	void registerCamera(Camera* camera);
 	void unregisterCamera(Camera* camera);
 
@@ -25,10 +25,16 @@ public:
 	void fixedUpdateComponents();
 	void updateRenderers();
 	void updateCameras();
+
+	void onSceneLoadStart();
+	void onSceneLoadFinished();
+
+	static ComponentManager* get();
+
 private:
 	std::list<GameObject*> mGameObjects = {};
 	std::list<Component*> mComponents = {};
-	std::list<RenderObject*> mRenderers = {};
+	std::list<RenderComponent*> mRenderers = {};
 	std::list<Camera*> mCameras = {};
 };
 

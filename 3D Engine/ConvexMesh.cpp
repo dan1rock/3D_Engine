@@ -6,6 +6,7 @@
 #include "Vector3.h"
 #include "Vector2.h"
 #include <vector>
+#include <PxPhysics.h>
 
 ConvexMesh::ConvexMesh(const wchar_t* fullPath) : Resource(fullPath)
 {
@@ -13,6 +14,16 @@ ConvexMesh::ConvexMesh(const wchar_t* fullPath) : Resource(fullPath)
 
 ConvexMesh::~ConvexMesh()
 {
+	if (mConvexMesh)
+	{
+		static_cast<PxConvexMesh*>(mConvexMesh)->release();
+		mConvexMesh = nullptr;
+	}
+	if (mTriangleMesh)
+	{
+		static_cast<PxTriangleMesh*>(mTriangleMesh)->release();
+		mTriangleMesh = nullptr;
+	}
 }
 
 void* ConvexMesh::getConvexMesh()

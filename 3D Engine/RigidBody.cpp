@@ -21,6 +21,12 @@ RigidBody::RigidBody(float radius, float mass, bool isStatic)
 
 RigidBody::~RigidBody()
 {
+	if (mShape)
+	{
+		mShape->release();
+		mShape = nullptr;
+	}
+
 	if (mActor)
 	{
 		mActor->release();

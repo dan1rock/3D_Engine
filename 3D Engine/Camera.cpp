@@ -6,12 +6,12 @@
 
 Camera::Camera()
 {
-	GraphicsEngine::get()->getComponentManager()->registerCamera(this);
+	ComponentManager::get()->registerCamera(this);
 }
 
 Camera::~Camera()
 {
-	GraphicsEngine::get()->getComponentManager()->unregisterCamera(this);
+	ComponentManager::get()->unregisterCamera(this);
 }
 
 void Camera::updateCamera()

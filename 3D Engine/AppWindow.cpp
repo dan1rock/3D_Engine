@@ -1,19 +1,10 @@
 #include "AppWindow.h"
 #include <Windows.h>
-#include "Mesh.h"
-#include "Cube.h"
-#include "MeshRenderer.h"
-#include "SkySphere.h"
-#include "TextureManager.h"
-#include "MeshManager.h"
-#include "Material.h"
 #include "GlobalResources.h"
 #include "ComponentManager.h"
 #include "Time.h"
-#include "Camera.h"
-#include "DemoPlayer.h"
-#include "InstantiationTest.h"
-#include "RigidBody.h"
+#include "SceneManager.h"
+#include "MainScene.h"
 
 constant* constantData = nullptr;
 
@@ -46,53 +37,16 @@ void AppWindow::onCreate()
 	constantData->lightColor[1] = 1.0f;
 	constantData->lightColor[2] = 1.0f;
 
-	Texture* penguinTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\penguin.png");
-	Texture* rabbitTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\256-gradient.png");
-	Texture* prototypeTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\1x1_grid_quarter_lines_numbered.png");
-
-	Mesh* penguinMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\penguin.obj");
-	Mesh* rabbitMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\rabbit.obj");
-	Mesh* planeMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\plane.obj");
-
-	Material* prototypeMaterial = new Material();
-	prototypeMaterial->addTexture(prototypeTexture);
-	prototypeMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"PrototypePixelShader.hlsl", "main"));
-	prototypeMaterial->setColor(0.5f, 0.5f, 0.5f, 1.0f);
-	prototypeMaterial->textureScale = 20.0f;
-	prototypeMaterial->clampTexture = false;
-
-	Material* penguinMaterial = new Material();
-	penguinMaterial->addTexture(penguinTexture);
-
-	Material* rabbitMaterial = new Material();
-	rabbitMaterial->addTexture(rabbitTexture);
-	rabbitMaterial->smoothness = 0.1f;
-
-	GameObject* plane = new GameObject(Vector3(0.0f, -2.0f, 0.0f));
-	plane->getTransform()->setScale(Vector3(20.0f, 1.0f, 20.0f));
-	plane->addComponent<MeshRenderer>(planeMesh, prototypeMaterial);
-	plane->addComponent<RigidBody>(true);
-
-	GameObject* penguin = new GameObject(Vector3(1.0f, 0.0f, 0.0f));
-	penguin->addComponent<MeshRenderer>(penguinMesh, penguinMaterial);
-
-	GameObject* rabbit = new GameObject(Vector3(-1.0f, 0.0f, 0.0f));
-	rabbit->addComponent<MeshRenderer>(rabbitMesh, rabbitMaterial);
-
-	GameObject* skyDome = new GameObject();
-	skyDome->addComponent<SkySphere>();
-
-	GameObject* camera = new GameObject(Vector3(0, 1, 3));
-	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
-	camera->addComponent<Camera>();
-	camera->addComponent<DemoPlayer>(2.0f, 0.002f);
-
-	GameObject* test = new GameObject(Vector3(0, 0, 0));
-	test->addComponent<InstantiationTest>();
+	SceneManager::get()->loadScene(new MainScene());
 }
 
 void AppWindow::onUpdate()
 {
+	if (!isFocused)
+	{
+		return;
+	}
+
 	GraphicsEngine::get()->getImmDeviceContext()->clearRenderTarget(mSwapChain, 0.1f, 0.1f, 0.1f, 1);
 	RECT windowSize = this->getClientWindowRect();
 	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
@@ -108,16 +62,18 @@ void AppWindow::onUpdate()
 	Input::update();
 	Input::updateMouse(this->getClientWindowRect(), isFocused);
 
-	GraphicsEngine::get()->getComponentManager()->updateComponents();
+	ComponentManager::get()->updateComponents();
 
 	if (Time::deltaTime >= 0.0f)
 	{
-		GraphicsEngine::get()->getComponentManager()->fixedUpdateComponents();
+		ComponentManager::get()->fixedUpdateComponents();
 		PhysicsEngine::get()->update(Time::deltaTime);
 	}
 
-	GraphicsEngine::get()->getComponentManager()->updateCameras();
-	GraphicsEngine::get()->getComponentManager()->updateRenderers();
+	ComponentManager::get()->updateCameras();
+	ComponentManager::get()->updateRenderers();
+
+	SceneManager::get()->update();
 
 	mSwapChain->present(false);
 }

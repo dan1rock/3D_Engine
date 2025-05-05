@@ -14,7 +14,7 @@ SkySphere::~SkySphere()
 {
 }
 
-void SkySphere::init()
+void SkySphere::awake()
 {
 	mMaterial = new Material();
 	mMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"UnlitPixelShader.hlsl", "main"));
@@ -23,7 +23,7 @@ void SkySphere::init()
 
 	mMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
 
-	RenderObject::init();
+	RenderComponent::awake();
 
 	mOwner->getTransform()->setScale(Vector3(100.0f, 100.0f, 100.0f));
 }
@@ -33,7 +33,7 @@ void SkySphere::render()
 	Vector3 cameraTranslation = GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.getTranslation();
 	GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.setTranslation(Vector3());
 
-	RenderObject::render();
+	RenderComponent::render();
 
 	GraphicsEngine::get()->getImmDeviceContext()->setVertexBuffer(mMesh->getVertexBuffer());
 	GraphicsEngine::get()->getImmDeviceContext()->setIndexBuffer(mMesh->getIndexBuffer());

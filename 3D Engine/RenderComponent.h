@@ -8,11 +8,11 @@ class ConstantBuffer;
 class Material;
 class Matrix;
 
-class RenderObject : public Component
+class RenderComponent : public Component
 {
 public:
-	RenderObject();
-	~RenderObject() override;
+	RenderComponent();
+	~RenderComponent() override;
 
 	virtual void render() = 0;
 	void setMaterial(Material* material);
@@ -20,7 +20,7 @@ public:
 	Mesh* getMesh();
 
 protected:
-	virtual void init() = 0;
+	virtual void awake() override;
 
 	Material* mMaterial = nullptr;
 

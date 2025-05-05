@@ -19,14 +19,14 @@ MeshRenderer::~MeshRenderer()
 {
 }
 
-void MeshRenderer::init()
+void MeshRenderer::awake()
 {
-	RenderObject::init();
+	RenderComponent::awake();
 }
 
 void MeshRenderer::render()
 {
-	RenderObject::render();
+	RenderComponent::render();
 
 	if (mMesh == nullptr) return;
 

@@ -1,0 +1,44 @@
+#include "SceneChanger.h"
+#include "GameObject.h"
+#include "MainScene.h"
+#include "Scene1.h"
+#include "SceneManager.h"
+#include "Input.h"
+
+SceneChanger* instance = nullptr;
+
+SceneChanger::SceneChanger()
+{
+}
+
+SceneChanger::~SceneChanger()
+{
+	if (instance == this)
+	{
+		instance = nullptr;
+	}
+}
+
+void SceneChanger::awake()
+{
+	if (instance == nullptr)
+	{
+		instance = this;
+	}
+	else
+	{
+		mOwner->destroy();
+	}
+}
+
+void SceneChanger::update()
+{
+	if (Input::getKeyDown('1'))
+	{
+		SceneManager::get()->loadScene(new MainScene());
+	}
+	if (Input::getKeyDown('2'))
+	{
+		SceneManager::get()->loadScene(new Scene1());
+	}
+}

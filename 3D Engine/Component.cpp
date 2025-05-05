@@ -1,15 +1,14 @@
 #include "Component.h"
-#include "GraphicsEngine.h"
 #include "ComponentManager.h"
 
 Component::Component()
 {
-    GraphicsEngine::get()->getComponentManager()->registerComponent(this);
+    ComponentManager::get()->registerComponent(this);
 }
 
 Component::~Component()
 {
-    GraphicsEngine::get()->getComponentManager()->unregisterComponent(this);
+    ComponentManager::get()->unregisterComponent(this);
 }
 
 GameObject* Component::getOwner()

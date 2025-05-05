@@ -22,6 +22,8 @@ public:
 
 	bool removeComponent(Component* component);
 
+	bool dontDestroyOnLoad = false;
+
 private:
 	Transform mTransform = {};
 	RigidBody* mRigidBody = nullptr;
