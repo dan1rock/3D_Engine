@@ -55,4 +55,5 @@ void Transform::setRotation(Vector3 rotation)
 void Transform::setForward(Vector3 forward)
 {
 	mMatrix.setForward(forward);
+	mRotation = mMatrix.getRotation();
 }

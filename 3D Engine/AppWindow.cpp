@@ -97,6 +97,7 @@ void AppWindow::onFocus()
 {
 	isFocused = true;
 	::ShowCursor(false);
+	Time::update();
 }
 
 void AppWindow::onKillFocus()

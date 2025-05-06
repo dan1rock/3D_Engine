@@ -28,7 +28,7 @@ void DemoPlayer::update()
 {
 	FreelookCameraController::update();
 
-	if (Input::getKeyDown('E'))
+	if (Input::getMouseButtonDown(MB_Left))
 	{
 		Mesh* mesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
 

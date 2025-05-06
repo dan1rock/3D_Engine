@@ -191,11 +191,21 @@ public:
 		::memcpy(mat, res.mat, sizeof(float) * 16);
 	}
 
-	Vector3 getRotation() {
+	Vector3 getRotation()
+	{
+		Vector3 r(mat[0][0], mat[0][1], mat[0][2]);
+		Vector3 u(mat[1][0], mat[1][1], mat[1][2]);
+		Vector3 f(mat[2][0], mat[2][1], mat[2][2]);
+
+		r = r.normalized();
+		u = u.normalized();
+		f = f.normalized();
+
 		Vector3 rotation;
-		rotation.x = atan2f(mat[2][1], mat[2][2]);
-		rotation.y = atan2f(-mat[2][0], sqrtf(mat[2][1] * mat[2][1] + mat[2][2] * mat[2][2]));
-		rotation.z = atan2f(mat[1][0], mat[0][0]);
+		rotation.x = atan2f(f.y, f.z);
+		rotation.y = atan2f(-f.x, sqrtf(f.y * f.y + f.z * f.z));
+		rotation.z = atan2f(u.x, r.x);
+
 		return rotation;
 	}
 
