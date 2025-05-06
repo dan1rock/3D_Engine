@@ -3,7 +3,6 @@
 
 Component::Component()
 {
-    ComponentManager::get()->registerComponent(this);
 }
 
 Component::~Component()
@@ -14,6 +13,11 @@ Component::~Component()
 GameObject* Component::getOwner()
 {
     return mOwner;
+}
+
+void Component::registerComponent()
+{
+    ComponentManager::get()->registerComponent(this);
 }
 
 void Component::setOwner(GameObject* gameObject)

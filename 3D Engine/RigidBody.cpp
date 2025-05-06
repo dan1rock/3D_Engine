@@ -45,6 +45,8 @@ void RigidBody::addForce(const Vector3& force)
 
 void RigidBody::setContinousCollisionDetection(bool ccd)
 {
+	mCcd = ccd;
+
 	if (!mActor) return;
 	if (mIsStatic) return;
 
@@ -85,6 +87,7 @@ void RigidBody::awake()
 	{
 		PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
 		PxRigidBodyExt::updateMassAndInertia(*dynamicActor, mMass);
+		dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, mCcd);
 	}
 
     physics->getScene()->addActor(*mActor);
@@ -101,11 +104,11 @@ void RigidBody::fixedUpdate()
 	PxTransform p = mActor->getGlobalPose();
 
 	Transform* t = getOwner()->getTransform();
-	t->setPosition({ p.p.x, p.p.y, p.p.z });
+	t->setPosition({ p.p.x, p.p.y, p.p.z }, false);
 
 	Quaternion quat{ p.q.x, p.q.y, p.q.z, p.q.w };
 	Vector3 euler = quat.toEuler();
-	t->setRotation(euler);
+	t->setRotation(euler, false);
 
 	if (!(mOwner->getTransform()->getScale() == mScale))
 	{
@@ -146,4 +149,21 @@ void RigidBody::updateShape()
 	}
 
 	mShape = PhysicsEngine::get()->getPhysics()->createShape(*geometry, *mMaterial);
+}
+
+void RigidBody::updateGlobalPose()
+{
+	if (!mActor) return;
+
+	Transform* t = mOwner->getTransform();
+	Vector3 pos = t->getPosition();
+	Vector3 euler = t->getRotation();
+	mScale = t->getScale();
+
+	PxQuat q = PxQuat(euler.x, PxVec3(1, 0, 0))
+		* PxQuat(euler.y, PxVec3(0, 1, 0))
+		* PxQuat(euler.z, PxVec3(0, 0, 1));
+	PxTransform pose(PxVec3(pos.x, pos.y, pos.z), q);
+
+	mActor->setGlobalPose(pose, true);
 }

@@ -60,6 +60,7 @@ void ComponentManager::unregisterCamera(Camera* camera)
 void ComponentManager::updateComponents()
 {
 	for (auto* c : mComponents) {
+		if (!c->getOwner()->isActive) continue;
 		c->update();
 	}
 }
@@ -67,6 +68,7 @@ void ComponentManager::updateComponents()
 void ComponentManager::fixedUpdateComponents()
 {
 	for (auto* c : mComponents) {
+		if (!c->getOwner()->isActive) continue;
 		c->fixedUpdate();
 	}
 }
@@ -74,6 +76,7 @@ void ComponentManager::fixedUpdateComponents()
 void ComponentManager::updateRenderers()
 {
 	for (auto* r : mRenderers) {
+		if (!r->getOwner()->isActive) continue;
 		r->render();
 	}
 }
@@ -81,6 +84,7 @@ void ComponentManager::updateRenderers()
 void ComponentManager::updateCameras()
 {
 	for (auto* c : mCameras) {
+		if (!c->getOwner()->isActive) continue;
 		c->updateCamera();
 	}
 }

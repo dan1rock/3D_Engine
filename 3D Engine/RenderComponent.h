@@ -20,6 +20,8 @@ public:
 	Mesh* getMesh();
 
 protected:
+	void registerComponent() override;
+
 	virtual void awake() override;
 
 	Material* mMaterial = nullptr;

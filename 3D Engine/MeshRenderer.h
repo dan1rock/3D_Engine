@@ -12,6 +12,11 @@ public:
 
 	virtual void render() override;
 
+protected:
+	MeshRenderer* instantiate() const override {
+		return new MeshRenderer(*this);
+	};
+
 private:
 	virtual void awake() override;
 };

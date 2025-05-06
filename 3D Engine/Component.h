@@ -13,6 +13,9 @@ public:
 protected:
 	GameObject* mOwner = nullptr;
 
+	virtual Component* instantiate() const = 0;
+	virtual void registerComponent();
+
 private:
 	void setOwner(GameObject* gameObject);
 

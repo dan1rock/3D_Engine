@@ -168,6 +168,9 @@
     <ClCompile Include="Scene1.cpp">
       <Filter>Application\Scenes</Filter>
     </ClCompile>
+    <ClCompile Include="Prefab.cpp">
+      <Filter>Engine\Component</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppWindow.h">
@@ -304,6 +307,9 @@
     </ClInclude>
     <ClInclude Include="Scene1.h">
       <Filter>Application\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="Prefab.h">
+      <Filter>Engine\Component</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

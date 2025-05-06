@@ -9,6 +9,11 @@ public:
 
 	virtual void render() override;
 
+protected:
+	SkySphere* instantiate() const override {
+		return new SkySphere(*this);
+	};
+
 private:
 	void awake() override;
 };

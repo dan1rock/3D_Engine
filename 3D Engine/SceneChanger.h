@@ -7,6 +7,11 @@ public:
 	SceneChanger();
 	~SceneChanger() override;
 
+protected:
+	SceneChanger* instantiate() const override {
+		return new SceneChanger(*this);
+	};
+
 private:
 	void awake() override;
 	void update() override;

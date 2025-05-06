@@ -9,7 +9,7 @@ class GameObject
 public:
 	GameObject();
 	GameObject(Vector3 position);
-	~GameObject();
+	virtual ~GameObject();
 
 	Transform* getTransform();
 	void destroy();
@@ -22,13 +22,20 @@ public:
 
 	bool removeComponent(Component* component);
 
-	bool dontDestroyOnLoad = false;
+	GameObject* instantiate();
 
-private:
-	Transform mTransform = {};
+	bool dontDestroyOnLoad = false;
+	bool isActive = true;
+
+protected:
+	virtual bool shouldAwakeComponents() const { return true; }
+
+    Transform mTransform;
 	RigidBody* mRigidBody = nullptr;
 
-	std::list<std::unique_ptr<Component>> mComponents;
+	std::list<Component*> mComponents;
+
+	friend class Transform;
 };
 
 template<typename T, typename... Args>
@@ -42,22 +49,25 @@ T* GameObject::addComponent(Args&&... args)
 		}
 	}
 
-	auto comp = std::make_unique<T>(std::forward<Args>(args)...);
+	auto* comp = new T(std::forward<Args>(args)...);
 
 	comp->setOwner(this);
 
-	T* ptr = comp.get();
-
-	mComponents.push_back(std::move(comp));
+	mComponents.push_back(comp);
 
 	if constexpr (std::is_base_of<RigidBody, T>::value) {
-		auto* rb = static_cast<RigidBody*>(ptr);
+		auto* rb = static_cast<RigidBody*>(comp);
 		mRigidBody = rb;
 	}
 
-	static_cast<Component*>(ptr)->awake();
+	static_cast<Component*>(comp)->registerComponent();
 
-	return ptr;
+	if (shouldAwakeComponents())
+	{
+		static_cast<Component*>(comp)->awake();
+	}
+
+	return comp;
 }
 
 template<typename T>
@@ -65,9 +75,9 @@ T* GameObject::getComponent()
 {
 	static_assert(std::is_base_of<Component, T>::value, "getComponent<T>: T must inherit from Component");
 
-	for (auto& compPtr : mComponents)
+	for (auto* compPtr : mComponents)
 	{
-		if (auto casted = dynamic_cast<T*>(compPtr.get()))
+		if (auto casted = dynamic_cast<T*>(compPtr))
 			return casted;
 	}
 	return nullptr;

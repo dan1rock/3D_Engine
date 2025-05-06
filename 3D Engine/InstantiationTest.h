@@ -12,6 +12,11 @@ public:
 	InstantiationTest();
 	~InstantiationTest() override;
 
+protected:
+	InstantiationTest* instantiate() const override {
+		return new InstantiationTest(*this);
+	};
+
 private:
 	void update() override;
 

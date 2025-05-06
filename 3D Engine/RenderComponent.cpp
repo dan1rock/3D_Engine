@@ -7,12 +7,17 @@
 
 RenderComponent::RenderComponent()
 {
-	ComponentManager::get()->registerRenderer(this);
 }
 
 RenderComponent::~RenderComponent()
 {
 	ComponentManager::get()->unregisterRenderer(this);
+}
+
+void RenderComponent::registerComponent()
+{
+	Component::registerComponent();
+	ComponentManager::get()->registerRenderer(this);
 }
 
 void RenderComponent::awake()

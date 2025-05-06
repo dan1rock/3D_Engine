@@ -6,12 +6,17 @@
 
 Camera::Camera()
 {
-	ComponentManager::get()->registerCamera(this);
 }
 
 Camera::~Camera()
 {
 	ComponentManager::get()->unregisterCamera(this);
+}
+
+void Camera::registerComponent()
+{
+	Component::registerComponent();
+	ComponentManager::get()->registerCamera(this);
 }
 
 void Camera::updateCamera()
@@ -29,4 +34,8 @@ void Camera::updateCamera()
 	constantData->view = view;
 
 	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
+}
+
+void Camera::awake()
+{
 }

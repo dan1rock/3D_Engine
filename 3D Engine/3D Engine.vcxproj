@@ -167,6 +167,7 @@
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="PhysicsEngine.cpp" />
     <ClCompile Include="PixelShader.cpp" />
+    <ClCompile Include="Prefab.cpp" />
     <ClCompile Include="RenderComponent.cpp" />
     <ClCompile Include="Resource.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
@@ -210,6 +211,7 @@
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="PhysicsEngine.h" />
     <ClInclude Include="PixelShader.h" />
+    <ClInclude Include="Prefab.h" />
     <ClInclude Include="Quaternion.h" />
     <ClInclude Include="RenderComponent.h" />
     <ClInclude Include="Resource.h" />

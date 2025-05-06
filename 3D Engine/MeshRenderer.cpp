@@ -1,5 +1,7 @@
 #include "MeshRenderer.h"
 
+#include <iostream>
+
 MeshRenderer::MeshRenderer()
 {
 }

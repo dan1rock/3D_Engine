@@ -13,12 +13,19 @@ public:
 	void addForce(const Vector3& force);
 	void setContinousCollisionDetection(bool ccd);
 
+protected:
+	RigidBody* instantiate() const override {
+		return new RigidBody(*this);
+	};
+
 private:
 	void awake() override;
 	void update() override;
 	void fixedUpdate() override;
 
 	void updateShape();
+
+	void updateGlobalPose();
 
     physx::PxRigidActor* mActor = nullptr;
 	physx::PxMaterial* mMaterial = nullptr;
@@ -29,5 +36,8 @@ private:
 	float mRadius = 1.0f;
 	float mMass = 1.0f;
 	bool mIsStatic = false;
+	bool mCcd = false;
+
+	friend class Transform;
 };
 
