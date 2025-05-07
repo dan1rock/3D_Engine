@@ -8,6 +8,7 @@
 #include "TextureManager.h"
 #include "MeshManager.h"
 #include "ConvexMeshManager.h"
+#include "Material.h"
 
 ComponentManager::ComponentManager()
 {
@@ -57,6 +58,16 @@ void ComponentManager::unregisterCamera(Camera* camera)
 	mCameras.remove(camera);
 }
 
+void ComponentManager::registerMaterial(Material* material)
+{
+	mMaterials.push_back(material);
+}
+
+void ComponentManager::unregisterMaterial(Material* material)
+{
+	mMaterials.remove(material);
+}
+
 void ComponentManager::updateComponents()
 {
 	for (auto* c : mComponents) {
@@ -99,6 +110,15 @@ void ComponentManager::onSceneLoadStart()
 			continue;
 
 		g->destroy();
+	}
+
+	auto it2 = mMaterials.begin();
+	while (it2 != mMaterials.end())
+	{
+		Material* m = *it2++;
+		if (m->dontDeleteOnLoad)
+			continue;
+		delete m;
 	}
 
 	GraphicsEngine::get()->getTextureManager()->markResourcesAsUnused();

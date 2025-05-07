@@ -10,6 +10,7 @@
 #include "InstantiationTest.h"
 #include "Camera.h"
 #include "RigidBody.h"
+#include "MeshCollider.h"
 
 Scene1::Scene1()
 {
@@ -35,6 +36,7 @@ void Scene1::init()
 	GameObject* plane = new GameObject(Vector3(0.0f, -2.0f, 0.0f));
 	plane->getTransform()->setScale(Vector3(20.0f, 1.0f, 20.0f));
 	plane->addComponent<MeshRenderer>(planeMesh, prototypeMaterial);
+	plane->addComponent<MeshCollider>();
 	plane->addComponent<RigidBody>(true);
 
 	GameObject* skyDome = new GameObject();

@@ -13,6 +13,7 @@ void GlobalResources::init()
     mConstantBuffer->load(&mConstantData, sizeof(mConstantData));
 
     mDefaultMaterial = new Material();
+	mDefaultMaterial->dontDeleteOnLoad = true;
 }
 
 GlobalResources::~GlobalResources()

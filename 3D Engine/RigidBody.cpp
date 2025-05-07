@@ -3,7 +3,7 @@
 #include "ConvexMeshManager.h"
 #include "GameObject.h"
 #include "Quaternion.h"
-#include "MeshRenderer.h"
+#include "Collider.h"
 
 using namespace physx;
 
@@ -21,14 +21,9 @@ RigidBody::RigidBody(float radius, float mass, bool isStatic)
 
 RigidBody::~RigidBody()
 {
-	if (mShape)
-	{
-		mShape->release();
-		mShape = nullptr;
-	}
-
 	if (mActor)
 	{
+		releaseShapes();
 		mActor->release();
 		mActor = nullptr;
 	}
@@ -79,9 +74,13 @@ void RigidBody::awake()
 
 	mMaterial = physics->getMaterial();
 
-	updateShape();
+	std::list<Collider*> colliders = mOwner->getComponents<Collider>();
 
-    mActor->attachShape(*mShape);
+	for (Collider* c : colliders) {
+		mColliders.push_back(c);
+	}
+
+	updateShape();
 
 	if (!mIsStatic)
 	{
@@ -114,41 +113,31 @@ void RigidBody::fixedUpdate()
 	{
 		mScale = mOwner->getTransform()->getScale();
 
-		mActor->detachShape(*mShape);
 		updateShape();
-		mActor->attachShape(*mShape);
 	}
 }
 
 void RigidBody::updateShape()
 {
-	PxGeometry* geometry = nullptr;
-	PxMeshScale meshScale(PxVec3(mScale.x, mScale.y, mScale.z), PxQuat(PxIdentity));
+	releaseShapes();
 
-	MeshRenderer* meshRenderer = mOwner->getComponent<MeshRenderer>();
-	if (meshRenderer) {
-		ConvexMesh* convexMesh = PhysicsEngine::get()->getConvexMeshManager()->createConvexMeshFromFile(meshRenderer->getMesh()->getFullPath().c_str());
-
-		if (mIsStatic)
-		{
-			geometry = new PxTriangleMeshGeometry(static_cast<PxTriangleMesh*>(convexMesh->getTriangleMesh()), meshScale);
-		}
-		else
-		{
-			geometry = new PxConvexMeshGeometry(static_cast<PxConvexMesh*>(convexMesh->getConvexMesh()), meshScale);
-		}
+	for (Collider* c : mColliders) {
+		PxShape* s = PhysicsEngine::get()->getPhysics()->createShape(*static_cast<PxGeometry*>(c->getGeometry(mScale, !mIsStatic)), *mMaterial);
+		mActor->attachShape(*s);
 	}
-	else {
-		geometry = new PxSphereGeometry(mRadius);
-	}
+}
 
-	if (mShape)
-	{
-		mShape->release();
-		mShape = nullptr;
-	}
+void RigidBody::releaseShapes()
+{
+	PxU32 shapesN = mActor->getNbShapes();
+	std::vector<PxShape*> shapes(shapesN);
 
-	mShape = PhysicsEngine::get()->getPhysics()->createShape(*geometry, *mMaterial);
+	mActor->getShapes(shapes.data(), shapesN);
+
+	for (PxShape* shape : shapes) {
+		mActor->detachShape(*shape);
+		shape->release();
+	}
 }
 
 void RigidBody::updateGlobalPose()
@@ -166,4 +155,9 @@ void RigidBody::updateGlobalPose()
 	PxTransform pose(PxVec3(pos.x, pos.y, pos.z), q);
 
 	mActor->setGlobalPose(pose, true);
+}
+
+void RigidBody::addCollider(Collider* collider)
+{
+	mColliders.push_back(collider);
 }

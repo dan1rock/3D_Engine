@@ -28,7 +28,7 @@ void DemoPlayer::update()
 	{
 		GameObject* projectile = projectilePrefab->instantiate();
 		projectile->getTransform()->setForward(mOwner->getTransform()->getForward());
-		projectile->getTransform()->setPosition(mOwner->getTransform()->getPosition());
+		projectile->getTransform()->setPosition(mOwner->getTransform()->getPosition() + mOwner->getTransform()->getForward() * 0.5f);
 		projectile->getComponent<RigidBody>()->addForce(mOwner->getTransform()->getForward() * 1000.0f);
 	}
 }

@@ -20,6 +20,9 @@ public:
 	template<typename T>
 	T* getComponent();
 
+	template<typename T>
+	std::list<T*> getComponents();
+
 	bool removeComponent(Component* component);
 
 	GameObject* instantiate();
@@ -30,7 +33,7 @@ public:
 protected:
 	virtual bool shouldAwakeComponents() const { return true; }
 
-    Transform mTransform;
+	Transform mTransform;
 	RigidBody* mRigidBody = nullptr;
 
 	std::list<Component*> mComponents;
@@ -81,4 +84,19 @@ T* GameObject::getComponent()
 			return casted;
 	}
 	return nullptr;
+}
+
+template<typename T>
+std::list<T*> GameObject::getComponents()
+{
+	static_assert(std::is_base_of<Component, T>::value, "getComponents<T>: T must inherit from Component");
+
+	std::list<T*> results;
+
+	for (auto* compPtr : mComponents)
+	{
+		if (auto casted = dynamic_cast<T*>(compPtr))
+			results.push_back(casted);
+	}
+	return results;
 }

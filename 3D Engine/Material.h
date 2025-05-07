@@ -27,6 +27,8 @@ public:
 	float textureScale = 1.0f;
 	float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
+	bool dontDeleteOnLoad = false;
+
 	void setConstantBuffer(ConstantBuffer* constantBuffer, int slot = 0);
 
 private:

@@ -2,6 +2,9 @@
 #include "Component.h"
 #include <PxPhysicsAPI.h>
 #include "Vector3.h"
+#include <list>
+
+class Collider;
 
 class RigidBody : public Component
 {
@@ -24,12 +27,16 @@ private:
 	void fixedUpdate() override;
 
 	void updateShape();
+	void releaseShapes();
 
 	void updateGlobalPose();
 
+	void addCollider(Collider* collider);
+
+	std::list<Collider*> mColliders = {};
+
     physx::PxRigidActor* mActor = nullptr;
 	physx::PxMaterial* mMaterial = nullptr;
-	physx::PxShape* mShape = nullptr;
 
 	Vector3 mScale;
 
@@ -39,5 +46,6 @@ private:
 	bool mCcd = false;
 
 	friend class Transform;
+	friend class Collider;
 };
 

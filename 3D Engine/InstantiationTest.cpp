@@ -6,6 +6,7 @@
 #include "MeshManager.h"
 #include "MeshRenderer.h"
 #include "RigidBody.h"
+#include "MeshCollider.h"
 #include "Material.h"
 
 InstantiationTest::InstantiationTest()
@@ -31,6 +32,7 @@ void InstantiationTest::update()
 
 		GameObject* newObject = new GameObject(mPosition);
 		newObject->addComponent<MeshRenderer>(penguinMesh, mMaterial);
+		newObject->addComponent<MeshCollider>();
 		newObject->addComponent<RigidBody>(1.0f, 2.0f);
 
 		mGameObjects.push_back(newObject);

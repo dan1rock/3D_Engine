@@ -11,6 +11,8 @@
 #include "Camera.h"
 #include "RigidBody.h"
 #include "SceneChanger.h"
+#include "MeshCollider.h"
+#include "SphereCollider.h"
 
 MainScene::MainScene()
 {
@@ -47,6 +49,7 @@ void MainScene::init()
 	GameObject* plane = new GameObject(Vector3(0.0f, -2.0f, 0.0f));
 	plane->getTransform()->setScale(Vector3(20.0f, 1.0f, 20.0f));
 	plane->addComponent<MeshRenderer>(planeMesh, prototypeMaterial);
+	plane->addComponent<MeshCollider>();
 	plane->addComponent<RigidBody>(true);
 
 	GameObject* penguin = new GameObject(Vector3(1.0f, 0.0f, 0.0f));
@@ -68,6 +71,7 @@ void MainScene::init()
 	Prefab* projectilePrefab = new Prefab();
 	projectilePrefab->getTransform()->setScale(Vector3(0.15f, 0.15f, 0.15f));
 	projectilePrefab->addComponent<MeshRenderer>(mesh, projectileMaterial);
+	projectilePrefab->addComponent<SphereCollider>();
 	RigidBody* rb = projectilePrefab->addComponent<RigidBody>(1.0f, 100.0f);
 	rb->setContinousCollisionDetection(true);
 

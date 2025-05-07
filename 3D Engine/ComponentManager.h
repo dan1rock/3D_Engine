@@ -5,6 +5,7 @@ class Component;
 class RenderComponent;
 class Camera;
 class GameObject;
+class Material;
 
 class ComponentManager
 {
@@ -20,6 +21,8 @@ public:
 	void unregisterRenderer(RenderComponent* renderer);
 	void registerCamera(Camera* camera);
 	void unregisterCamera(Camera* camera);
+	void registerMaterial(Material* material);
+	void unregisterMaterial(Material* material);
 
 	void updateComponents();
 	void fixedUpdateComponents();
@@ -36,5 +39,6 @@ private:
 	std::list<Component*> mComponents = {};
 	std::list<RenderComponent*> mRenderers = {};
 	std::list<Camera*> mCameras = {};
+	std::list<Material*> mMaterials = {};
 };
 

@@ -146,6 +146,7 @@
   <ItemGroup>
     <ClCompile Include="AppWindow.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Collider.cpp" />
     <ClCompile Include="Component.cpp" />
     <ClCompile Include="ComponentManager.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
@@ -163,10 +164,12 @@
     <ClCompile Include="MainScene.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="MeshCollider.cpp" />
     <ClCompile Include="MeshManager.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="PhysicsEngine.cpp" />
     <ClCompile Include="PixelShader.cpp" />
+    <ClCompile Include="PlaneCollider.cpp" />
     <ClCompile Include="Prefab.cpp" />
     <ClCompile Include="RenderComponent.cpp" />
     <ClCompile Include="Resource.cpp" />
@@ -178,6 +181,7 @@
     <ClCompile Include="SceneChanger.cpp" />
     <ClCompile Include="SceneManager.cpp" />
     <ClCompile Include="SkySphere.cpp" />
+    <ClCompile Include="SphereCollider.cpp" />
     <ClCompile Include="SwapChain.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TextureManager.cpp" />
@@ -190,6 +194,7 @@
   <ItemGroup>
     <ClInclude Include="AppWindow.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Collider.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentManager.h" />
     <ClInclude Include="ConstantBuffer.h" />
@@ -207,10 +212,12 @@
     <ClInclude Include="Material.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="MeshCollider.h" />
     <ClInclude Include="MeshManager.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="PhysicsEngine.h" />
     <ClInclude Include="PixelShader.h" />
+    <ClInclude Include="PlaneCollider.h" />
     <ClInclude Include="Prefab.h" />
     <ClInclude Include="Quaternion.h" />
     <ClInclude Include="RenderComponent.h" />
@@ -223,6 +230,7 @@
     <ClInclude Include="SceneChanger.h" />
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="SkySphere.h" />
+    <ClInclude Include="SphereCollider.h" />
     <ClInclude Include="SwapChain.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />
