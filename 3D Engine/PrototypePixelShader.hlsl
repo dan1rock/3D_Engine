@@ -65,10 +65,7 @@ float4 main(PS_INPUT input) : SV_TARGET
     if (isTextured)
     {
         float4 textureSample = Texture.Sample(TextureSampler, input.texCoord * textureScale);
-        if (textureSample.a > 0.1f)
-        {
-            baseColor = textureSample;
-        }
+        baseColor = color * (1.0f - textureSample.a) + textureSample * textureSample.a;
     }
     
     float4 result = baseColor * float4(lighting, 1.0f);
