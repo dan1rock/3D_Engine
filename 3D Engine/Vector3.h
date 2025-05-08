@@ -35,11 +35,19 @@ public:
 		return Vector3(x + vector.x, y + vector.y, z + vector.z);
 	}
 
+	Vector3 operator -() const {
+		return Vector3(-x, -y, -z);
+	}
+
 	Vector3 cross(const Vector3& vector) {
 		return Vector3(
 			y * vector.z - z * vector.y,
 			z * vector.x - x * vector.z,
 			x * vector.y - y * vector.x);
+	}
+
+	float operator *(const Vector3& vector) const {
+		return x * vector.x + y * vector.y + z * vector.z;
 	}
 
 	void normalize() {

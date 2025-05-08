@@ -64,7 +64,7 @@ void AppWindow::onUpdate()
 
 	ComponentManager::get()->updateComponents();
 
-	if (Time::deltaTime >= 0.0f)
+	if (Time::deltaTime > 0.0f)
 	{
 		ComponentManager::get()->fixedUpdateComponents();
 		PhysicsEngine::get()->update(Time::deltaTime);

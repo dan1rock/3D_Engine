@@ -1,11 +1,13 @@
 #pragma once
 #include <list>
+#include <unordered_map>
 
 class Component;
 class RenderComponent;
 class Camera;
 class GameObject;
 class Material;
+class RigidBody;
 
 class ComponentManager
 {
@@ -23,6 +25,10 @@ public:
 	void unregisterCamera(Camera* camera);
 	void registerMaterial(Material* material);
 	void unregisterMaterial(Material* material);
+	void registerRigidBody(RigidBody* rigidBody);
+	void unregisterRigidBody(RigidBody* rigidBody);
+
+	RigidBody* getRigidBody(void* actor);
 
 	void updateComponents();
 	void fixedUpdateComponents();
@@ -40,5 +46,6 @@ private:
 	std::list<RenderComponent*> mRenderers = {};
 	std::list<Camera*> mCameras = {};
 	std::list<Material*> mMaterials = {};
+	std::unordered_map<void*, RigidBody*> mRigidBodies = {};
 };
 

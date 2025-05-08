@@ -8,6 +8,7 @@
 #include "RigidBody.h"
 #include "MeshCollider.h"
 #include "Material.h"
+#include "LevitationTest.h"
 
 InstantiationTest::InstantiationTest()
 {
@@ -34,6 +35,11 @@ void InstantiationTest::update()
 		newObject->addComponent<MeshRenderer>(penguinMesh, mMaterial);
 		newObject->addComponent<MeshCollider>();
 		newObject->addComponent<RigidBody>(1.0f, 2.0f);
+		LevitationTest* l = newObject->addComponent<LevitationTest>();
+		l->force = 200.0f;
+		l->damping = 10.0f;
+		l->maxDistance = 2.0f;
+
 
 		mGameObjects.push_back(newObject);
 
@@ -43,8 +49,8 @@ void InstantiationTest::update()
 	{
 		if (!mGameObjects.empty())
 		{
-			GameObject* objectToDelete = mGameObjects.front();
-			mGameObjects.pop_front();
+			GameObject* objectToDelete = mGameObjects.back();
+			mGameObjects.pop_back();
 			objectToDelete->destroy();
 
 			mPosition.x -= 1.0f;

@@ -13,7 +13,13 @@ public:
     RigidBody(float radius, float mass, bool isStatic = false);
     ~RigidBody() override;
 
+	Vector3 getVelocity();
+	Vector3 getVelocityAtPoint(const Vector3& point);
+	Vector3 getAngularVelocity();
+
 	void addForce(const Vector3& force);
+	void addForce(const Vector3& force, const Vector3& position);
+	void addTorque(const Vector3& torque);
 	void setContinousCollisionDetection(bool ccd);
 
 protected:
@@ -47,5 +53,7 @@ private:
 
 	friend class Transform;
 	friend class Collider;
+	friend class ComponentManager;
+	friend class Physics;
 };
 

@@ -1,0 +1,29 @@
+#pragma once
+#include "Component.h"
+
+class RigidBody;
+
+class LevitationTest : public Component
+{
+public:
+	LevitationTest();
+	~LevitationTest();
+
+	float force = 1.0f;
+	float damping = 0.1f;
+	float maxDistance = 1.0f;
+
+protected:
+	LevitationTest* instantiate() const override
+	{
+		return new LevitationTest(*this);
+	}
+
+private:
+	void awake() override;
+	void fixedUpdate() override;
+
+	RigidBody* mRigidBody = nullptr;
+
+};
+

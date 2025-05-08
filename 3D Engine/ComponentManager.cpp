@@ -9,6 +9,7 @@
 #include "MeshManager.h"
 #include "ConvexMeshManager.h"
 #include "Material.h"
+#include "RigidBody.h"
 
 ComponentManager::ComponentManager()
 {
@@ -66,6 +67,30 @@ void ComponentManager::registerMaterial(Material* material)
 void ComponentManager::unregisterMaterial(Material* material)
 {
 	mMaterials.remove(material);
+}
+
+void ComponentManager::registerRigidBody(RigidBody* rigidBody)
+{
+	if (rigidBody->mActor) {
+		mRigidBodies[rigidBody->mActor] = rigidBody;
+	}
+}
+
+void ComponentManager::unregisterRigidBody(RigidBody* rigidBody)
+{
+	if (rigidBody->mActor) {
+		mRigidBodies.erase(rigidBody->mActor);
+	}
+}
+
+RigidBody* ComponentManager::getRigidBody(void* actor)
+{
+	auto it = mRigidBodies.find(actor);
+	if (it != mRigidBodies.end()) {
+		return it->second;
+	}
+
+	return nullptr;
 }
 
 void ComponentManager::updateComponents()

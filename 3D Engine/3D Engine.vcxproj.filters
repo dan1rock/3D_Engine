@@ -123,9 +123,6 @@
     <ClCompile Include="FreelookCameraController.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="InstantiationTest.cpp">
-      <Filter>Engine\Component</Filter>
-    </ClCompile>
     <ClCompile Include="PhysicsEngine.cpp">
       <Filter>Engine\Physics</Filter>
     </ClCompile>
@@ -137,9 +134,6 @@
     </ClCompile>
     <ClCompile Include="ConvexMeshManager.cpp">
       <Filter>Engine\Resource managers</Filter>
-    </ClCompile>
-    <ClCompile Include="DemoPlayer.cpp">
-      <Filter>Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="GameObject.cpp">
       <Filter>Engine\Component</Filter>
@@ -182,6 +176,18 @@
     </ClCompile>
     <ClCompile Include="PlaneCollider.cpp">
       <Filter>Engine\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics.cpp">
+      <Filter>Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="DemoPlayer.cpp">
+      <Filter>Application\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="InstantiationTest.cpp">
+      <Filter>Application\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="LevitationTest.cpp">
+      <Filter>Application\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -272,9 +278,6 @@
     <ClInclude Include="FreelookCameraController.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="InstantiationTest.h">
-      <Filter>Engine\Component</Filter>
-    </ClInclude>
     <ClInclude Include="PhysicsEngine.h">
       <Filter>Engine\Physics</Filter>
     </ClInclude>
@@ -289,9 +292,6 @@
     </ClInclude>
     <ClInclude Include="ConvexMeshManager.h">
       <Filter>Engine\Resource managers</Filter>
-    </ClInclude>
-    <ClInclude Include="DemoPlayer.h">
-      <Filter>Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="GameObject.h">
       <Filter>Engine\Component</Filter>
@@ -334,6 +334,18 @@
     </ClInclude>
     <ClInclude Include="PlaneCollider.h">
       <Filter>Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics.h">
+      <Filter>Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="DemoPlayer.h">
+      <Filter>Application\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="InstantiationTest.h">
+      <Filter>Application\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="LevitationTest.h">
+      <Filter>Application\Components</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

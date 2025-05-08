@@ -4,6 +4,7 @@
 #include "GameObject.h"
 #include "Quaternion.h"
 #include "Collider.h"
+#include "ComponentManager.h"
 
 using namespace physx;
 
@@ -23,10 +24,49 @@ RigidBody::~RigidBody()
 {
 	if (mActor)
 	{
+		ComponentManager::get()->unregisterRigidBody(this);	
 		releaseShapes();
 		mActor->release();
 		mActor = nullptr;
 	}
+}
+
+Vector3 RigidBody::getVelocity()
+{
+	if (!mActor) return Vector3();
+	if (mIsStatic) return Vector3();
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	PxVec3 velocity = dynamicActor->getLinearVelocity();
+	return Vector3(velocity.x, velocity.y, velocity.z);
+}
+
+Vector3 RigidBody::getVelocityAtPoint(const Vector3& point)
+{
+	if (!mActor) return Vector3();
+	if (mIsStatic) return Vector3();
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	
+	PxVec3 vLin = dynamicActor->getLinearVelocity();
+	PxVec3 wAng = dynamicActor->getAngularVelocity();
+
+	PxVec3 comPos = dynamicActor->getGlobalPose().p;
+	PxVec3 r = PxVec3(point.x, point.y, point.z) - comPos;
+
+	PxVec3 vAtP = vLin + wAng.cross(r);
+
+	return Vector3(vAtP.x, vAtP.y, vAtP.z);
+}
+
+Vector3 RigidBody::getAngularVelocity()
+{
+	if (!mActor) return Vector3();
+	if (mIsStatic) return Vector3();
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	PxVec3 angularVelocity = dynamicActor->getAngularVelocity();
+	return Vector3(angularVelocity.x, angularVelocity.y, angularVelocity.z);
 }
 
 void RigidBody::addForce(const Vector3& force)
@@ -36,6 +76,24 @@ void RigidBody::addForce(const Vector3& force)
 
 	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
 	dynamicActor->addForce(PxVec3(force.x, force.y, force.z), PxForceMode::eFORCE, true);
+}
+
+void RigidBody::addForce(const Vector3& force, const Vector3& position)
+{
+	if (!mActor) return;
+	if (mIsStatic) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	PxRigidBodyExt::addForceAtPos(*dynamicActor, PxVec3(force.x, force.y, force.z), PxVec3(position.x, position.y, position.z), PxForceMode::eFORCE, true);
+}
+
+void RigidBody::addTorque(const Vector3& torque)
+{
+	if (!mActor) return;
+	if (mIsStatic) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	dynamicActor->addTorque(PxVec3(torque.x, torque.y, torque.z), PxForceMode::eFORCE, true);
 }
 
 void RigidBody::setContinousCollisionDetection(bool ccd)
@@ -90,6 +148,7 @@ void RigidBody::awake()
 	}
 
     physics->getScene()->addActor(*mActor);
+	ComponentManager::get()->registerRigidBody(this);
 }
 
 void RigidBody::update()
