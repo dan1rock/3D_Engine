@@ -45,327 +45,327 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
+    <ClCompile Include="src\Main\Main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="AppWindow.cpp">
+    <ClCompile Include="src\Main\AppWindow.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="VertexBuffer.cpp">
+    <ClCompile Include="src\Engine\Buffer managers\VertexBuffer.cpp">
       <Filter>Engine\Buffer managers</Filter>
     </ClCompile>
-    <ClCompile Include="IndexBuffer.cpp">
+    <ClCompile Include="src\Engine\Buffer managers\IndexBuffer.cpp">
       <Filter>Engine\Buffer managers</Filter>
     </ClCompile>
-    <ClCompile Include="ConstantBuffer.cpp">
+    <ClCompile Include="src\Engine\Buffer managers\ConstantBuffer.cpp">
       <Filter>Engine\Buffer managers</Filter>
     </ClCompile>
-    <ClCompile Include="PixelShader.cpp">
+    <ClCompile Include="src\Engine\Shader managers\PixelShader.cpp">
       <Filter>Engine\Shader managers</Filter>
     </ClCompile>
-    <ClCompile Include="VertexShader.cpp">
+    <ClCompile Include="src\Engine\Shader managers\VertexShader.cpp">
       <Filter>Engine\Shader managers</Filter>
     </ClCompile>
-    <ClCompile Include="DeviceContext.cpp">
+    <ClCompile Include="src\Engine\Main parts\DeviceContext.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
-    <ClCompile Include="GraphicsEngine.cpp">
+    <ClCompile Include="src\Engine\Main parts\GraphicsEngine.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
-    <ClCompile Include="Window.cpp">
+    <ClCompile Include="src\Engine\Main parts\Window.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
-    <ClCompile Include="SwapChain.cpp">
+    <ClCompile Include="src\Engine\Main parts\SwapChain.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
-    <ClCompile Include="ResourceManager.cpp">
+    <ClCompile Include="src\Engine\Resource managers\ResourceManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="Texture.cpp">
+    <ClCompile Include="src\Engine\Resource managers\Texture.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="Input.cpp">
+    <ClCompile Include="src\Engine\Main parts\Input.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
-    <ClCompile Include="Resource.cpp">
+    <ClCompile Include="src\Engine\Resource managers\Resource.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="Mesh.cpp">
+    <ClCompile Include="src\Engine\Resource managers\Mesh.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="TextureManager.cpp">
+    <ClCompile Include="src\Engine\Resource managers\TextureManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="MeshManager.cpp">
+    <ClCompile Include="src\Engine\Resource managers\MeshManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="Material.cpp">
+    <ClCompile Include="src\Engine\Resource managers\Material.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="GlobalResources.cpp">
+    <ClCompile Include="src\Engine\Resource managers\GlobalResources.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="Component.cpp">
+    <ClCompile Include="src\Engine\Component\Component.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Transform.cpp">
+    <ClCompile Include="src\Engine\Component\Transform.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="ComponentManager.cpp">
+    <ClCompile Include="src\Engine\Resource managers\ComponentManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="Time.cpp">
+    <ClCompile Include="src\Engine\Main parts\EngineTime.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
-    <ClCompile Include="Camera.cpp">
+    <ClCompile Include="src\Engine\Component\Camera.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="FreelookCameraController.cpp">
+    <ClCompile Include="src\Engine\Component\FreelookCameraController.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="PhysicsEngine.cpp">
+    <ClCompile Include="src\Engine\Physics\PhysicsEngine.cpp">
       <Filter>Engine\Physics</Filter>
     </ClCompile>
-    <ClCompile Include="RigidBody.cpp">
+    <ClCompile Include="src\Engine\Component\RigidBody.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="ConvexMesh.cpp">
+    <ClCompile Include="src\Engine\Resource managers\ConvexMesh.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="ConvexMeshManager.cpp">
+    <ClCompile Include="src\Engine\Resource managers\ConvexMeshManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="GameObject.cpp">
+    <ClCompile Include="src\Engine\Component\GameObject.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="MeshRenderer.cpp">
+    <ClCompile Include="src\Engine\Component\MeshRenderer.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="RenderComponent.cpp">
+    <ClCompile Include="src\Engine\Component\RenderComponent.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="SkySphere.cpp">
+    <ClCompile Include="src\Engine\Component\SkySphere.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Scene.cpp">
+    <ClCompile Include="src\Engine\Scene\Scene.cpp">
       <Filter>Engine\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="SceneManager.cpp">
+    <ClCompile Include="src\Engine\Scene\SceneManager.cpp">
       <Filter>Engine\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="SceneChanger.cpp">
+    <ClCompile Include="Demo\Components\SceneChanger.cpp">
       <Filter>Application\Components</Filter>
     </ClCompile>
-    <ClCompile Include="MainScene.cpp">
+    <ClCompile Include="Demo\Scenes\MainScene.cpp">
       <Filter>Application\Scenes</Filter>
     </ClCompile>
-    <ClCompile Include="Scene1.cpp">
+    <ClCompile Include="Demo\Scenes\Scene1.cpp">
       <Filter>Application\Scenes</Filter>
     </ClCompile>
-    <ClCompile Include="Prefab.cpp">
+    <ClCompile Include="src\Engine\Component\Prefab.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Collider.cpp">
+    <ClCompile Include="src\Engine\Component\Collider.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="MeshCollider.cpp">
+    <ClCompile Include="src\Engine\Component\MeshCollider.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="SphereCollider.cpp">
+    <ClCompile Include="src\Engine\Component\SphereCollider.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="PlaneCollider.cpp">
+    <ClCompile Include="src\Engine\Component\PlaneCollider.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="Physics.cpp">
+    <ClCompile Include="src\Engine\Physics\Physics.cpp">
       <Filter>Engine\Physics</Filter>
     </ClCompile>
-    <ClCompile Include="DemoPlayer.cpp">
+    <ClCompile Include="Demo\Components\DemoPlayer.cpp">
       <Filter>Application\Components</Filter>
     </ClCompile>
-    <ClCompile Include="InstantiationTest.cpp">
+    <ClCompile Include="Demo\Components\InstantiationTest.cpp">
       <Filter>Application\Components</Filter>
     </ClCompile>
-    <ClCompile Include="LevitationTest.cpp">
+    <ClCompile Include="Demo\Components\LevitationTest.cpp">
       <Filter>Application\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AppWindow.h">
+    <ClInclude Include="src\Main\AppWindow.h">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="Vector3.h">
+    <ClInclude Include="src\Math\Vector3.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Matrix.h">
+    <ClInclude Include="src\Math\Matrix.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Vector2.h">
+    <ClInclude Include="src\Math\Vector2.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="Vector4.h">
+    <ClInclude Include="src\Math\Vector4.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="VertexBuffer.h">
+    <ClInclude Include="src\Engine\Buffer managers\VertexBuffer.h">
       <Filter>Engine\Buffer managers</Filter>
     </ClInclude>
-    <ClInclude Include="IndexBuffer.h">
+    <ClInclude Include="src\Engine\Buffer managers\IndexBuffer.h">
       <Filter>Engine\Buffer managers</Filter>
     </ClInclude>
-    <ClInclude Include="ConstantBuffer.h">
+    <ClInclude Include="src\Engine\Buffer managers\ConstantBuffer.h">
       <Filter>Engine\Buffer managers</Filter>
     </ClInclude>
-    <ClInclude Include="PixelShader.h">
+    <ClInclude Include="src\Engine\Shader managers\PixelShader.h">
       <Filter>Engine\Shader managers</Filter>
     </ClInclude>
-    <ClInclude Include="VertexShader.h">
+    <ClInclude Include="src\Engine\Shader managers\VertexShader.h">
       <Filter>Engine\Shader managers</Filter>
     </ClInclude>
-    <ClInclude Include="Window.h">
+    <ClInclude Include="src\Engine\Main parts\Window.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
-    <ClInclude Include="SwapChain.h">
+    <ClInclude Include="src\Engine\Main parts\SwapChain.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
-    <ClInclude Include="GraphicsEngine.h">
+    <ClInclude Include="src\Engine\Main parts\GraphicsEngine.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
-    <ClInclude Include="DeviceContext.h">
+    <ClInclude Include="src\Engine\Main parts\DeviceContext.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
-    <ClInclude Include="ResourceManager.h">
+    <ClInclude Include="src\Engine\Resource managers\ResourceManager.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="Texture.h">
+    <ClInclude Include="src\Engine\Resource managers\Texture.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="Input.h">
+    <ClInclude Include="src\Engine\Main parts\Input.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
-    <ClInclude Include="Resource.h">
+    <ClInclude Include="src\Engine\Resource managers\Resource.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="Mesh.h">
+    <ClInclude Include="src\Engine\Resource managers\Mesh.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="TextureManager.h">
+    <ClInclude Include="src\Engine\Resource managers\TextureManager.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="MeshManager.h">
+    <ClInclude Include="src\Engine\Resource managers\MeshManager.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="Material.h">
+    <ClInclude Include="src\Engine\Resource managers\Material.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="GlobalResources.h">
+    <ClInclude Include="src\Engine\Resource managers\GlobalResources.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="Component.h">
+    <ClInclude Include="src\Engine\Component\Component.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Transform.h">
+    <ClInclude Include="src\Engine\Component\Transform.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="ComponentManager.h">
+    <ClInclude Include="src\Engine\Resource managers\ComponentManager.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="Camera.h">
+    <ClInclude Include="src\Engine\Component\Camera.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Time.h">
+    <ClInclude Include="src\Engine\Main parts\EngineTime.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
-    <ClInclude Include="FreelookCameraController.h">
+    <ClInclude Include="src\Engine\Component\FreelookCameraController.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="PhysicsEngine.h">
+    <ClInclude Include="src\Engine\Physics\PhysicsEngine.h">
       <Filter>Engine\Physics</Filter>
     </ClInclude>
-    <ClInclude Include="RigidBody.h">
+    <ClInclude Include="src\Engine\Component\RigidBody.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Quaternion.h">
+    <ClInclude Include="src\Math\Quaternion.h">
       <Filter>Math</Filter>
     </ClInclude>
-    <ClInclude Include="ConvexMesh.h">
+    <ClInclude Include="src\Engine\Resource managers\ConvexMesh.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="ConvexMeshManager.h">
+    <ClInclude Include="src\Engine\Resource managers\ConvexMeshManager.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="GameObject.h">
+    <ClInclude Include="src\Engine\Component\GameObject.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="MeshRenderer.h">
+    <ClInclude Include="src\Engine\Component\MeshRenderer.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="RenderComponent.h">
+    <ClInclude Include="src\Engine\Component\RenderComponent.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="SkySphere.h">
+    <ClInclude Include="src\Engine\Component\SkySphere.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Scene.h">
+    <ClInclude Include="src\Engine\Scene\Scene.h">
       <Filter>Engine\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="SceneManager.h">
+    <ClInclude Include="src\Engine\Scene\SceneManager.h">
       <Filter>Engine\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="SceneChanger.h">
+    <ClInclude Include="Demo\Components\SceneChanger.h">
       <Filter>Application\Components</Filter>
     </ClInclude>
-    <ClInclude Include="MainScene.h">
+    <ClInclude Include="Demo\Scenes\MainScene.h">
       <Filter>Application\Scenes</Filter>
     </ClInclude>
-    <ClInclude Include="Scene1.h">
+    <ClInclude Include="Demo\Scenes\Scene1.h">
       <Filter>Application\Scenes</Filter>
     </ClInclude>
-    <ClInclude Include="Prefab.h">
+    <ClInclude Include="src\Engine\Component\Prefab.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Collider.h">
+    <ClInclude Include="src\Engine\Component\Collider.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="MeshCollider.h">
+    <ClInclude Include="src\Engine\Component\MeshCollider.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="SphereCollider.h">
+    <ClInclude Include="src\Engine\Component\SphereCollider.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="PlaneCollider.h">
+    <ClInclude Include="src\Engine\Component\PlaneCollider.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Physics.h">
+    <ClInclude Include="src\Engine\Physics\Physics.h">
       <Filter>Engine\Physics</Filter>
     </ClInclude>
-    <ClInclude Include="DemoPlayer.h">
+    <ClInclude Include="Demo\Components\DemoPlayer.h">
       <Filter>Application\Components</Filter>
     </ClInclude>
-    <ClInclude Include="InstantiationTest.h">
+    <ClInclude Include="Demo\Components\InstantiationTest.h">
       <Filter>Application\Components</Filter>
     </ClInclude>
-    <ClInclude Include="LevitationTest.h">
+    <ClInclude Include="Demo\Components\LevitationTest.h">
       <Filter>Application\Components</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="PixelShader.hlsl">
+    <FxCompile Include="src\Shaders\PixelShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="VertexShader.hlsl">
+    <FxCompile Include="src\Shaders\VertexShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="VertexLayoutShader.hlsl">
+    <FxCompile Include="src\Shaders\VertexLayoutShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="UnlitPixelShader.hlsl">
+    <FxCompile Include="src\Shaders\UnlitPixelShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="PrototypePixelShader.hlsl">
+    <FxCompile Include="src\Shaders\PrototypePixelShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <None Include="Demo\Components\packages.config" />
   </ItemGroup>
 </Project>

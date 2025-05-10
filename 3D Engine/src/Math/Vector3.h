@@ -35,6 +35,10 @@ public:
 		return Vector3(x + vector.x, y + vector.y, z + vector.z);
 	}
 
+	Vector3 operator -(Vector3 vector) {
+		return Vector3(x - vector.x, y - vector.y, z - vector.z);
+	}
+
 	Vector3 operator -() const {
 		return Vector3(-x, -y, -z);
 	}

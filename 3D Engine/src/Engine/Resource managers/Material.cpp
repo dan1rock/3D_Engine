@@ -21,8 +21,8 @@ material materialData = {};
 
 Material::Material()
 {
-	mVertexShader = GraphicsEngine::get()->getVertexShader(L"VertexShader.hlsl", "main");
-	mPixelShader = GraphicsEngine::get()->getPixelShader(L"PixelShader.hlsl", "main");
+	mVertexShader = GraphicsEngine::get()->getVertexShader(L"src\\Shaders\\VertexShader.hlsl", "main");
+	mPixelShader = GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\PixelShader.hlsl", "main");
 
 	mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
 	mConstantBuffer->load(&materialData, sizeof(materialData));

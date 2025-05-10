@@ -13,6 +13,8 @@ public:
 	Vector3 getScale();
 	Vector3 getRotation();
 	Vector3 getForward();
+	Vector3 getRight();
+	Vector3 getUp();
 
 	void setPosition(Vector3 position, bool updateRb = true);
 	void setScale(Vector3 scale);

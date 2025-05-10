@@ -10,7 +10,7 @@ class RigidBody : public Component
 {
 public:
 	RigidBody(bool isStatic = false);
-    RigidBody(float radius, float mass, bool isStatic = false);
+    RigidBody(float mass, bool isStatic = false);
     ~RigidBody() override;
 
 	Vector3 getVelocity();
@@ -46,7 +46,6 @@ private:
 
 	Vector3 mScale;
 
-	float mRadius = 1.0f;
 	float mMass = 1.0f;
 	bool mIsStatic = false;
 	bool mCcd = false;

@@ -36,6 +36,16 @@ Vector3 Transform::getForward()
 	return mMatrix.getZDirection().normalized();
 }
 
+Vector3 Transform::getRight()
+{
+	return mMatrix.getXDirection().normalized();
+}
+
+Vector3 Transform::getUp()
+{
+	return mMatrix.getYDirection().normalized();
+}
+
 void Transform::setPosition(Vector3 position, bool updateRb)
 {
 	mMatrix.setTranslation(position);

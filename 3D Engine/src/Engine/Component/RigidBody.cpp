@@ -13,9 +13,8 @@ RigidBody::RigidBody(bool isStatic)
 	mIsStatic = isStatic;
 }
 
-RigidBody::RigidBody(float radius, float mass, bool isStatic)
+RigidBody::RigidBody(float mass, bool isStatic)
 {
-	mRadius = radius;
 	mMass = mass;
 	mIsStatic = isStatic;
 }
@@ -47,16 +46,9 @@ Vector3 RigidBody::getVelocityAtPoint(const Vector3& point)
 	if (mIsStatic) return Vector3();
 
 	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
-	
-	PxVec3 vLin = dynamicActor->getLinearVelocity();
-	PxVec3 wAng = dynamicActor->getAngularVelocity();
+	PxVec3 res = PxRigidBodyExt::getVelocityAtPos(*dynamicActor, PxVec3(point.x, point.y, point.z));
 
-	PxVec3 comPos = dynamicActor->getGlobalPose().p;
-	PxVec3 r = PxVec3(point.x, point.y, point.z) - comPos;
-
-	PxVec3 vAtP = vLin + wAng.cross(r);
-
-	return Vector3(vAtP.x, vAtP.y, vAtP.z);
+	return Vector3(res.x, res.y, res.z);
 }
 
 Vector3 RigidBody::getAngularVelocity()
@@ -144,6 +136,7 @@ void RigidBody::awake()
 	{
 		PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
 		PxRigidBodyExt::updateMassAndInertia(*dynamicActor, mMass);
+		dynamicActor->setMass(mMass);
 		dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, mCcd);
 	}
 

@@ -77,7 +77,7 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
     void* shaderByteCode = nullptr;
     SIZE_T shaderSize = 0;
 
-    GraphicsEngine::get()->compileVertexShader(L"VertexLayoutShader.hlsl", "main", &shaderByteCode, &shaderSize);
+    GraphicsEngine::get()->compileVertexShader(L"src\\Shaders\\VertexLayoutShader.hlsl", "main", &shaderByteCode, &shaderSize);
     mVertexBuffer->load(outVertices.data(), sizeof(vertex), outVertices.size(), shaderByteCode, shaderSize);
     mIndexBuffer->load(outIndices.data(), outIndices.size());
     GraphicsEngine::get()->releaseVertexShader();

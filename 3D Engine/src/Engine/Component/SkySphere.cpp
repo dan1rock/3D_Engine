@@ -17,7 +17,7 @@ SkySphere::~SkySphere()
 void SkySphere::awake()
 {
 	mMaterial = new Material();
-	mMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"UnlitPixelShader.hlsl", "main"));
+	mMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\UnlitPixelShader.hlsl", "main"));
 	mMaterial->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\HDR_029_Sky_Cloudy_Bg.jpg"));
 	mMaterial->cullBack = false;
 

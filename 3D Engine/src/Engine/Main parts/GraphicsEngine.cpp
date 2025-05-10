@@ -14,6 +14,7 @@
 #include "DirectXTex.h"
 #include <d3dcompiler.h>
 
+#include <iostream>
 
 GraphicsEngine::GraphicsEngine()
 {
@@ -165,6 +166,8 @@ VertexShader* GraphicsEngine::getVertexShader(const wchar_t* fileName, const cha
 		return shader;
 	}
 
+	std::cout << "Failed to load vertex shader: " << fileName << std::endl;
+
 	return nullptr;
 }
 
@@ -188,6 +191,8 @@ PixelShader* GraphicsEngine::getPixelShader(const wchar_t* fileName, const char*
 		pixelShaderMap[fileName] = shader;
 		return shader;
 	}
+
+	std::cout << "Failed to load pixel shader: " << fileName << std::endl;
 
 	return nullptr;
 }

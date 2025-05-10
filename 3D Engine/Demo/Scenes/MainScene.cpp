@@ -13,6 +13,7 @@
 #include "SceneChanger.h"
 #include "MeshCollider.h"
 #include "SphereCollider.h"
+#include "LevitationTest.h"
 
 MainScene::MainScene()
 {
@@ -34,7 +35,7 @@ void MainScene::init()
 
 	Material* prototypeMaterial = new Material();
 	prototypeMaterial->addTexture(prototypeTexture);
-	prototypeMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"PrototypePixelShader.hlsl", "main"));
+	prototypeMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\PrototypePixelShader.hlsl", "main"));
 	prototypeMaterial->setColor(0.5f, 0.5f, 0.5f, 1.0f);
 	prototypeMaterial->textureScale = 20.0f;
 	prototypeMaterial->clampTexture = false;
@@ -64,7 +65,7 @@ void MainScene::init()
 	Mesh* mesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
 
 	Material* projectileMaterial = new Material();
-	projectileMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"PrototypePixelShader.hlsl", "main"));
+	projectileMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\PrototypePixelShader.hlsl", "main"));
 	projectileMaterial->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\1x1_grid_quarter_lines_numbered.png"));
 	projectileMaterial->setColor(0.7f, 0.7f, 0.1f, 1.0f);
 
@@ -72,7 +73,7 @@ void MainScene::init()
 	projectilePrefab->getTransform()->setScale(Vector3(0.15f, 0.15f, 0.15f));
 	projectilePrefab->addComponent<MeshRenderer>(mesh, projectileMaterial);
 	projectilePrefab->addComponent<SphereCollider>();
-	RigidBody* rb = projectilePrefab->addComponent<RigidBody>(1.0f, 100.0f);
+	RigidBody* rb = projectilePrefab->addComponent<RigidBody>(1.0f);
 	rb->setContinousCollisionDetection(true);
 
 	GameObject* camera = new GameObject(Vector3(0, 1, 3));
@@ -81,8 +82,18 @@ void MainScene::init()
 	DemoPlayer* demoPlayer = camera->addComponent<DemoPlayer>(2.0f, 0.002f);
 	demoPlayer->projectilePrefab = projectilePrefab;
 
+	Prefab* instantiationPrefab = new Prefab();
+	instantiationPrefab->addComponent<MeshRenderer>(rabbitMesh);
+	instantiationPrefab->addComponent<MeshCollider>();
+	instantiationPrefab->addComponent<RigidBody>(1.0f);
+	LevitationTest* l = instantiationPrefab->addComponent<LevitationTest>();
+	l->force = 15.0f;
+	l->damping = 2.0f;
+	l->maxDistance = 1.0f;
+
 	GameObject* test = new GameObject(Vector3(0, 0, 0));
-	test->addComponent<InstantiationTest>();
+	InstantiationTest* i = test->addComponent<InstantiationTest>();
+	i->prefab = instantiationPrefab;
 
 	GameObject* sceneChanger = new GameObject();
 	sceneChanger->addComponent<SceneChanger>();

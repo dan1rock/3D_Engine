@@ -1,5 +1,6 @@
 #pragma once
 #include <d3d11.h>
+#include <d2d1.h>
 #include <unordered_map>
 #include <string>
 

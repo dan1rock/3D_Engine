@@ -4,6 +4,7 @@
 #include <list>
 
 class GameObject;
+class Prefab;
 class Material;
 
 class InstantiationTest : public Component
@@ -11,6 +12,8 @@ class InstantiationTest : public Component
 public:
 	InstantiationTest();
 	~InstantiationTest() override;
+
+	Prefab* prefab = nullptr;
 
 protected:
 	InstantiationTest* instantiate() const override {
@@ -23,7 +26,5 @@ private:
 	std::list<GameObject*> mGameObjects = {};
 
 	Vector3 mPosition = { 0.0f, 0.0f, 0.0f };
-
-	Material* mMaterial = nullptr;
 };
 

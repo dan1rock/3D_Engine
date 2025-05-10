@@ -120,6 +120,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(ProjectDir)Demo\Scenes;$(ProjectDir)Demo\Components;$(ProjectDir)src\Math;$(ProjectDir)src\Main;$(ProjectDir)src\Engine\Shader managers;$(ProjectDir)src\Engine\Scene;$(ProjectDir)src\Engine\Resource managers;$(ProjectDir)src\Engine\Physics;$(ProjectDir)src\Engine\Main parts;$(ProjectDir)src\Engine\Component;$(ProjectDir)src\Engine\Buffer managers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,124 +145,124 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AppWindow.cpp" />
-    <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="Collider.cpp" />
-    <ClCompile Include="Component.cpp" />
-    <ClCompile Include="ComponentManager.cpp" />
-    <ClCompile Include="ConstantBuffer.cpp" />
-    <ClCompile Include="ConvexMesh.cpp" />
-    <ClCompile Include="ConvexMeshManager.cpp" />
-    <ClCompile Include="DemoPlayer.cpp" />
-    <ClCompile Include="DeviceContext.cpp" />
-    <ClCompile Include="FreelookCameraController.cpp" />
-    <ClCompile Include="GameObject.cpp" />
-    <ClCompile Include="GraphicsEngine.cpp" />
-    <ClCompile Include="IndexBuffer.cpp" />
-    <ClCompile Include="Input.cpp" />
-    <ClCompile Include="InstantiationTest.cpp" />
-    <ClCompile Include="LevitationTest.cpp" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="MainScene.cpp" />
-    <ClCompile Include="Material.cpp" />
-    <ClCompile Include="Mesh.cpp" />
-    <ClCompile Include="MeshCollider.cpp" />
-    <ClCompile Include="MeshManager.cpp" />
-    <ClCompile Include="MeshRenderer.cpp" />
-    <ClCompile Include="Physics.cpp" />
-    <ClCompile Include="PhysicsEngine.cpp" />
-    <ClCompile Include="PixelShader.cpp" />
-    <ClCompile Include="PlaneCollider.cpp" />
-    <ClCompile Include="Prefab.cpp" />
-    <ClCompile Include="RenderComponent.cpp" />
-    <ClCompile Include="Resource.cpp" />
-    <ClCompile Include="ResourceManager.cpp" />
-    <ClCompile Include="GlobalResources.cpp" />
-    <ClCompile Include="RigidBody.cpp" />
-    <ClCompile Include="Scene.cpp" />
-    <ClCompile Include="Scene1.cpp" />
-    <ClCompile Include="SceneChanger.cpp" />
-    <ClCompile Include="SceneManager.cpp" />
-    <ClCompile Include="SkySphere.cpp" />
-    <ClCompile Include="SphereCollider.cpp" />
-    <ClCompile Include="SwapChain.cpp" />
-    <ClCompile Include="Texture.cpp" />
-    <ClCompile Include="TextureManager.cpp" />
-    <ClCompile Include="Time.cpp" />
-    <ClCompile Include="Transform.cpp" />
-    <ClCompile Include="VertexBuffer.cpp" />
-    <ClCompile Include="VertexShader.cpp" />
-    <ClCompile Include="Window.cpp" />
+    <ClCompile Include="src\Main\AppWindow.cpp" />
+    <ClCompile Include="src\Engine\Component\Camera.cpp" />
+    <ClCompile Include="src\Engine\Component\Collider.cpp" />
+    <ClCompile Include="src\Engine\Component\Component.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\ComponentManager.cpp" />
+    <ClCompile Include="src\Engine\Buffer managers\ConstantBuffer.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\ConvexMesh.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\ConvexMeshManager.cpp" />
+    <ClCompile Include="Demo\Components\DemoPlayer.cpp" />
+    <ClCompile Include="src\Engine\Main parts\DeviceContext.cpp" />
+    <ClCompile Include="src\Engine\Component\FreelookCameraController.cpp" />
+    <ClCompile Include="src\Engine\Component\GameObject.cpp" />
+    <ClCompile Include="src\Engine\Main parts\GraphicsEngine.cpp" />
+    <ClCompile Include="src\Engine\Buffer managers\IndexBuffer.cpp" />
+    <ClCompile Include="src\Engine\Main parts\Input.cpp" />
+    <ClCompile Include="Demo\Components\InstantiationTest.cpp" />
+    <ClCompile Include="Demo\Components\LevitationTest.cpp" />
+    <ClCompile Include="src\Main\Main.cpp" />
+    <ClCompile Include="Demo\Scenes\MainScene.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\Material.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\Mesh.cpp" />
+    <ClCompile Include="src\Engine\Component\MeshCollider.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\MeshManager.cpp" />
+    <ClCompile Include="src\Engine\Component\MeshRenderer.cpp" />
+    <ClCompile Include="src\Engine\Physics\Physics.cpp" />
+    <ClCompile Include="src\Engine\Physics\PhysicsEngine.cpp" />
+    <ClCompile Include="src\Engine\Shader managers\PixelShader.cpp" />
+    <ClCompile Include="src\Engine\Component\PlaneCollider.cpp" />
+    <ClCompile Include="src\Engine\Component\Prefab.cpp" />
+    <ClCompile Include="src\Engine\Component\RenderComponent.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\Resource.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\ResourceManager.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\GlobalResources.cpp" />
+    <ClCompile Include="src\Engine\Component\RigidBody.cpp" />
+    <ClCompile Include="src\Engine\Scene\Scene.cpp" />
+    <ClCompile Include="Demo\Scenes\Scene1.cpp" />
+    <ClCompile Include="Demo\Components\SceneChanger.cpp" />
+    <ClCompile Include="src\Engine\Scene\SceneManager.cpp" />
+    <ClCompile Include="src\Engine\Component\SkySphere.cpp" />
+    <ClCompile Include="src\Engine\Component\SphereCollider.cpp" />
+    <ClCompile Include="src\Engine\Main parts\SwapChain.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\Texture.cpp" />
+    <ClCompile Include="src\Engine\Resource managers\TextureManager.cpp" />
+    <ClCompile Include="src\Engine\Main parts\EngineTime.cpp" />
+    <ClCompile Include="src\Engine\Component\Transform.cpp" />
+    <ClCompile Include="src\Engine\Buffer managers\VertexBuffer.cpp" />
+    <ClCompile Include="src\Engine\Shader managers\VertexShader.cpp" />
+    <ClCompile Include="src\Engine\Main parts\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AppWindow.h" />
-    <ClInclude Include="Camera.h" />
-    <ClInclude Include="Collider.h" />
-    <ClInclude Include="Component.h" />
-    <ClInclude Include="ComponentManager.h" />
-    <ClInclude Include="ConstantBuffer.h" />
-    <ClInclude Include="ConvexMesh.h" />
-    <ClInclude Include="ConvexMeshManager.h" />
-    <ClInclude Include="DemoPlayer.h" />
-    <ClInclude Include="DeviceContext.h" />
-    <ClInclude Include="FreelookCameraController.h" />
-    <ClInclude Include="GameObject.h" />
-    <ClInclude Include="GraphicsEngine.h" />
-    <ClInclude Include="IndexBuffer.h" />
-    <ClInclude Include="Input.h" />
-    <ClInclude Include="InstantiationTest.h" />
-    <ClInclude Include="LevitationTest.h" />
-    <ClInclude Include="MainScene.h" />
-    <ClInclude Include="Material.h" />
-    <ClInclude Include="Matrix.h" />
-    <ClInclude Include="Mesh.h" />
-    <ClInclude Include="MeshCollider.h" />
-    <ClInclude Include="MeshManager.h" />
-    <ClInclude Include="MeshRenderer.h" />
-    <ClInclude Include="Physics.h" />
-    <ClInclude Include="PhysicsEngine.h" />
-    <ClInclude Include="PixelShader.h" />
-    <ClInclude Include="PlaneCollider.h" />
-    <ClInclude Include="Prefab.h" />
-    <ClInclude Include="Quaternion.h" />
-    <ClInclude Include="RenderComponent.h" />
-    <ClInclude Include="Resource.h" />
-    <ClInclude Include="ResourceManager.h" />
-    <ClInclude Include="GlobalResources.h" />
-    <ClInclude Include="RigidBody.h" />
-    <ClInclude Include="Scene.h" />
-    <ClInclude Include="Scene1.h" />
-    <ClInclude Include="SceneChanger.h" />
-    <ClInclude Include="SceneManager.h" />
-    <ClInclude Include="SkySphere.h" />
-    <ClInclude Include="SphereCollider.h" />
-    <ClInclude Include="SwapChain.h" />
-    <ClInclude Include="Texture.h" />
-    <ClInclude Include="TextureManager.h" />
-    <ClInclude Include="Time.h" />
-    <ClInclude Include="Transform.h" />
-    <ClInclude Include="Vector2.h" />
-    <ClInclude Include="Vector3.h" />
-    <ClInclude Include="Vector4.h" />
-    <ClInclude Include="VertexBuffer.h" />
-    <ClInclude Include="VertexShader.h" />
-    <ClInclude Include="Window.h" />
+    <ClInclude Include="src\Main\AppWindow.h" />
+    <ClInclude Include="src\Engine\Component\Camera.h" />
+    <ClInclude Include="src\Engine\Component\Collider.h" />
+    <ClInclude Include="src\Engine\Component\Component.h" />
+    <ClInclude Include="src\Engine\Resource managers\ComponentManager.h" />
+    <ClInclude Include="src\Engine\Buffer managers\ConstantBuffer.h" />
+    <ClInclude Include="src\Engine\Resource managers\ConvexMesh.h" />
+    <ClInclude Include="src\Engine\Resource managers\ConvexMeshManager.h" />
+    <ClInclude Include="Demo\Components\DemoPlayer.h" />
+    <ClInclude Include="src\Engine\Main parts\DeviceContext.h" />
+    <ClInclude Include="src\Engine\Component\FreelookCameraController.h" />
+    <ClInclude Include="src\Engine\Component\GameObject.h" />
+    <ClInclude Include="src\Engine\Main parts\GraphicsEngine.h" />
+    <ClInclude Include="src\Engine\Buffer managers\IndexBuffer.h" />
+    <ClInclude Include="src\Engine\Main parts\Input.h" />
+    <ClInclude Include="Demo\Components\InstantiationTest.h" />
+    <ClInclude Include="Demo\Components\LevitationTest.h" />
+    <ClInclude Include="Demo\Scenes\MainScene.h" />
+    <ClInclude Include="src\Engine\Resource managers\Material.h" />
+    <ClInclude Include="src\Math\Matrix.h" />
+    <ClInclude Include="src\Engine\Resource managers\Mesh.h" />
+    <ClInclude Include="src\Engine\Component\MeshCollider.h" />
+    <ClInclude Include="src\Engine\Resource managers\MeshManager.h" />
+    <ClInclude Include="src\Engine\Component\MeshRenderer.h" />
+    <ClInclude Include="src\Engine\Physics\Physics.h" />
+    <ClInclude Include="src\Engine\Physics\PhysicsEngine.h" />
+    <ClInclude Include="src\Engine\Shader managers\PixelShader.h" />
+    <ClInclude Include="src\Engine\Component\PlaneCollider.h" />
+    <ClInclude Include="src\Engine\Component\Prefab.h" />
+    <ClInclude Include="src\Math\Quaternion.h" />
+    <ClInclude Include="src\Engine\Component\RenderComponent.h" />
+    <ClInclude Include="src\Engine\Resource managers\Resource.h" />
+    <ClInclude Include="src\Engine\Resource managers\ResourceManager.h" />
+    <ClInclude Include="src\Engine\Resource managers\GlobalResources.h" />
+    <ClInclude Include="src\Engine\Component\RigidBody.h" />
+    <ClInclude Include="src\Engine\Scene\Scene.h" />
+    <ClInclude Include="Demo\Scenes\Scene1.h" />
+    <ClInclude Include="Demo\Components\SceneChanger.h" />
+    <ClInclude Include="src\Engine\Scene\SceneManager.h" />
+    <ClInclude Include="src\Engine\Component\SkySphere.h" />
+    <ClInclude Include="src\Engine\Component\SphereCollider.h" />
+    <ClInclude Include="src\Engine\Main parts\SwapChain.h" />
+    <ClInclude Include="src\Engine\Resource managers\Texture.h" />
+    <ClInclude Include="src\Engine\Resource managers\TextureManager.h" />
+    <ClInclude Include="src\Engine\Main parts\EngineTime.h" />
+    <ClInclude Include="src\Engine\Component\Transform.h" />
+    <ClInclude Include="src\Math\Vector2.h" />
+    <ClInclude Include="src\Math\Vector3.h" />
+    <ClInclude Include="src\Math\Vector4.h" />
+    <ClInclude Include="src\Engine\Buffer managers\VertexBuffer.h" />
+    <ClInclude Include="src\Engine\Shader managers\VertexShader.h" />
+    <ClInclude Include="src\Engine\Main parts\Window.h" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="PixelShader.hlsl">
+    <FxCompile Include="src\Shaders\PixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="PrototypePixelShader.hlsl">
+    <FxCompile Include="src\Shaders\PrototypePixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="UnlitPixelShader.hlsl">
+    <FxCompile Include="src\Shaders\UnlitPixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="VertexLayoutShader.hlsl" />
-    <FxCompile Include="VertexShader.hlsl">
+    <FxCompile Include="src\Shaders\VertexLayoutShader.hlsl" />
+    <FxCompile Include="src\Shaders\VertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
@@ -269,7 +270,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <None Include="Demo\Components\packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

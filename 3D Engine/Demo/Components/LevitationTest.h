@@ -1,5 +1,6 @@
 #pragma once
 #include "Component.h"
+#include "Vector3.h"
 
 class RigidBody;
 
@@ -22,6 +23,8 @@ protected:
 private:
 	void awake() override;
 	void fixedUpdate() override;
+
+	void simulateSpring(Vector3 position);
 
 	RigidBody* mRigidBody = nullptr;
 
