@@ -1,4 +1,4 @@
-#include "ComponentManager.h"
+#include "EntityManager.h"
 #include "Component.h"
 #include "GameObject.h"
 #include "RenderComponent.h"
@@ -11,79 +11,79 @@
 #include "Material.h"
 #include "RigidBody.h"
 
-ComponentManager::ComponentManager()
+EntityManager::EntityManager()
 {
 }
 
-ComponentManager::~ComponentManager()
+EntityManager::~EntityManager()
 {
 }
 
-void ComponentManager::registerGameObject(GameObject* gameObject)
+void EntityManager::registerGameObject(GameObject* gameObject)
 {
 	mGameObjects.push_back(gameObject);
 }
 
-void ComponentManager::unregisterGameObject(GameObject* gameObject)
+void EntityManager::unregisterGameObject(GameObject* gameObject)
 {
 	mGameObjects.remove(gameObject);
 }
 
-void ComponentManager::registerComponent(Component* component)
+void EntityManager::registerComponent(Component* component)
 {
 	mComponents.push_back(component);
 }
 
-void ComponentManager::unregisterComponent(Component* component)
+void EntityManager::unregisterComponent(Component* component)
 {
 	mComponents.remove(component);
 }
 
-void ComponentManager::registerRenderer(RenderComponent* renderer)
+void EntityManager::registerRenderer(RenderComponent* renderer)
 {
 	mRenderers.push_back(renderer);
 }
 
-void ComponentManager::unregisterRenderer(RenderComponent* renderer)
+void EntityManager::unregisterRenderer(RenderComponent* renderer)
 {
 	mRenderers.remove(renderer);
 }
 
-void ComponentManager::registerCamera(Camera* camera)
+void EntityManager::registerCamera(Camera* camera)
 {
 	mCameras.push_back(camera);
 }
 
-void ComponentManager::unregisterCamera(Camera* camera)
+void EntityManager::unregisterCamera(Camera* camera)
 {
 	mCameras.remove(camera);
 }
 
-void ComponentManager::registerMaterial(Material* material)
+void EntityManager::registerMaterial(Material* material)
 {
 	mMaterials.push_back(material);
 }
 
-void ComponentManager::unregisterMaterial(Material* material)
+void EntityManager::unregisterMaterial(Material* material)
 {
 	mMaterials.remove(material);
 }
 
-void ComponentManager::registerRigidBody(RigidBody* rigidBody)
+void EntityManager::registerRigidBody(RigidBody* rigidBody)
 {
 	if (rigidBody->mActor) {
 		mRigidBodies[rigidBody->mActor] = rigidBody;
 	}
 }
 
-void ComponentManager::unregisterRigidBody(RigidBody* rigidBody)
+void EntityManager::unregisterRigidBody(RigidBody* rigidBody)
 {
 	if (rigidBody->mActor) {
 		mRigidBodies.erase(rigidBody->mActor);
 	}
 }
 
-RigidBody* ComponentManager::getRigidBody(void* actor)
+RigidBody* EntityManager::getRigidBody(void* actor)
 {
 	auto it = mRigidBodies.find(actor);
 	if (it != mRigidBodies.end()) {
@@ -93,7 +93,7 @@ RigidBody* ComponentManager::getRigidBody(void* actor)
 	return nullptr;
 }
 
-void ComponentManager::updateComponents()
+void EntityManager::updateComponents()
 {
 	for (auto* c : mComponents) {
 		if (!c->getOwner()->isActive) continue;
@@ -101,7 +101,7 @@ void ComponentManager::updateComponents()
 	}
 }
 
-void ComponentManager::fixedUpdateComponents()
+void EntityManager::fixedUpdateComponents()
 {
 	for (auto* c : mComponents) {
 		if (!c->getOwner()->isActive) continue;
@@ -109,7 +109,7 @@ void ComponentManager::fixedUpdateComponents()
 	}
 }
 
-void ComponentManager::updateRenderers()
+void EntityManager::updateRenderers()
 {
 	for (auto* r : mRenderers) {
 		if (!r->getOwner()->isActive) continue;
@@ -117,7 +117,7 @@ void ComponentManager::updateRenderers()
 	}
 }
 
-void ComponentManager::updateCameras()
+void EntityManager::updateCameras()
 {
 	for (auto* c : mCameras) {
 		if (!c->getOwner()->isActive) continue;
@@ -125,7 +125,7 @@ void ComponentManager::updateCameras()
 	}
 }
 
-void ComponentManager::onSceneLoadStart()
+void EntityManager::onSceneLoadStart()
 {
 	auto it = mGameObjects.begin();
 	while (it != mGameObjects.end())
@@ -151,15 +151,15 @@ void ComponentManager::onSceneLoadStart()
 	PhysicsEngine::get()->getConvexMeshManager()->markResourcesAsUnused();
 }
 
-void ComponentManager::onSceneLoadFinished()
+void EntityManager::onSceneLoadFinished()
 {
 	GraphicsEngine::get()->getTextureManager()->unloadUnusedResources();
 	GraphicsEngine::get()->getMeshManager()->unloadUnusedResources();
 	PhysicsEngine::get()->getConvexMeshManager()->unloadUnusedResources();
 }
 
-ComponentManager* ComponentManager::get()
+EntityManager* EntityManager::get()
 {
-	static ComponentManager instance;
+	static EntityManager instance;
 	return &instance;
 }

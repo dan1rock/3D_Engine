@@ -9,11 +9,11 @@ class GameObject;
 class Material;
 class RigidBody;
 
-class ComponentManager
+class EntityManager
 {
 public:
-	ComponentManager();
-	~ComponentManager();
+	EntityManager();
+	~EntityManager();
 
 	void registerGameObject(GameObject* gameObject);
 	void unregisterGameObject(GameObject* gameObject);
@@ -38,7 +38,7 @@ public:
 	void onSceneLoadStart();
 	void onSceneLoadFinished();
 
-	static ComponentManager* get();
+	static EntityManager* get();
 
 private:
 	std::list<GameObject*> mGameObjects = {};

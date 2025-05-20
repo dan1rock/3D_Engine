@@ -4,7 +4,7 @@
 #include "GameObject.h"
 #include "Quaternion.h"
 #include "Collider.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 
 using namespace physx;
 
@@ -23,7 +23,7 @@ RigidBody::~RigidBody()
 {
 	if (mActor)
 	{
-		ComponentManager::get()->unregisterRigidBody(this);	
+		EntityManager::get()->unregisterRigidBody(this);	
 		releaseShapes();
 		mActor->release();
 		mActor = nullptr;
@@ -141,7 +141,7 @@ void RigidBody::awake()
 	}
 
     physics->getScene()->addActor(*mActor);
-	ComponentManager::get()->registerRigidBody(this);
+	EntityManager::get()->registerRigidBody(this);
 }
 
 void RigidBody::update()

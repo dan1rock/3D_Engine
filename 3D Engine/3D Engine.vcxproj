@@ -149,7 +149,7 @@
     <ClCompile Include="src\Engine\Component\Camera.cpp" />
     <ClCompile Include="src\Engine\Component\Collider.cpp" />
     <ClCompile Include="src\Engine\Component\Component.cpp" />
-    <ClCompile Include="src\Engine\Resource managers\ComponentManager.cpp" />
+    <ClCompile Include="src\Engine\Main parts\EntityManager.cpp" />
     <ClCompile Include="src\Engine\Buffer managers\ConstantBuffer.cpp" />
     <ClCompile Include="src\Engine\Resource managers\ConvexMesh.cpp" />
     <ClCompile Include="src\Engine\Resource managers\ConvexMeshManager.cpp" />
@@ -199,7 +199,7 @@
     <ClInclude Include="src\Engine\Component\Camera.h" />
     <ClInclude Include="src\Engine\Component\Collider.h" />
     <ClInclude Include="src\Engine\Component\Component.h" />
-    <ClInclude Include="src\Engine\Resource managers\ComponentManager.h" />
+    <ClInclude Include="src\Engine\Main parts\EntityManager.h" />
     <ClInclude Include="src\Engine\Buffer managers\ConstantBuffer.h" />
     <ClInclude Include="src\Engine\Resource managers\ConvexMesh.h" />
     <ClInclude Include="src\Engine\Resource managers\ConvexMeshManager.h" />

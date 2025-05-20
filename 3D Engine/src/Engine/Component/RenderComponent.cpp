@@ -2,7 +2,7 @@
 #include "Material.h"
 #include "GlobalResources.h"
 #include "GraphicsEngine.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 #include "GameObject.h"
 
 RenderComponent::RenderComponent()
@@ -11,13 +11,13 @@ RenderComponent::RenderComponent()
 
 RenderComponent::~RenderComponent()
 {
-	ComponentManager::get()->unregisterRenderer(this);
+	EntityManager::get()->unregisterRenderer(this);
 }
 
 void RenderComponent::registerComponent()
 {
 	Component::registerComponent();
-	ComponentManager::get()->registerRenderer(this);
+	EntityManager::get()->registerRenderer(this);
 }
 
 void RenderComponent::awake()

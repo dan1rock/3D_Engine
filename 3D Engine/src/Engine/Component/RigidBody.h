@@ -52,7 +52,7 @@ private:
 
 	friend class Transform;
 	friend class Collider;
-	friend class ComponentManager;
+	friend class EntityManager;
 	friend class Physics;
 };
 

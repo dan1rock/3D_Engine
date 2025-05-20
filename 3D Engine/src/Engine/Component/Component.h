@@ -24,6 +24,6 @@ private:
 	virtual void fixedUpdate();
 
 	friend class GameObject;
-	friend class ComponentManager;
+	friend class EntityManager;
 };
 

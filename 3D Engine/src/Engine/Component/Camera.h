@@ -18,6 +18,6 @@ private:
 	void updateCamera();
 	void awake() override;
 
-	friend class ComponentManager;
+	friend class EntityManager;
 };
 

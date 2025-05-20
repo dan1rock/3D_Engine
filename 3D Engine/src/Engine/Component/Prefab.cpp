@@ -1,5 +1,5 @@
 #include "Prefab.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 
 Prefab::Prefab()
 {

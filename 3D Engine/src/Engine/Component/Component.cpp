@@ -1,5 +1,5 @@
 #include "Component.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 
 Component::Component()
 {
@@ -7,7 +7,7 @@ Component::Component()
 
 Component::~Component()
 {
-    ComponentManager::get()->unregisterComponent(this);
+    EntityManager::get()->unregisterComponent(this);
 }
 
 GameObject* Component::getOwner()
@@ -17,7 +17,7 @@ GameObject* Component::getOwner()
 
 void Component::registerComponent()
 {
-    ComponentManager::get()->registerComponent(this);
+    EntityManager::get()->registerComponent(this);
 }
 
 void Component::setOwner(GameObject* gameObject)

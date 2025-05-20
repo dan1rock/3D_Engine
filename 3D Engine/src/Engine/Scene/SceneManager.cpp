@@ -1,5 +1,5 @@
 #include "SceneManager.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 #include "Scene.h"
 
 #include <iostream>
@@ -33,9 +33,9 @@ void SceneManager::update()
 
 	std::wcout << L"Loading scene!" << std::endl;
 
-	ComponentManager::get()->onSceneLoadStart();
+	EntityManager::get()->onSceneLoadStart();
 	mRequestedScene->init();
-	ComponentManager::get()->onSceneLoadFinished();
+	EntityManager::get()->onSceneLoadFinished();
 
 	std::wcout << L"Loaded scene!" << std::endl;
 

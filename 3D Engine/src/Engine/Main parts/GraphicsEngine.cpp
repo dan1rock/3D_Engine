@@ -9,7 +9,7 @@
 #include "TextureManager.h"
 #include "MeshManager.h"
 #include "GlobalResources.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 #include "Material.h"
 #include "DirectXTex.h"
 #include <d3dcompiler.h>

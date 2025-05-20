@@ -1,10 +1,10 @@
 #include "GameObject.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 #include "RigidBody.h"
 
 GameObject::GameObject()
 {
-	ComponentManager::get()->registerGameObject(this);
+	EntityManager::get()->registerGameObject(this);
     mTransform.setOwner(this);
 	mTransform.setPosition(Vector3(0.0f, 0.0f, 0.0f));
 	mTransform.setScale(Vector3(1.0f, 1.0f, 1.0f));
@@ -13,7 +13,7 @@ GameObject::GameObject()
 
 GameObject::GameObject(Vector3 position)
 {
-    ComponentManager::get()->registerGameObject(this);
+    EntityManager::get()->registerGameObject(this);
     mTransform.setOwner(this);
 	mTransform.setPosition(position);
 	mTransform.setScale(Vector3(1.0f, 1.0f, 1.0f));
@@ -28,7 +28,7 @@ GameObject::~GameObject()
 
     mComponents.clear();
 
-    ComponentManager::get()->unregisterGameObject(this);
+    EntityManager::get()->unregisterGameObject(this);
 }
 
 Transform* GameObject::getTransform()

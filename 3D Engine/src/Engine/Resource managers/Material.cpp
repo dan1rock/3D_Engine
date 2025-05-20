@@ -3,7 +3,7 @@
 #include "DeviceContext.h"
 #include "GlobalResources.h"
 #include "ConstantBuffer.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 #include <iostream>
 
 __declspec(align(16))
@@ -29,14 +29,14 @@ Material::Material()
 
 	mConstantBuffers[0] = GraphicsEngine::get()->getGlobalResources()->getConstantBuffer();
 
-	ComponentManager::get()->registerMaterial(this);
+	EntityManager::get()->registerMaterial(this);
 }
 
 Material::~Material()
 {
 	mConstantBuffer->release();
 
-	ComponentManager::get()->unregisterMaterial(this);
+	EntityManager::get()->unregisterMaterial(this);
 }
 
 void Material::setVertexShader(VertexShader* vertexShader)

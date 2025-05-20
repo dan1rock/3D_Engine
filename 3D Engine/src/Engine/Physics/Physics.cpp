@@ -1,6 +1,6 @@
 #include "Physics.h"
 #include "PhysicsEngine.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 #include "RigidBody.h"
 
 using namespace physx;
@@ -58,7 +58,7 @@ bool Physics::raycast(const Vector3& origin, const Vector3& direction, float max
     outHit.distance = hitBuffer.block.distance;
     outHit.point = Vector3(hitBuffer.block.position.x, hitBuffer.block.position.y, hitBuffer.block.position.z);
     outHit.normal = Vector3(hitBuffer.block.normal.x, hitBuffer.block.normal.y, hitBuffer.block.normal.z);
-	outHit.rigidBody = ComponentManager::get()->getRigidBody(hitBuffer.block.actor);
+	outHit.rigidBody = EntityManager::get()->getRigidBody(hitBuffer.block.actor);
 
     return true;
 }
@@ -89,7 +89,7 @@ bool Physics::sphereCast(const Vector3& origin, const Vector3& direction, float 
 	outHit.distance = sweepBuffer.block.distance;
 	outHit.point = Vector3(sweepBuffer.block.position.x, sweepBuffer.block.position.y, sweepBuffer.block.position.z);
 	outHit.normal = Vector3(sweepBuffer.block.normal.x, sweepBuffer.block.normal.y, sweepBuffer.block.normal.z);
-	outHit.rigidBody = ComponentManager::get()->getRigidBody(sweepBuffer.block.actor);
+	outHit.rigidBody = EntityManager::get()->getRigidBody(sweepBuffer.block.actor);
 
 	return true;
 }
@@ -118,7 +118,7 @@ bool Physics::overlapSphere(const Vector3& origin, float radius, std::vector<Ove
     for (PxU32 i = 0; i < overlapBuffer.nbTouches; ++i)
     {
         outHits.push_back({
-            ComponentManager::get()->getRigidBody(overlapBuffer.touches[i].actor),
+            EntityManager::get()->getRigidBody(overlapBuffer.touches[i].actor),
             nullptr
         });
     }

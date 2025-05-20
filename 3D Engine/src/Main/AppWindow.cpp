@@ -1,7 +1,7 @@
 #include "AppWindow.h"
 #include <Windows.h>
 #include "GlobalResources.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 #include "EngineTime.h"
 #include "SceneManager.h"
 #include "MainScene.h"
@@ -62,16 +62,16 @@ void AppWindow::onUpdate()
 	Input::update();
 	Input::updateMouse(this->getClientWindowRect(), isFocused);
 
-	ComponentManager::get()->updateComponents();
+	EntityManager::get()->updateComponents();
 
 	if (Time::deltaTime > 0.0f)
 	{
-		ComponentManager::get()->fixedUpdateComponents();
+		EntityManager::get()->fixedUpdateComponents();
 		PhysicsEngine::get()->update(Time::deltaTime);
 	}
 
-	ComponentManager::get()->updateCameras();
-	ComponentManager::get()->updateRenderers();
+	EntityManager::get()->updateCameras();
+	EntityManager::get()->updateRenderers();
 
 	SceneManager::get()->update();
 

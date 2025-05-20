@@ -2,8 +2,7 @@
 #include "RigidBody.h"
 #include "Physics.h"
 #include "GameObject.h"
-
-#include <iostream>
+#include "Input.h"
 
 LevitationTest::LevitationTest()
 {
@@ -26,10 +25,21 @@ void LevitationTest::fixedUpdate()
 
 	Transform* transform = mRigidBody->getOwner()->getTransform();
 
-	simulateSpring(transform->getPosition() + (transform->getRight() + transform->getForward()) * base);
-	simulateSpring(transform->getPosition() + (-transform->getRight() + transform->getForward()) * base);
-	simulateSpring(transform->getPosition() + (-transform->getRight() - transform->getForward()) * base);
-	simulateSpring(transform->getPosition() + (transform->getRight() - transform->getForward()) * base);
+	simulateSpring(transform->getPosition() + transform->getRight() * base + transform->getForward() * base * 2.0f);
+	simulateSpring(transform->getPosition() + -transform->getRight() * base + transform->getForward() * base * 2.0f);
+	simulateSpring(transform->getPosition() + -transform->getRight() * base - transform->getForward() * base * 2.0f);
+	simulateSpring(transform->getPosition() + transform->getRight() * base - transform->getForward() * base * 2.0f);
+
+	Vector3 point = transform->getPosition() - transform->getUp() * 0.2f;
+
+	if (Input::getKey('Y'))
+	{
+		mRigidBody->addForce(transform->getForward() * 10.0f, point);
+	}
+	if (Input::getKey('H'))
+	{
+		mRigidBody->addForce(-transform->getForward() * 10.0f, point);
+	}
 }
 
 void LevitationTest::simulateSpring(Vector3 position)

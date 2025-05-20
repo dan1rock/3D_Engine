@@ -2,7 +2,7 @@
 #include "GameObject.h"
 #include "GraphicsEngine.h"
 #include "GlobalResources.h"
-#include "ComponentManager.h"
+#include "EntityManager.h"
 
 Camera::Camera()
 {
@@ -10,13 +10,13 @@ Camera::Camera()
 
 Camera::~Camera()
 {
-	ComponentManager::get()->unregisterCamera(this);
+	EntityManager::get()->unregisterCamera(this);
 }
 
 void Camera::registerComponent()
 {
 	Component::registerComponent();
-	ComponentManager::get()->registerCamera(this);
+	EntityManager::get()->registerCamera(this);
 }
 
 void Camera::updateCamera()
