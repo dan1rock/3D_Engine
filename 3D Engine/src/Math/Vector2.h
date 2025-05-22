@@ -13,11 +13,13 @@ public:
 	
 	}
 
+	// Конструктор копіювання
 	Vector2(const Vector2& vector) : x(vector.x), y(vector.y)
 	{
 
 	}
 
+	// Оператор порівняння векторів
 	bool operator==(const Vector2& vector) const
 	{
 		return (x == vector.x && y == vector.y);

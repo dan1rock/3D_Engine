@@ -7,12 +7,15 @@ class Quaternion {
 public:
     float x, y, z, w;
 
+    // Конструктор за замовчуванням (одиничний кватерніон)
     Quaternion() noexcept : x(0), y(0), z(0), w(1) {}
 
+    // Конструктор кватерніона з заданими компонентами
     Quaternion(float _x, float _y, float _z, float _w) noexcept
         : x(_x), y(_y), z(_z), w(_w) {
     }
 
+    // Створює кватерніон з осі обертання та кута (у радіанах)
     static Quaternion fromAxisAngle(const Vector3& axis, float angle) noexcept {
         float half = angle * 0.5f;
         float s = std::sin(half);
@@ -20,6 +23,7 @@ public:
         return Quaternion(a.x * s, a.y * s, a.z * s, std::cos(half));
     }
 
+    // Створює кватерніон з Ейлерових кутів (у радіанах)
     static Quaternion fromEuler(const Vector3& euler) noexcept {
         float cx = std::cos(euler.x * 0.5f);
         float sx = std::sin(euler.x * 0.5f);
@@ -37,6 +41,7 @@ public:
         );
     }
 
+    // Перетворює кватерніон у вектор Ейлерових кутів (у радіанах)
     Vector3 toEuler() const noexcept {
         Vector3 e;
 
@@ -50,6 +55,7 @@ public:
         return e;
     }
 
+    // Нормалізує кватерніон
     Quaternion& normalize() noexcept {
         float len = std::sqrt(x * x + y * y + z * z + w * w);
         if (len > 0.0f) {
@@ -59,6 +65,7 @@ public:
         return *this;
     }
 
+    // Оператор множення кватерніонів
     Quaternion operator*(const Quaternion& r) const noexcept {
         return Quaternion(
             w * r.x + x * r.w + y * r.z - z * r.y,
@@ -68,6 +75,7 @@ public:
         );
     }
 
+    // Перетворює кватерніон у матрицю 4x4
     Matrix toMatrix() const noexcept {
         Matrix m;
         float xx = x * x, yy = y * y, zz = z * z;

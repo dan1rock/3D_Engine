@@ -9,6 +9,7 @@ public:
 
 	}
 
+	// Оператор множення матриці на матрицю (з присвоєнням)
 	void operator *=(const Matrix matrix) {
 		Matrix res;
 
@@ -22,11 +23,13 @@ public:
 		::memcpy(mat, res.mat, sizeof(float) * 16);
 	}
 
+	// Дружній оператор множення двох матриць
 	friend Matrix operator*(Matrix lhs, const Matrix& rhs) {
 		lhs *= rhs;
 		return lhs;
 	}
 
+	// Обчислює визначник матриці
 	float getDeterminant() {
 		Vector4 minor, v1, v2, v3;
 		float det;
@@ -42,6 +45,7 @@ public:
 		return det;
 	}
 
+	// Інвертує матрицю
 	void inverse()
 	{
 		int a, i, j;
@@ -76,6 +80,7 @@ public:
 		::memcpy(mat, out.mat, sizeof(float) * 16);
 	}
 
+	// Транспонує матрицю
 	void transpose() {
 		Matrix out;
 		for (int i = 0; i < 4; i++) {
@@ -86,6 +91,7 @@ public:
 		::memcpy(mat, out.mat, sizeof(float) * 16);
 	}
 
+	// Встановлює одиничну матрицю
 	void setIdentity() {
 		::memset(mat, 0, sizeof(float) * 16);
 		mat[0][0] = 1;
@@ -94,12 +100,14 @@ public:
 		mat[3][3] = 1;
 	}
 
+	// Встановлює трансляцію (позицію) для матриці
 	void setTranslation(const Vector3& vector) {
 		mat[3][0] = vector.x;
 		mat[3][1] = vector.y;
 		mat[3][2] = vector.z;
 	}
 
+	// Встановлює масштаб для матриці
 	void setScale(const Vector3& scale) {
 		Vector3 r(mat[0][0], mat[0][1], mat[0][2]);
 		Vector3 u(mat[1][0], mat[1][1], mat[1][2]);
@@ -118,6 +126,7 @@ public:
 		mat[2][0] = f.x;  mat[2][1] = f.y;  mat[2][2] = f.z;
 	}
 
+	// Встановлює напрямок "вперед" (Z) для матриці
 	void setForward(const Vector3& forward)
 	{
 		Vector3 scale = getScale();
@@ -135,6 +144,7 @@ public:
 		mat[2][0] = f.x;  mat[2][1] = f.y;  mat[2][2] = f.z;  mat[2][3] = 0;
 	}
 
+	// Встановлює обертання навколо осі X
 	void setRotationX(float x) {
 		mat[1][1] = cos(x);
 		mat[1][2] = sin(x);
@@ -142,6 +152,7 @@ public:
 		mat[2][2] = cos(x);
 	}
 
+	// Встановлює обертання навколо осі Y
 	void setRotationY(float y) {
 		mat[0][0] = cos(y);
 		mat[0][2] = -sin(y);
@@ -149,6 +160,7 @@ public:
 		mat[2][2] = cos(y);
 	}
 
+	// Встановлює обертання навколо осі Z
 	void setRotationZ(float z) {
 		mat[0][0] = cos(z);
 		mat[0][1] = sin(z);
@@ -156,6 +168,7 @@ public:
 		mat[1][1] = cos(z);
 	}
 
+	// Встановлює обертання для матриці (Euler angles)
 	void setRotation(const Vector3& r)
 	{
 		Vector3 oldTrans = getTranslation();
@@ -191,6 +204,7 @@ public:
 		::memcpy(mat, res.mat, sizeof(float) * 16);
 	}
 
+	// Повертає обертання матриці у вигляді вектору (Euler angles)
 	Vector3 getRotation()
 	{
 		Vector3 r(mat[0][0], mat[0][1], mat[0][2]);
@@ -209,22 +223,27 @@ public:
 		return rotation;
 	}
 
+	// Повертає напрямок "вправо" (X) у вигляді вектору
 	Vector3 getXDirection() {
 		return Vector3(mat[0][0], mat[0][1], mat[0][2]);
 	}
 
+	// Повертає напрямок "вгору" (Y) у вигляді вектору
 	Vector3 getYDirection() {
 		return Vector3(mat[1][0], mat[1][1], mat[1][2]);
 	}
 
+	// Повертає напрямок "вперед" (Z) у вигляді вектору
 	Vector3 getZDirection() {
 		return Vector3(mat[2][0], mat[2][1], mat[2][2]);
 	}
 
+	// Повертає вектор трансляції (позицію) з матриці
 	Vector3 getTranslation() {
 		return Vector3(mat[3][0], mat[3][1], mat[3][2]);
 	}
 
+	// Повертає масштаб по кожній осі
 	Vector3 getScale() {
 		return Vector3(
 			Vector3(mat[0][0], mat[0][1], mat[0][2]).length(),
@@ -233,6 +252,7 @@ public:
 		);
 	}
 
+	// Встановлює ортографічну проекцію
 	void setOrthoPM(float width, float height, float nearPlane, float farPlane) {
 		setIdentity();
 		mat[0][0] = 2.0f / width;
@@ -241,6 +261,7 @@ public:
 		mat[3][2] = -(nearPlane / (farPlane - nearPlane));
 	}
 
+	// Встановлює перспективну проекцію
 	void setPerspectivePM(float fov, float aspectRatio, float nearPlane, float farPlane) {
 		float yScale = 1.0f / tan(fov / 2.0f);
 		float xScale = yScale / aspectRatio;
