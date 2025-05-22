@@ -26,18 +26,21 @@ ConvexMesh::~ConvexMesh()
 	}
 }
 
+// Повертає вказівник на опуклий меш, створює його при необхідності
 void* ConvexMesh::getConvexMesh()
 {
 	if (mConvexMesh == nullptr) createConvexMesh();
     return mConvexMesh;
 }
 
+// Повертає вказівник на трикутний меш, створює його при необхідності
 void* ConvexMesh::getTriangleMesh()
 {
 	if (mTriangleMesh == nullptr) createTriangleMesh();
 	return mTriangleMesh;
 }
 
+// Створює опуклий меш з моделі, завантаженої через Assimp
 void ConvexMesh::createConvexMesh()
 {
 	std::wstring ws = getFullPath();
@@ -70,6 +73,7 @@ void ConvexMesh::createConvexMesh()
 	mConvexMesh = PhysicsEngine::get()->cookConvexMesh(points);
 }
 
+// Створює трикутний меш з моделі, завантаженої через Assimp
 void ConvexMesh::createTriangleMesh()
 {
 	std::wstring ws = getFullPath();

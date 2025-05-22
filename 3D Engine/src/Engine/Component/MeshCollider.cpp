@@ -13,6 +13,7 @@ MeshCollider::~MeshCollider()
 {
 }
 
+// Повертає вказівник на геометрію коллайдера
 void* MeshCollider::getGeometry(Vector3& scale, bool convex)
 {
 	if (mGeometry) {
@@ -50,6 +51,7 @@ void* MeshCollider::getGeometry(Vector3& scale, bool convex)
 	return mGeometry;
 }
 
+// Встановлює меш для коллайдера з файлу
 void MeshCollider::setConvexMesh(const wchar_t* fullPath)
 {
 	mConvexMesh = PhysicsEngine::get()->getConvexMeshManager()->createConvexMeshFromFile(fullPath);

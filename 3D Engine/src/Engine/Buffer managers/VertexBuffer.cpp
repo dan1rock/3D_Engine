@@ -5,6 +5,7 @@ VertexBuffer::VertexBuffer()
 {
 }
 
+// Створює та завантажує вершинний буфер і з переданими даними з лейаутом шейдера
 bool VertexBuffer::load(void* vertList, UINT vertSize, UINT listSize, void* shaderByteCode, SIZE_T byteShaderSize)
 {
 	if (mBuffer) mBuffer->Release();
@@ -43,11 +44,13 @@ bool VertexBuffer::load(void* vertList, UINT vertSize, UINT listSize, void* shad
 	return true;
 }
 
+// Повертає кількість вершин у буфері
 UINT VertexBuffer::getVertexListSize()
 {
 	return this->mListSize;
 }
 
+// Звільняє ресурси вершинного буфера
 bool VertexBuffer::release()
 {
 	mBuffer->Release();

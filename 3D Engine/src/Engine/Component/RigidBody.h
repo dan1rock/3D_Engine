@@ -6,37 +6,55 @@
 
 class Collider;
 
+// Компонент, що представляє фізичний об'єкт у сцені
 class RigidBody : public Component
 {
 public:
+	// Конструктор класу RigidBody для статичного або динамічного тіла
 	RigidBody(bool isStatic = false);
+	// Конструктор класу RigidBody з масою та типом (статичний/динамічний)
     RigidBody(float mass, bool isStatic = false);
+	// Деструктор класу RigidBody, звільняє ресурси PhysX та знімає реєстрацію в EntityManager
     ~RigidBody() override;
 
+	// Повертає лінійну швидкість тіла
 	Vector3 getVelocity();
+	// Повертає швидкість тіла у заданій точці
 	Vector3 getVelocityAtPoint(const Vector3& point);
+	// Повертає кутову швидкість тіла
 	Vector3 getAngularVelocity();
 
+	// Додає силу до тіла
 	void addForce(const Vector3& force);
+	// Додає силу до тіла в певній точці
 	void addForce(const Vector3& force, const Vector3& position);
+	// Додає кутову силу до тіла
 	void addTorque(const Vector3& torque);
+	// Вмикає або вимикає режим безперервного виявлення зіткнень (CCD)
 	void setContinousCollisionDetection(bool ccd);
 
 protected:
+	// Конструктор копіювання
 	RigidBody* instantiate() const override {
 		return new RigidBody(*this);
 	};
 
 private:
+	// Ініціалізує фізичне тіло, створює фізичного актора, додає коллайдери, реєструє в EntityManager
 	void awake() override;
 	void update() override;
+	// Фіксоване оновлення компонента: синхронізує позицію та обертання з PhysX, оновлює форму при зміні масштабу
 	void fixedUpdate() override;
 
+	// Оновлює коллайдери фізичного тіла відповідно до поточного масштабу
 	void updateShape();
+	// Звільняє всі форми з фізичного тіла
 	void releaseShapes();
 
+	// Оновлює глобальну позицію та обертання фізичного тіла згідно з Transform
 	void updateGlobalPose();
 
+	// Додає коллайдер до списку коллайдерів цього фізичного тіла
 	void addCollider(Collider* collider);
 
 	std::list<Collider*> mColliders = {};

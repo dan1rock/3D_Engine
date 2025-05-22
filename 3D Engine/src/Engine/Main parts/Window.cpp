@@ -8,33 +8,39 @@ Window::Window()
 
 bool windowIsResizing = false;
 
+// Головна процедура обробки повідомлень Windows
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	switch (msg) 
 	{
 	case WM_CREATE: 
 	{
+		// Обробка створення вікна
 		window->setHWND(hwnd);
 		window->onCreate();
 		break;
 	}
 	case WM_SETFOCUS:
 	{
+		// Обробка отримання фокусу вікном
 		window->onFocus();
 		break;
 	}
 	case WM_KILLFOCUS:
 	{
+		// Обробка втрати фокусу вікном
 		window->onKillFocus();
 		break;
 	}
 	case WM_DESTROY:
 	{
+		// Обробка знищення вікна
 		window->onDestroy();
 		::PostQuitMessage(0);
 		break;
 	}
 	case WM_SIZE:
 	{
+		// Обробка зміни розміру вікна
 		if (!windowIsResizing)
 		{
 			window->onWindowResized();
@@ -43,11 +49,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	}
 	case WM_ENTERSIZEMOVE:
 	{
+		// Початок зміни розміру або переміщення вікна
 		windowIsResizing = true;
 		break;
 	}
 	case WM_EXITSIZEMOVE:
 	{
+		// Кінець зміни розміру або переміщення вікна
 		windowIsResizing = false;
 		window->onWindowResized();
 		break;
@@ -59,6 +67,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	return NULL;
 }
 
+// Ініціалізує вікно
 bool Window::init()
 {
 	WNDCLASSEX wc;
@@ -92,6 +101,7 @@ bool Window::init()
 	return true;
 }
 
+// Основний цикл обробки повідомлень та оновлення вікна
 bool Window::broadcast()
 {
 	MSG msg;
@@ -108,6 +118,7 @@ bool Window::broadcast()
 	return true;
 }
 
+// Звільняє ресурси вікна
 bool Window::release()
 {
 	if (!::DestroyWindow(mHwnd))
@@ -116,11 +127,13 @@ bool Window::release()
 	return true;
 }
 
+// Перевіряє, чи працює додаток (чи відкрите вікно)
 bool Window::isRunning()
 {
 	return appIsRunning;
 }
 
+// Повертає прямокутник клієнтської області вікна
 RECT Window::getClientWindowRect()
 {
 	RECT rect;
@@ -128,19 +141,23 @@ RECT Window::getClientWindowRect()
 	return rect;
 }
 
+// Встановлює дескриптор вікна
 void Window::setHWND(HWND hwnd)
 {
 	this->mHwnd = hwnd;
 }
 
+// Викликається при отриманні фокусу вікном
 void Window::onFocus()
 {
 }
 
+// Викликається при втраті фокусу вікном
 void Window::onKillFocus()
 {
 }
 
+// Викликається при знищенні вікна
 void Window::onDestroy()
 {
 	appIsRunning = false;

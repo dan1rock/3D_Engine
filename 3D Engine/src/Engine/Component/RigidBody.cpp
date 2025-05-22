@@ -8,17 +8,20 @@
 
 using namespace physx;
 
+// Конструктор класу RigidBody для статичного або динамічного тіла
 RigidBody::RigidBody(bool isStatic)
 {
 	mIsStatic = isStatic;
 }
 
+// Конструктор класу RigidBody з масою та типом (статичний/динамічний)
 RigidBody::RigidBody(float mass, bool isStatic)
 {
 	mMass = mass;
 	mIsStatic = isStatic;
 }
 
+// Деструктор класу RigidBody, звільняє ресурси PhysX та знімає реєстрацію в EntityManager
 RigidBody::~RigidBody()
 {
 	if (mActor)
@@ -30,6 +33,7 @@ RigidBody::~RigidBody()
 	}
 }
 
+// Повертає лінійну швидкість тіла
 Vector3 RigidBody::getVelocity()
 {
 	if (!mActor) return Vector3();
@@ -40,6 +44,7 @@ Vector3 RigidBody::getVelocity()
 	return Vector3(velocity.x, velocity.y, velocity.z);
 }
 
+// Повертає швидкість тіла у заданій точці
 Vector3 RigidBody::getVelocityAtPoint(const Vector3& point)
 {
 	if (!mActor) return Vector3();
@@ -51,6 +56,7 @@ Vector3 RigidBody::getVelocityAtPoint(const Vector3& point)
 	return Vector3(res.x, res.y, res.z);
 }
 
+// Повертає кутову швидкість тіла
 Vector3 RigidBody::getAngularVelocity()
 {
 	if (!mActor) return Vector3();
@@ -61,6 +67,7 @@ Vector3 RigidBody::getAngularVelocity()
 	return Vector3(angularVelocity.x, angularVelocity.y, angularVelocity.z);
 }
 
+// Додає силу до тіла
 void RigidBody::addForce(const Vector3& force)
 {
 	if (!mActor) return;
@@ -70,6 +77,7 @@ void RigidBody::addForce(const Vector3& force)
 	dynamicActor->addForce(PxVec3(force.x, force.y, force.z), PxForceMode::eFORCE, true);
 }
 
+// Додає силу до тіла в певній точці
 void RigidBody::addForce(const Vector3& force, const Vector3& position)
 {
 	if (!mActor) return;
@@ -79,6 +87,7 @@ void RigidBody::addForce(const Vector3& force, const Vector3& position)
 	PxRigidBodyExt::addForceAtPos(*dynamicActor, PxVec3(force.x, force.y, force.z), PxVec3(position.x, position.y, position.z), PxForceMode::eFORCE, true);
 }
 
+// Додає кутову силу до тіла
 void RigidBody::addTorque(const Vector3& torque)
 {
 	if (!mActor) return;
@@ -88,6 +97,7 @@ void RigidBody::addTorque(const Vector3& torque)
 	dynamicActor->addTorque(PxVec3(torque.x, torque.y, torque.z), PxForceMode::eFORCE, true);
 }
 
+// Вмикає або вимикає режим безперервного виявлення зіткнень (CCD)
 void RigidBody::setContinousCollisionDetection(bool ccd)
 {
 	mCcd = ccd;
@@ -99,6 +109,7 @@ void RigidBody::setContinousCollisionDetection(bool ccd)
 	dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, ccd);
 }
 
+// Ініціалізує фізичне тіло, створює фізичного актора, додає коллайдери, реєструє в EntityManager
 void RigidBody::awake()
 {
     Transform* t = mOwner->getTransform();
@@ -148,6 +159,7 @@ void RigidBody::update()
 {
 }
 
+// Фіксоване оновлення компонента: синхронізує позицію та обертання з PhysX, оновлює форму при зміні масштабу
 void RigidBody::fixedUpdate()
 {
 	if (!mActor) return;
@@ -169,6 +181,7 @@ void RigidBody::fixedUpdate()
 	}
 }
 
+// Оновлює коллайдери фізичного тіла відповідно до поточного масштабу
 void RigidBody::updateShape()
 {
 	releaseShapes();
@@ -179,6 +192,7 @@ void RigidBody::updateShape()
 	}
 }
 
+// Звільняє всі форми з фізичного тіла
 void RigidBody::releaseShapes()
 {
 	PxU32 shapesN = mActor->getNbShapes();
@@ -192,6 +206,7 @@ void RigidBody::releaseShapes()
 	}
 }
 
+// Оновлює глобальну позицію та обертання фізичного тіла згідно з Transform
 void RigidBody::updateGlobalPose()
 {
 	if (!mActor) return;
@@ -209,6 +224,7 @@ void RigidBody::updateGlobalPose()
 	mActor->setGlobalPose(pose, true);
 }
 
+// Додає коллайдер до списку коллайдерів цього фізичного тіла
 void RigidBody::addCollider(Collider* collider)
 {
 	mColliders.push_back(collider);

@@ -19,6 +19,7 @@ struct material {
 
 material materialData = {};
 
+// Ініціалізує шейдери, константні буфери та реєструє матеріал
 Material::Material()
 {
 	mVertexShader = GraphicsEngine::get()->getVertexShader(L"src\\Shaders\\VertexShader.hlsl", "main");
@@ -32,6 +33,7 @@ Material::Material()
 	EntityManager::get()->registerMaterial(this);
 }
 
+// Звільняє ресурси та знімає реєстрацію матеріалу
 Material::~Material()
 {
 	mConstantBuffer->release();
@@ -39,22 +41,26 @@ Material::~Material()
 	EntityManager::get()->unregisterMaterial(this);
 }
 
+// Встановлює вершинний шейдер для матеріалу
 void Material::setVertexShader(VertexShader* vertexShader)
 {
 	mVertexShader = vertexShader;
 }
 
+// Встановлює піксельний шейдер для матеріалу
 void Material::setPixelShader(PixelShader* pixelShader)
 {
 	mPixelShader = pixelShader;
 }
 
+// Додає текстуру до матеріалу
 void Material::addTexture(Texture* texture)
 {
 	if (texture == nullptr) return;
 	mTextures.push_back(texture);
 }
 
+// Видаляє текстуру з матеріалу за індексом
 void Material::removeTexture(unsigned int id)
 {
 	if (id >= mTextures.size()) return;
@@ -62,6 +68,7 @@ void Material::removeTexture(unsigned int id)
 	mTextures.erase(mTextures.begin() + id);
 }
 
+// Встановлює колір матеріалу
 void Material::setColor(float r, float g, float b, float a)
 {
 	color[0] = r;
@@ -70,12 +77,14 @@ void Material::setColor(float r, float g, float b, float a)
 	color[3] = a;
 }
 
+// Встановлює константний буфер для матеріалу у відповідний слот
 void Material::setConstantBuffer(ConstantBuffer* constantBuffer, int slot)
 {
 	if (slot == 1) return;
 	mConstantBuffers[slot] = constantBuffer;
 }
 
+// Оновлює дані матеріалу та встановлює константні буфери для шейдерів
 void Material::onMaterialSet()
 {
 	materialData.ambient = ambient;

@@ -1,6 +1,7 @@
 #pragma once
 #include "Component.h"
 
+// Компонент для управління камерою в стилі "вільного погляду" (freelook)
 class FreelookCameraController : public Component
 {
 public:
@@ -9,6 +10,7 @@ public:
 	~FreelookCameraController() override;
 
 protected:
+	// Оновлює стан камери в стилі "вільного погляду"
 	void update() override;
 
 	float speed = 2.0f;

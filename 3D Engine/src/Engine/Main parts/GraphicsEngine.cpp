@@ -27,6 +27,7 @@ GraphicsEngine::GraphicsEngine()
 	catch(...) {}
 }
 
+// Ініціалізує графічний рушій
 bool GraphicsEngine::init()
 {
 	D3D_DRIVER_TYPE driverTypes[] = {
@@ -68,6 +69,7 @@ bool GraphicsEngine::init()
 	return true;
 }
 
+// Звільняє ресурси графічного рушія
 bool GraphicsEngine::release()
 {
 	mDxgiDevice->Release();
@@ -92,37 +94,44 @@ GraphicsEngine::~GraphicsEngine()
 	delete mGlobalResources;
 }
 
+// Повертає єдиний екземпляр GraphicsEngine (синглтон)
 GraphicsEngine* GraphicsEngine::get()
 {
 	static GraphicsEngine engine;
 	return &engine;
 }
 
+// Створює новий SwapChain
 SwapChain* GraphicsEngine::createSwapShain()
 {
 	return new SwapChain();
 }
 
+// Повертає основний DeviceContext
 DeviceContext* GraphicsEngine::getImmDeviceContext()
 {
 	return this->mImmDeviceContext;
 }
 
+// Створює новий VertexBuffer
 VertexBuffer* GraphicsEngine::createVertexBuffer()
 {
 	return new VertexBuffer();
 }
 
+// Створює новий IndexBuffer
 IndexBuffer* GraphicsEngine::createIndexBuffer()
 {
 	return new IndexBuffer();
 }
 
+// Створює новий ConstantBuffer
 ConstantBuffer* GraphicsEngine::createConstantBuffer()
 {
 	return new ConstantBuffer();
 }
 
+// Створює новий VertexShader з байткоду
 VertexShader* GraphicsEngine::createVertexShader(const void* shaderBytecode, SIZE_T bytecodeLength)
 {
 	VertexShader* vs = new VertexShader();
@@ -134,6 +143,7 @@ VertexShader* GraphicsEngine::createVertexShader(const void* shaderBytecode, SIZ
 	return vs;
 }
 
+// Створює новий PixelShader з байткоду
 PixelShader* GraphicsEngine::createPixelShader(const void* shaderBytecode, SIZE_T bytecodeLength)
 {
 	PixelShader* ps = new PixelShader();
@@ -145,6 +155,7 @@ PixelShader* GraphicsEngine::createPixelShader(const void* shaderBytecode, SIZE_
 	return ps;
 }
 
+// Повертає VertexShader за ім'ям файлу та точкою входу
 VertexShader* GraphicsEngine::getVertexShader(const wchar_t* fileName, const char* entryPoint)
 {
 	auto it = vertexShaderMap.find(fileName);
@@ -171,6 +182,7 @@ VertexShader* GraphicsEngine::getVertexShader(const wchar_t* fileName, const cha
 	return nullptr;
 }
 
+// Повертає PixelShader за ім'ям файлу та точкою входу
 PixelShader* GraphicsEngine::getPixelShader(const wchar_t* fileName, const char* entryPoint)
 {
 	auto it = pixelShaderMap.find(fileName);
@@ -197,21 +209,25 @@ PixelShader* GraphicsEngine::getPixelShader(const wchar_t* fileName, const char*
 	return nullptr;
 }
 
+// Повертає менеджер текстур
 TextureManager* GraphicsEngine::getTextureManager()
 {
 	return mTextureManager;
 }
 
+// Повертає менеджер мешів
 MeshManager* GraphicsEngine::getMeshManager()
 {
 	return mMeshManager;
 }
 
+// Повертає менеджер глобальних ресурсів
 GlobalResources* GraphicsEngine::getGlobalResources()
 {
 	return mGlobalResources;
 }
 
+// Компілює вершинний шейдер з файлу
 bool GraphicsEngine::compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength)
 {
 	ID3DBlob* errblob = nullptr;
@@ -226,11 +242,13 @@ bool GraphicsEngine::compileVertexShader(const wchar_t* fileName, const char* en
 	return true;
 }
 
+// Звільняє ресурси вершинного шейдера
 void GraphicsEngine::releaseVertexShader()
 {
 	if(mVSBlob) mVSBlob->Release();
 }
 
+// Компілює піксельний шейдер з файлу
 bool GraphicsEngine::compilePixelShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength)
 {
 	ID3DBlob* errblob = nullptr;
@@ -245,11 +263,13 @@ bool GraphicsEngine::compilePixelShader(const wchar_t* fileName, const char* ent
 	return true;
 }
 
+// Звільняє ресурси піксельного шейдера
 void GraphicsEngine::releasePixelShader()
 {
 	if (mPSBlob) mPSBlob->Release();
 }
 
+// Встановлює матеріал в шейдерах
 void GraphicsEngine::setMaterial(Material* material)
 {
 	material->onMaterialSet();
@@ -265,6 +285,7 @@ void GraphicsEngine::setMaterial(Material* material)
 	}
 }
 
+// Створює стани растеризатора
 bool GraphicsEngine::createRasterizerStates()
 {
 	CD3D11_RASTERIZER_DESC rastDesc(D3D11_FILL_SOLID, D3D11_CULL_BACK, FALSE,
@@ -283,6 +304,7 @@ bool GraphicsEngine::createRasterizerStates()
 	return true;
 }
 
+// Створює стани семплера
 bool GraphicsEngine::createSamplerStates()
 {
 	D3D11_SAMPLER_DESC sampDesc = {};

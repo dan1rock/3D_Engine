@@ -16,6 +16,7 @@ AppWindow::~AppWindow()
 {
 }
 
+// Викликається при створенні вікна: ініціалізує рушії, створює SwapChain, встановлює початкові константи та завантажує головну сцену
 void AppWindow::onCreate()
 {
 	PhysicsEngine::get()->init();
@@ -40,6 +41,7 @@ void AppWindow::onCreate()
 	SceneManager::get()->loadScene(new MainScene());
 }
 
+// Основний цикл оновлення: обробляє ввід, оновлює компоненти, фізику, рендеринг та сцену
 void AppWindow::onUpdate()
 {
 	if (!isFocused)
@@ -78,6 +80,7 @@ void AppWindow::onUpdate()
 	mSwapChain->present(false);
 }
 
+// Викликається при зміні розміру вікна: оновлює SwapChain та матрицю проекції
 void AppWindow::onWindowResized()
 {
 	RECT rc = this->getClientWindowRect();
@@ -93,6 +96,7 @@ void AppWindow::onWindowResized()
 	);
 }
 
+// Викликається при отриманні фокусу вікном: ховає курсор та оновлює час
 void AppWindow::onFocus()
 {
 	isFocused = true;
@@ -100,12 +104,14 @@ void AppWindow::onFocus()
 	Time::update();
 }
 
+// Викликається при втраті фокусу вікном: показує курсор
 void AppWindow::onKillFocus()
 {
 	isFocused = false;
 	::ShowCursor(true);
 }
 
+// Викликається при знищенні вікна: звільняє ресурси та завершує роботу рушіїв
 void AppWindow::onDestroy()
 {
 	Window::onDestroy();

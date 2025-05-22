@@ -7,8 +7,11 @@ class SwapChain
 {
 public:
 	SwapChain();
+	// Ініціалізує SwapChain для заданого вікна з вказаною шириною та висотою
 	bool init(HWND hwnd, UINT width, UINT height);
+	// Відображає (презентує) зображення на екран, з можливістю вертикальної синхронізації
 	bool present(bool vSync);
+	// Звільняє ресурси SwapChain
 	bool release();
 	~SwapChain();
 private:

@@ -5,6 +5,7 @@ SwapChain::SwapChain()
 {
 }
 
+// Ініціалізує SwapChain для заданого вікна з вказаною шириною та висотою
 bool SwapChain::init(HWND hwnd, UINT width, UINT height)
 {
 	if (mSwapChain != nullptr) mSwapChain->Release();
@@ -13,6 +14,7 @@ bool SwapChain::init(HWND hwnd, UINT width, UINT height)
 
 	ID3D11Device* device = GraphicsEngine::get()->mD3dDevice;
 
+	// Створення дескриптора для SwapChain
 	DXGI_SWAP_CHAIN_DESC desc;
 	ZeroMemory(&desc, sizeof(DXGI_SWAP_CHAIN_DESC));
 	desc.BufferCount = 1;
@@ -36,6 +38,7 @@ bool SwapChain::init(HWND hwnd, UINT width, UINT height)
 	if (FAILED(hr))
 		return false;
 
+	// Створення цілі рендеру
 	ID3D11Texture2D* buffer;
 	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&buffer);
 	if (FAILED(hr))
@@ -46,6 +49,7 @@ bool SwapChain::init(HWND hwnd, UINT width, UINT height)
 	if (FAILED(hr))
 		return false;
 
+	// Створення текстури для глибини
 	D3D11_TEXTURE2D_DESC texDesc = {};
 	texDesc.Width = width;
 	texDesc.Height = height;
@@ -73,12 +77,14 @@ bool SwapChain::init(HWND hwnd, UINT width, UINT height)
 	return true;
 }
 
+// Відображає (презентує) зображення на екран, з можливістю вертикальної синхронізації
 bool SwapChain::present(bool vSync)
 {
 	mSwapChain->Present(vSync, NULL);
 	return true;
 }
 
+// Звільняє ресурси SwapChain
 bool SwapChain::release()
 {
 	mSwapChain->Release();

@@ -7,8 +7,11 @@ class IndexBuffer
 {
 public:
 	IndexBuffer();
+	// Створює та завантажує індексний буфер за списком індексів
 	bool load(void* indicesList, UINT listSize);
+	// Повертає кількість індексів у буфері
 	UINT getVertexListSize();
+	// Звільняє ресурси індексного буфера
 	bool release();
 	~IndexBuffer();
 private:

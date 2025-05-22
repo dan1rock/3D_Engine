@@ -12,16 +12,19 @@ Time::~Time()
 {
 }
 
+// Повертає різницю часу між двома кадрами
 float Time::getDeltaTime()
 {
     return deltaTime;
 }
 
+// Повертає час, що пройшов з моменту запуску програми
 float Time::getCurrentTime()
 {
     return currentTickTime / 1000.0f;
 }
 
+// Оновлює поточний час і різницю часу між кадрами
 void Time::update()
 {
 	lastTickTime = currentTickTime;

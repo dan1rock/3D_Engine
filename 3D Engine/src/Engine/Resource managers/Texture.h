@@ -5,6 +5,7 @@
 class Texture : public Resource
 {
 public:
+	// Створює текстуру з файлу
 	Texture(const wchar_t* fullPath);
 	~Texture();
 private:

@@ -5,13 +5,15 @@
 
 using namespace physx;
 
+// Клас для фільтрації акторів, які потрібно ігнорувати при фізичних запитах
 struct IgnoreActorFilterCallback : PxQueryFilterCallback
 {
     PxRigidActor* mIgnore;
 
+    // Конструктор з актором, якого потрібно ігнорувати
     IgnoreActorFilterCallback(PxRigidActor* ignore) : mIgnore(ignore) {}
 
-    // Called before the query hits get added
+    // Викликається перед додаванням попадання до результату запиту
     PxQueryHitType::Enum preFilter(
         PxFilterData const& filterData,
         const PxShape* shape,
@@ -25,6 +27,7 @@ struct IgnoreActorFilterCallback : PxQueryFilterCallback
         return PxQueryHitType::eBLOCK;
     }
 
+    // Викликається після обробки попадання
     PxQueryHitType::Enum postFilter(
         PxFilterData const& filterData,
         const PxQueryHit& hit
@@ -34,6 +37,7 @@ struct IgnoreActorFilterCallback : PxQueryFilterCallback
     }
 };
 
+// Виконує фізичний raycast у сцені, ігноруючи заданий RigidBody
 bool Physics::raycast(const Vector3& origin, const Vector3& direction, float maxDistance, RaycastHit& outHit, RigidBody* ignore)
 {
     PxRaycastBuffer hitBuffer;
@@ -63,6 +67,7 @@ bool Physics::raycast(const Vector3& origin, const Vector3& direction, float max
     return true;
 }
 
+// Виконує фізичний sphere cast у сцені, ігноруючи заданий RigidBody
 bool Physics::sphereCast(const Vector3& origin, const Vector3& direction, float radius, float maxDistance, RaycastHit& outHit, RigidBody* ignore)
 {
 	PxSphereGeometry sphere(radius);
@@ -94,6 +99,7 @@ bool Physics::sphereCast(const Vector3& origin, const Vector3& direction, float 
 	return true;
 }
 
+// Перевіряє, які об'єкти знаходяться всередині сфери з заданим радіусом
 bool Physics::overlapSphere(const Vector3& origin, float radius, std::vector<OverlapHit>& outHits)
 {
     PxSphereGeometry sphere(radius);

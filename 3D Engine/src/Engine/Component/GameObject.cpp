@@ -2,6 +2,7 @@
 #include "EntityManager.h"
 #include "RigidBody.h"
 
+// Конструктор класу GameObject, реєструє об'єкт у EntityManager та ініціалізує трансформацію за замовчуванням
 GameObject::GameObject()
 {
 	EntityManager::get()->registerGameObject(this);
@@ -11,6 +12,7 @@ GameObject::GameObject()
 	mTransform.setRotation(Vector3(0.0f, 0.0f, 0.0f));
 }
 
+// Конструктор класу GameObject з початковою позицією
 GameObject::GameObject(Vector3 position)
 {
     EntityManager::get()->registerGameObject(this);
@@ -20,6 +22,7 @@ GameObject::GameObject(Vector3 position)
 	mTransform.setRotation(Vector3(0.0f, 0.0f, 0.0f));
 }
 
+// Деструктор класу GameObject, видаляє всі компоненти та знімає реєстрацію об'єкта
 GameObject::~GameObject()
 {
     for (auto* component : mComponents) {
@@ -31,16 +34,19 @@ GameObject::~GameObject()
     EntityManager::get()->unregisterGameObject(this);
 }
 
+// Повертає вказівник на компонент Transform цього об'єкта
 Transform* GameObject::getTransform()
 {
     return &mTransform;
 }
 
+// Знищує об'єкт
 void GameObject::destroy()
 {
     delete this;
 }
 
+// Видаляє компонент з об'єкта, якщо він існує
 bool GameObject::removeComponent(Component* component)
 {
     auto it = std::find_if(
@@ -57,6 +63,7 @@ bool GameObject::removeComponent(Component* component)
     return false;
 }
 
+// Створює копію об'єкта разом з усіма його компонентами
 GameObject* GameObject::instantiate()  
 {  
    GameObject* newObject = new GameObject();
@@ -71,9 +78,8 @@ GameObject* GameObject::instantiate()
        static_cast<Component*>(newComponent)->registerComponent();
        newObject->mComponents.push_back(newComponent);
        newObject->mComponents.back()->awake();
-	   newObject->mRigidBody = newObject->getComponent<RigidBody>();
+    newObject->mRigidBody = newObject->getComponent<RigidBody>();
    }
 
    return newObject;
 }
-

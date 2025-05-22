@@ -8,12 +8,14 @@
 #include <vector>
 #include <iostream>
 
+// Структура для зберігання вершинних даних
 struct vertex {
     Vector3 pos;
     Vector3 normal;
     Vector2 texCoord;
 };
 
+// Завантажує модель з файлу, створює вершинний та індексний буфери
 Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
 {
     std::wstring ws(fullPath);
@@ -83,6 +85,7 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
     GraphicsEngine::get()->releaseVertexShader();
 }
 
+// Звільняє ресурси вершинного та індексного буферів
 Mesh::~Mesh()
 {
 	if (mVertexBuffer)
@@ -97,11 +100,13 @@ Mesh::~Mesh()
 	}
 }
 
+// Повертає вказівник на вершинний буфер
 VertexBuffer* Mesh::getVertexBuffer()
 {
     return mVertexBuffer;
 }
 
+// Повертає вказівник на індексний буфер
 IndexBuffer* Mesh::getIndexBuffer()
 {
     return mIndexBuffer;

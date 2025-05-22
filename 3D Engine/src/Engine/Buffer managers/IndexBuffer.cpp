@@ -5,6 +5,7 @@ IndexBuffer::IndexBuffer()
 {
 }
 
+// Створює та завантажує індексний буфер за списком індексів
 bool IndexBuffer::load(void* indicesList, UINT listSize)
 {
 	if (mBuffer) mBuffer->Release();
@@ -29,11 +30,13 @@ bool IndexBuffer::load(void* indicesList, UINT listSize)
 	return true;
 }
 
+// Повертає кількість індексів у буфері
 UINT IndexBuffer::getVertexListSize()
 {
 	return this->mListSize;
 }
 
+// Звільняє ресурси індексного буфера
 bool IndexBuffer::release()
 {
 	mBuffer->Release();

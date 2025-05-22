@@ -14,6 +14,7 @@ ResourceManager::~ResourceManager()
 {
 }
 
+// Створює або повертає ресурс з файлу, використовуючи кешування
 Resource* ResourceManager::createResourceFromFile(const wchar_t* path)
 {
 	std::wstring fullPath = std::experimental::filesystem::absolute(path);
@@ -43,11 +44,13 @@ Resource* ResourceManager::createResourceFromFile(const wchar_t* path)
 	return nullptr;
 }
 
+// Віртуальний метод для створення ресурсу з файлу (реалізується у спадкоємцях)
 Resource* ResourceManager::createResourceFromFileConcrete(const wchar_t* filePath)
 {
 	return nullptr;
 }
 
+// Позначає всі ресурси як невикористані
 void ResourceManager::markResourcesAsUnused()
 {
 	for (auto& it : resourceMap)
@@ -60,6 +63,7 @@ void ResourceManager::markResourcesAsUnused()
 	}
 }
 
+// Видаляє всі невикористані ресурси з пам'яті та кешу
 void ResourceManager::unloadUnusedResources()
 {
 	int count = 0;

@@ -1,16 +1,16 @@
 #include "MeshRenderer.h"
 
-#include <iostream>
-
 MeshRenderer::MeshRenderer()
 {
 }
 
+// Конструктор класу MeshRenderer з вказаним мешем
 MeshRenderer::MeshRenderer(Mesh* mesh)
 {
 	this->mMesh = mesh;
 }
 
+// Конструктор класу MeshRenderer з вказаними мешем та матеріалом
 MeshRenderer::MeshRenderer(Mesh* mesh, Material* material)
 {
 	this->mMesh = mesh;
@@ -21,11 +21,13 @@ MeshRenderer::~MeshRenderer()
 {
 }
 
+// Викликається при активації компонента
 void MeshRenderer::awake()
 {
 	RenderComponent::awake();
 }
 
+// Викликається для рендеру об'єкта: встановлює буфери та викликає рендеринг
 void MeshRenderer::render()
 {
 	RenderComponent::render();

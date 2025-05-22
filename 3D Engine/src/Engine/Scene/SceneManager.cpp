@@ -12,6 +12,7 @@ SceneManager::~SceneManager()
 {
 }
 
+// Встановлює сцену для завантаження
 void SceneManager::loadScene(Scene* scene)
 {
 	if (mRequestedScene != nullptr)
@@ -20,12 +21,14 @@ void SceneManager::loadScene(Scene* scene)
 	mRequestedScene = scene;
 }
 
+// Повертає єдиний екземпляр менеджера сцен (синглтон)
 SceneManager* SceneManager::get()
 {
 	static SceneManager instance;
 	return &instance;
 }
 
+// Оновлює менеджер сцен, викликаючи завантаження нової сцени
 void SceneManager::update()
 {
 	if (mRequestedScene == nullptr)

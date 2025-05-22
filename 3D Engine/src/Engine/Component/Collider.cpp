@@ -14,6 +14,7 @@ Collider::~Collider()
 	}
 }
 
+// Додає коллайдер до фізичного тіла
 void Collider::awake()
 {
 	if (RigidBody* rb = mOwner->getComponent<RigidBody>()) {

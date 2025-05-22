@@ -7,8 +7,11 @@ class VertexBuffer
 {
 public:
 	VertexBuffer();
+	// Створює та завантажує вершинний буфер і з переданими даними з лейаутом шейдера
 	bool load(void* vertList, UINT vertSize, UINT listSize, void* shaderByteCode, SIZE_T byteShaderSize);
+	// Повертає кількість вершин у буфері
 	UINT getVertexListSize();
+	// Звільняє ресурси вершинного буфера
 	bool release();
 	~VertexBuffer();
 private:

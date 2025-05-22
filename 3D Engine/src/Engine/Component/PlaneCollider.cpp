@@ -9,6 +9,7 @@ PlaneCollider::~PlaneCollider()
 {
 }
 
+// Повертає вказівник на геометрію коллайдера
 void* PlaneCollider::getGeometry(Vector3& scale, bool convex)
 {
 	if (mGeometry) {

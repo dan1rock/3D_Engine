@@ -14,6 +14,7 @@ SphereCollider::~SphereCollider()
 {
 }
 
+// Повертає вказівник на геометрію коллайдера
 void* SphereCollider::getGeometry(Vector3& scale, bool convex)
 {
 	if (mGeometry) {

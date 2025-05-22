@@ -15,6 +15,7 @@ PhysicsEngine::~PhysicsEngine()
     delete mConvexMeshManager;
 }
 
+// Ініціалізує PhysX, створює сцену, матеріали, диспатчер та інші ресурси
 void PhysicsEngine::init()
 {
     gFoundation = PxCreateFoundation(
@@ -65,6 +66,7 @@ void PhysicsEngine::init()
     gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, params);
 }
 
+// Оновлює фізичну сцену (симуляція) на заданий крок часу
 void PhysicsEngine::update(float deltaTime)
 {
 	if (deltaTime <= 0.0f)
@@ -74,6 +76,7 @@ void PhysicsEngine::update(float deltaTime)
 	gScene->fetchResults(true);
 }
 
+// Завершує роботу PhysX, звільняє всі ресурси
 void PhysicsEngine::shutdown()
 {
     if (gScene) {
@@ -105,26 +108,31 @@ void PhysicsEngine::shutdown()
     }
 }
 
+// Повертає вказівник на об'єкт PxPhysics
 PxPhysics* PhysicsEngine::getPhysics()
 {
     return gPhysics;
 }
 
+// Повертає вказівник на об'єкт PxScene
 PxScene* PhysicsEngine::getScene()
 {
     return gScene;
 }
 
+// Повертає вказівник на фізичний матеріал за замовчуванням
 PxMaterial* PhysicsEngine::getMaterial()
 {
     return gMaterial;
 }
 
+// Повертає менеджер опуклих мешів
 ConvexMeshManager* PhysicsEngine::getConvexMeshManager()
 {
     return mConvexMeshManager;
 }
 
+// Створює (готує) опуклий меш з набору точок і повертає його
 PxConvexMesh* PhysicsEngine::cookConvexMesh(const std::vector<PxVec3>& points)
 {
     PxConvexMeshDesc desc;
@@ -144,6 +152,7 @@ PxConvexMesh* PhysicsEngine::cookConvexMesh(const std::vector<PxVec3>& points)
     return convexMesh;
 }
 
+// Створює (готує) трикутний меш з набору точок та індексів і повертає його
 PxTriangleMesh* PhysicsEngine::cookTriangleMesh(const std::vector<PxVec3>& points, const std::vector<PxU32>& indices)
 {
     PxTriangleMeshDesc meshDesc;
@@ -164,6 +173,7 @@ PxTriangleMesh* PhysicsEngine::cookTriangleMesh(const std::vector<PxVec3>& point
     return triangleMesh;
 }
 
+// Повертає єдиний екземпляр PhysicsEngine (синглтон)
 PhysicsEngine* PhysicsEngine::get()
 {
 	static PhysicsEngine instance;

@@ -5,6 +5,7 @@
 class RigidBody;
 class Collider;
 
+// Структура для зберігання інформації про результати raycast
 struct RaycastHit
 {
 	float distance;
@@ -14,6 +15,7 @@ struct RaycastHit
 	Collider* collider;
 };
 
+// Структура для зберігання інформації про результати sphere cast
 struct OverlapHit
 {
 	RigidBody* rigidBody;
@@ -23,9 +25,11 @@ struct OverlapHit
 class Physics
 {
 public:
-	// Cast a ray in the world and check for collisions with colliders.
+	// Виконує фізичний raycast у сцені, ігноруючи заданий RigidBody
 	static bool raycast(const Vector3& origin, const Vector3& direction, float maxDistance, RaycastHit& outHit, RigidBody* ignore = nullptr);
+	// Виконує фізичний sphere cast у сцені, ігноруючи заданий RigidBody
 	static bool sphereCast(const Vector3& origin, const Vector3& direction, float radius, float maxDistance, RaycastHit& outHit, RigidBody* ignore = nullptr);
+	// Перевіряє, які об'єкти знаходяться всередині сфери з заданим радіусом
 	static bool overlapSphere(const Vector3& origin, float radius, std::vector<OverlapHit>& outHits);
 };
 

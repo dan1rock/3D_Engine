@@ -4,33 +4,45 @@
 
 class RigidBody;
 
+// Представляє об'єкт у сцені, що може мати компоненти
 class GameObject
 {
 public:
+	// Конструктор класу GameObject, реєструє об'єкт у EntityManager та ініціалізує трансформацію за замовчуванням
 	GameObject();
+	// Конструктор класу GameObject з початковою позицією
 	GameObject(Vector3 position);
+	// Деструктор класу GameObject, видаляє всі компоненти та знімає реєстрацію об'єкта
 	virtual ~GameObject();
 
+	// Повертає вказівник на компонент Transform цього об'єкта
 	Transform* getTransform();
+	// Знищує об'єкт
 	void destroy();
 
+	// Створює новий компонент типу T і додає його до об'єкта
 	template<typename T, typename... Args>
 	T* addComponent(Args&&... args);
 
+	// Повертає вказівник на компонент типу T, якщо він існує
 	template<typename T>
 	T* getComponent();
 
+	// Повертає список вказівників на компоненти типу T, якщо вони існують
 	template<typename T>
 	std::list<T*> getComponents();
 
+	// Видаляє компонент з об'єкта, якщо він існує
 	bool removeComponent(Component* component);
 
+	// Створює копію об'єкта разом з усіма його компонентами
 	GameObject* instantiate();
 
 	bool dontDestroyOnLoad = false;
 	bool isActive = true;
 
 protected:
+	// Чи повинен об'єкт прокидати компоненти при створенні
 	virtual bool shouldAwakeComponents() const { return true; }
 
 	Transform mTransform;
@@ -41,6 +53,7 @@ protected:
 	friend class Transform;
 };
 
+// Створює новий компонент типу T і додає його до об'єкта
 template<typename T, typename... Args>
 T* GameObject::addComponent(Args&&... args)
 {
@@ -73,6 +86,7 @@ T* GameObject::addComponent(Args&&... args)
 	return comp;
 }
 
+// Повертає вказівник на компонент типу T, якщо він існує
 template<typename T>
 T* GameObject::getComponent()
 {
@@ -86,6 +100,7 @@ T* GameObject::getComponent()
 	return nullptr;
 }
 
+// Повертає список вказівників на компоненти типу T, якщо вони існують
 template<typename T>
 std::list<T*> GameObject::getComponents()
 {

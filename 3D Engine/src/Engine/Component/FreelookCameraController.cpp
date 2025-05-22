@@ -18,6 +18,7 @@ FreelookCameraController::~FreelookCameraController()
 {
 }
 
+// Оновлює стан камери в стилі "вільного погляду"
 void FreelookCameraController::update()
 {
 	Vector3 rotation = mOwner->getTransform()->getRotation();

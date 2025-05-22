@@ -5,6 +5,7 @@ VertexShader::VertexShader()
 {
 }
 
+// Звільняє ресурси вершинного шейдера
 bool VertexShader::release()
 {
 	mVertexShader->Release();
@@ -16,6 +17,7 @@ VertexShader::~VertexShader()
 {
 }
 
+// Ініціалізує вершинний шейдер з байткоду
 bool VertexShader::init(const void* shaderBytecode, SIZE_T bytecodeLength)
 {
 	if(FAILED(GraphicsEngine::get()->mD3dDevice->CreateVertexShader(shaderBytecode, bytecodeLength, NULL, &mVertexShader)))

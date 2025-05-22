@@ -14,6 +14,7 @@ SkySphere::~SkySphere()
 {
 }
 
+// Викликається при активації компонента: створює матеріал, завантажує текстуру та меш, масштабує об'єкт
 void SkySphere::awake()
 {
 	mMaterial = new Material();
@@ -28,6 +29,7 @@ void SkySphere::awake()
 	mOwner->getTransform()->setScale(Vector3(100.0f, 100.0f, 100.0f));
 }
 
+// Викликається для рендеру: тимчасово зміщує камеру в центр, рендерить небо, повертає камеру назад
 void SkySphere::render()
 {
 	Vector3 cameraTranslation = GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.getTranslation();

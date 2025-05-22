@@ -6,6 +6,7 @@ ConstantBuffer::ConstantBuffer()
 {
 }
 
+// Створює та завантажує константний буфер з переданими даними
 bool ConstantBuffer::load(void* buffer, UINT bufferSize)
 {
 	if (mBuffer) mBuffer->Release();
@@ -28,11 +29,13 @@ bool ConstantBuffer::load(void* buffer, UINT bufferSize)
 	return true;
 }
 
+// Оновлює дані в константному буфері для заданого контексту пристрою
 void ConstantBuffer::update(DeviceContext* context, void* buffer)
 {
 	context->mDeviceContext->UpdateSubresource(this->mBuffer, NULL, NULL, buffer, NULL, NULL);
 }
 
+// Звільняє ресурси константного буфера
 bool ConstantBuffer::release()
 {
 	mBuffer->Release();

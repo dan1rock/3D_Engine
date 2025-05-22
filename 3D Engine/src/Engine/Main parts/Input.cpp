@@ -19,41 +19,49 @@ Input::~Input()
 {
 }
 
+// Перевіряє, чи натиснута клавіша з вказаним кодом
 bool Input::getKey(int keycode)
 {
 	return keys_state[keycode] & 0x80;
 }
 
+// Повертає true тільки в той кадр, коли клавішу було натиснуто
 bool Input::getKeyDown(int keycode)
 {
 	return keys_state[keycode] & 0x80 && !(old_keys_state[keycode] & 0x80);
 }
 
+// Повертає true тільки в той кадр, коли клавішу було відпущено
 bool Input::getKeyUp(int keycode)
 {
 	return old_keys_state[keycode] & 0x80 && !(keys_state[keycode] & 0x80);
 }
 
+// Перевіряє, чи натиснута кнопка миші
 bool Input::getMouseButton(MouseButton button)
 {
 	return mouse_state[button] & 0x80;
 }
 
+// Повертає true тільки в той кадр, коли кнопку миші було натиснуто
 bool Input::getMouseButtonDown(MouseButton button)
 {
 	return (mouse_state[button] & 0x80) && !(old_mouse_state[button] & 0x80);
 }
 
+// Повертає true тільки в той кадр, коли кнопку миші було відпущено
 bool Input::getMouseButtonUp(MouseButton button)
 {
 	return (old_mouse_state[button] & 0x80) && !(mouse_state[button] & 0x80);
 }
 
+// Повертає зміну позиції миші за кадр
 Vector2 Input::getDeltaMousePos()
 {
 	return deltaMousePos;
 }
 
+// Оновлює стан клавіатури та кнопок миші
 void Input::update()
 {
 	::memcpy(old_keys_state, keys_state, sizeof(unsigned char) * 256);
@@ -67,6 +75,7 @@ void Input::update()
 
 bool wasFocused = false;
 
+// Оновлює стан миші з урахуванням області вікна та фокусу
 void Input::updateMouse(RECT windowRect, bool isFocused)
 {
 	if (isFocused)

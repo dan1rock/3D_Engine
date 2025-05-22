@@ -1,11 +1,13 @@
 #include "Prefab.h"
 #include "EntityManager.h"
 
+// Задання статусу активності об'єкта як неактивного
 Prefab::Prefab()
 {
 	isActive = false;
 }
 
+// Задання статусу активності об'єкта як неактивного з позицією
 Prefab::Prefab(Vector3 position)
 {
 	isActive = false;

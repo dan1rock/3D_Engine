@@ -2,6 +2,7 @@
 #include "GraphicsEngine.h"
 #include <DirectXTex.h>
 
+// Створює текстуру з файлу
 Texture::Texture(const wchar_t* fullPath): Resource(fullPath)
 {
 	DirectX::ScratchImage imageData;

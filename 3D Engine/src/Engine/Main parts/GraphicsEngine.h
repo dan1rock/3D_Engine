@@ -22,35 +22,57 @@ class GraphicsEngine
 {
 public:
 	GraphicsEngine();
+	// Ініціалізує графічний рушій
 	bool init();
+	// Звільняє ресурси графічного рушія
 	bool release();
 	~GraphicsEngine();
 
+	// Повертає єдиний екземпляр GraphicsEngine (синглтон)
 	static GraphicsEngine* get();
 
+	// Створює новий SwapChain
 	SwapChain* createSwapShain();
+	// Повертає основний DeviceContext
 	DeviceContext* getImmDeviceContext();
+	// Створює новий VertexBuffer
 	VertexBuffer* createVertexBuffer();
+	// Створює новий IndexBuffer
 	IndexBuffer* createIndexBuffer();
+	// Створює новий ConstantBuffer
 	ConstantBuffer* createConstantBuffer();
+	// Створює новий VertexShader з байткоду
 	VertexShader* createVertexShader(const void* shaderBytecode, SIZE_T bytecodeLength);
+	// Створює новий PixelShader з байткоду
 	PixelShader* createPixelShader(const void* shaderBytecode, SIZE_T bytecodeLength);
+	// Повертає VertexShader за ім'ям файлу та точкою входу
 	VertexShader* getVertexShader(const wchar_t* fileName, const char* entryPoint);
+	// Повертає PixelShader за ім'ям файлу та точкою входу
 	PixelShader* getPixelShader(const wchar_t* fileName, const char* entryPoint);
 
+	// Повертає менеджер текстур
 	TextureManager* getTextureManager();
+	// Повертає менеджер мешів
 	MeshManager* getMeshManager();
+	// Повертає менеджер глобальних ресурсів
 	GlobalResources* getGlobalResources();
 
+	// Компілює вершинний шейдер з файлу
 	bool compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
+	// Звільняє ресурси вершинного шейдера
 	void releaseVertexShader();
+	// Компілює піксельний шейдер з файлу
 	bool compilePixelShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
+	// Звільняє ресурси піксельного шейдера
 	void releasePixelShader();
 
+	// Встановлює матеріал в шейдерах
 	void setMaterial(Material* material);
 
 private:
+	// Створює стани растеризатора
 	bool createRasterizerStates();
+	// Створює стани семплера
 	bool createSamplerStates();
 
 	ID3D11Device* mD3dDevice = nullptr;

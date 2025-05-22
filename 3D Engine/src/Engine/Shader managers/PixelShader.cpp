@@ -5,6 +5,7 @@ PixelShader::PixelShader()
 {
 }
 
+// Звільняє ресурси піксельного шейдера
 bool PixelShader::release()
 {
 	mPixelShader->Release();
@@ -16,6 +17,7 @@ PixelShader::~PixelShader()
 {
 }
 
+// Ініціалізує піксельний шейдер з байткоду
 bool PixelShader::init(const void* shaderBytecode, SIZE_T bytecodeLength)
 {
 	if (FAILED(GraphicsEngine::get()->mD3dDevice->CreatePixelShader(shaderBytecode, bytecodeLength, NULL, &mPixelShader)))
