@@ -42,6 +42,7 @@ bool GraphicsEngine::init()
 
 	ID3D11DeviceContext* mImmContext = NULL;
 	
+	// Обираємо підтримуваний драйвер та створюємо пристрій
 	HRESULT create = 0;
 	for (UINT index = 0; index < ARRAYSIZE(driverTypes);) {
 		create = D3D11CreateDevice(NULL, driverTypes[index], NULL, NULL, featureLevels,
@@ -55,15 +56,18 @@ bool GraphicsEngine::init()
 
 	mImmDeviceContext = new DeviceContext(mImmContext);
 
+	// Отримуємо DXGI Device, Adapter та Factory
 	mD3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**)&mDxgiDevice);
 	mDxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&mDxgiAdapter);
 	mDxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&mDxgiFactory);
 
 	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
+	// Ініціалізація станів семплера та растеризатора
 	createSamplerStates();
 	createRasterizerStates();
 
+	// Ініціалізація менеджеру глобальних ресурсів
 	mGlobalResources->init();
 
 	return true;
