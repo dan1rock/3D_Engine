@@ -2,7 +2,7 @@
 #include "GlobalResources.h"
 #include "Input.h"
 #include "EngineTime.h"
-#include "GameObject.h"
+#include "Entity.h"
 
 FreelookCameraController::FreelookCameraController()
 {

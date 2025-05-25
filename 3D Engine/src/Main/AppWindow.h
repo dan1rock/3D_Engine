@@ -9,7 +9,7 @@
 #include "Input.h"
 #include "VertexShader.h"
 #include "PixelShader.h"
-#include "GameObject.h"
+#include "Entity.h"
 #include "Vector2.h"
 #include "Vector3.h"
 #include "Matrix.h"

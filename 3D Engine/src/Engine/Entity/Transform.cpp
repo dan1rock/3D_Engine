@@ -1,6 +1,6 @@
 #include "Transform.h"
 #include "RigidBody.h"
-#include "GameObject.h"
+#include "Entity.h"
 
 // Ініціалізує модельну матрицю як одиничну
 Transform::Transform()

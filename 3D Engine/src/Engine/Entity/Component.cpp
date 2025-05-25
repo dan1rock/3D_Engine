@@ -12,7 +12,7 @@ Component::~Component()
 }
 
 // Повертає вказівник на об'єкт-власник (GameObject) цього компонента
-GameObject* Component::getOwner()
+Entity* Component::getOwner()
 {
     return mOwner;
 }
@@ -24,7 +24,7 @@ void Component::registerComponent()
 }
 
 // Встановлює власника (GameObject) для цього компонента
-void Component::setOwner(GameObject* gameObject)
+void Component::setOwner(Entity* gameObject)
 {
     mOwner = gameObject;
 }

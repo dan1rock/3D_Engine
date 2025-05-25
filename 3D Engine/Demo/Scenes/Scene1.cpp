@@ -2,7 +2,7 @@
 #include "GraphicsEngine.h"
 #include "MeshManager.h"
 #include "TextureManager.h"
-#include "GameObject.h"
+#include "Entity.h"
 #include "Material.h"
 #include "MeshRenderer.h"
 #include "SkySphere.h"
@@ -33,20 +33,20 @@ void Scene1::init()
 	prototypeMaterial->textureScale = 20.0f;
 	prototypeMaterial->clampTexture = false;
 
-	GameObject* plane = new GameObject(Vector3(0.0f, -2.0f, 0.0f));
+	Entity* plane = new Entity(Vector3(0.0f, -2.0f, 0.0f));
 	plane->getTransform()->setScale(Vector3(20.0f, 1.0f, 20.0f));
 	plane->addComponent<MeshRenderer>(planeMesh, prototypeMaterial);
 	plane->addComponent<MeshCollider>();
 	plane->addComponent<RigidBody>(true);
 
-	GameObject* skyDome = new GameObject();
+	Entity* skyDome = new Entity();
 	skyDome->addComponent<SkySphere>();
 
-	GameObject* camera = new GameObject(Vector3(0, 1, 3));
+	Entity* camera = new Entity(Vector3(0, 1, 3));
 	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
 	camera->addComponent<Camera>();
 	camera->addComponent<DemoPlayer>(2.0f, 0.002f);
 
-	GameObject* test = new GameObject(Vector3(0, 0, 0));
+	Entity* test = new Entity(Vector3(0, 0, 0));
 	test->addComponent<InstantiationTest>();
 }

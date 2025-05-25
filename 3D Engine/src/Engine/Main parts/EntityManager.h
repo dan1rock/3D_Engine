@@ -5,7 +5,7 @@
 class Component;
 class RenderComponent;
 class Camera;
-class GameObject;
+class Entity;
 class Material;
 class RigidBody;
 
@@ -15,10 +15,10 @@ public:
 	EntityManager();
 	~EntityManager();
 
-	// Реєструє ігровий об'єкт у менеджері
-	void registerGameObject(GameObject* gameObject);
-	// Видаляє ігровий об'єкт з менеджера
-	void unregisterGameObject(GameObject* gameObject);
+	// Реєструє Entity у менеджері
+	void registerEntity(Entity* gameObject);
+	// Видаляє Entity з менеджера
+	void unregisterEntity(Entity* gameObject);
 	// Реєструє компонент у менеджері
 	void registerComponent(Component* component);
 	// Видаляє компонент з менеджера
@@ -61,7 +61,7 @@ public:
 	static EntityManager* get();
 
 private:
-	std::list<GameObject*> mGameObjects = {};
+	std::list<Entity*> mGameObjects = {};
 	std::list<Component*> mComponents = {};
 	std::list<RenderComponent*> mRenderers = {};
 	std::list<Camera*> mCameras = {};

@@ -1,7 +1,7 @@
 #include "MeshCollider.h"
 #include "PhysicsEngine.h"
 #include "ConvexMeshManager.h"
-#include "GameObject.h"
+#include "Entity.h"
 #include "MeshRenderer.h"
 #include <string>
 

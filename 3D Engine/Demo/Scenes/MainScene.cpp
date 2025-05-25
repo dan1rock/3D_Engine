@@ -47,19 +47,19 @@ void MainScene::init()
 	rabbitMaterial->addTexture(rabbitTexture);
 	rabbitMaterial->smoothness = 0.1f;
 
-	GameObject* plane = new GameObject(Vector3(0.0f, -2.0f, 0.0f));
+	Entity* plane = new Entity(Vector3(0.0f, -2.0f, 0.0f));
 	plane->getTransform()->setScale(Vector3(20.0f, 1.0f, 20.0f));
 	plane->addComponent<MeshRenderer>(planeMesh, prototypeMaterial);
 	plane->addComponent<MeshCollider>();
 	plane->addComponent<RigidBody>(true);
 
-	GameObject* penguin = new GameObject(Vector3(1.0f, 0.0f, 0.0f));
+	Entity* penguin = new Entity(Vector3(1.0f, 0.0f, 0.0f));
 	penguin->addComponent<MeshRenderer>(penguinMesh, penguinMaterial);
 
-	GameObject* rabbit = new GameObject(Vector3(-1.0f, 0.0f, 0.0f));
+	Entity* rabbit = new Entity(Vector3(-1.0f, 0.0f, 0.0f));
 	rabbit->addComponent<MeshRenderer>(rabbitMesh, rabbitMaterial);
 
-	GameObject* skyDome = new GameObject();
+	Entity* skyDome = new Entity();
 	skyDome->addComponent<SkySphere>();
 
 	Mesh* mesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
@@ -76,7 +76,7 @@ void MainScene::init()
 	RigidBody* rb = projectilePrefab->addComponent<RigidBody>(1.0f);
 	rb->setContinousCollisionDetection(true);
 
-	GameObject* camera = new GameObject(Vector3(0, 1, 3));
+	Entity* camera = new Entity(Vector3(0, 1, 3));
 	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
 	camera->addComponent<Camera>();
 	DemoPlayer* demoPlayer = camera->addComponent<DemoPlayer>(2.0f, 0.002f);
@@ -91,11 +91,11 @@ void MainScene::init()
 	l->damping = 2.0f;
 	l->maxDistance = 1.0f;
 
-	GameObject* test = new GameObject(Vector3(0, 0, 0));
+	Entity* test = new Entity(Vector3(0, 0, 0));
 	InstantiationTest* i = test->addComponent<InstantiationTest>();
 	i->prefab = instantiationPrefab;
 
-	GameObject* sceneChanger = new GameObject();
+	Entity* sceneChanger = new Entity();
 	sceneChanger->addComponent<SceneChanger>();
 	sceneChanger->dontDestroyOnLoad = true;
 }

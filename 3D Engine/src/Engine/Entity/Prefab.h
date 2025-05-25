@@ -1,8 +1,8 @@
 #pragma once
-#include "GameObject.h"
+#include "Entity.h"
 
 // Образ об'єкта сцени, який можна використовувати для створення нових об'єктів
-class Prefab : public GameObject
+class Prefab : public Entity
 {
 public:
 	// Задання статусу активності об'єкта як неактивного

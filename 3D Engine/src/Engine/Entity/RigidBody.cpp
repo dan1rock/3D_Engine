@@ -1,7 +1,7 @@
 #include "RigidBody.h"
 #include "PhysicsEngine.h"
 #include "ConvexMeshManager.h"
-#include "GameObject.h"
+#include "Entity.h"
 #include "Quaternion.h"
 #include "Collider.h"
 #include "EntityManager.h"

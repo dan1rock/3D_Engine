@@ -29,6 +29,7 @@ bool VertexBuffer::load(void* vertList, UINT vertSize, UINT listSize, void* shad
 	if (FAILED(hr))
 		return false;
 
+	// Створення лейауту шейдера
 	D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = {
 		//SEMANTIC NAME - SEMANTIC INDEX - FORMAT - INPUT SLOT - ALIGNED BYTE OFFSET - INPUT SLOT CLASS - INSTANCE DATA STEP RATE
 		{"POSITION"	, 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0},

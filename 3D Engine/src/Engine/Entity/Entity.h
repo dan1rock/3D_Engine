@@ -5,15 +5,15 @@
 class RigidBody;
 
 // Представляє об'єкт у сцені, що може мати компоненти
-class GameObject
+class Entity
 {
 public:
 	// Конструктор класу GameObject, реєструє об'єкт у EntityManager та ініціалізує трансформацію за замовчуванням
-	GameObject();
+	Entity();
 	// Конструктор класу GameObject з початковою позицією
-	GameObject(Vector3 position);
+	Entity(Vector3 position);
 	// Деструктор класу GameObject, видаляє всі компоненти та знімає реєстрацію об'єкта
-	virtual ~GameObject();
+	virtual ~Entity();
 
 	// Повертає вказівник на компонент Transform цього об'єкта
 	Transform* getTransform();
@@ -36,7 +36,7 @@ public:
 	bool removeComponent(Component* component);
 
 	// Створює копію об'єкта разом з усіма його компонентами
-	GameObject* instantiate();
+	Entity* instantiate();
 
 	bool dontDestroyOnLoad = false;
 	bool isActive = true;
@@ -55,7 +55,7 @@ protected:
 
 // Створює новий компонент типу T і додає його до об'єкта
 template<typename T, typename... Args>
-T* GameObject::addComponent(Args&&... args)
+T* Entity::addComponent(Args&&... args)
 {
 	static_assert(std::is_base_of<Component, T>::value, "addComponent<T>: T must inherit from Component");
 
@@ -88,7 +88,7 @@ T* GameObject::addComponent(Args&&... args)
 
 // Повертає вказівник на компонент типу T, якщо він існує
 template<typename T>
-T* GameObject::getComponent()
+T* Entity::getComponent()
 {
 	static_assert(std::is_base_of<Component, T>::value, "getComponent<T>: T must inherit from Component");
 
@@ -102,7 +102,7 @@ T* GameObject::getComponent()
 
 // Повертає список вказівників на компоненти типу T, якщо вони існують
 template<typename T>
-std::list<T*> GameObject::getComponents()
+std::list<T*> Entity::getComponents()
 {
 	static_assert(std::is_base_of<Component, T>::value, "getComponents<T>: T must inherit from Component");
 

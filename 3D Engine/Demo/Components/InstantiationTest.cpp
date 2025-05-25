@@ -14,7 +14,7 @@ void InstantiationTest::update()
 {
 	if (Input::getKeyDown('I'))
 	{
-		GameObject* newObject = prefab->instantiate();
+		Entity* newObject = prefab->instantiate();
 		newObject->getTransform()->setPosition(mPosition);
 
 		mGameObjects.push_back(newObject);
@@ -25,7 +25,7 @@ void InstantiationTest::update()
 	{
 		if (!mGameObjects.empty())
 		{
-			GameObject* objectToDelete = mGameObjects.back();
+			Entity* objectToDelete = mGameObjects.back();
 			mGameObjects.pop_back();
 			objectToDelete->destroy();
 

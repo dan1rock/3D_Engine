@@ -26,7 +26,7 @@ void DemoPlayer::update()
 
 	if (Input::getMouseButtonDown(MB_Left) && projectilePrefab)
 	{
-		GameObject* projectile = projectilePrefab->instantiate();
+		Entity* projectile = projectilePrefab->instantiate();
 		projectile->getTransform()->setForward(mOwner->getTransform()->getForward());
 		projectile->getTransform()->setPosition(mOwner->getTransform()->getPosition() + mOwner->getTransform()->getForward() * 0.5f);
 		projectile->getComponent<RigidBody>()->addForce(mOwner->getTransform()->getForward() * 1000.0f);

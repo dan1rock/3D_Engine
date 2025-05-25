@@ -1,6 +1,6 @@
 #pragma once
 
-class GameObject;
+class Entity;
 
 // Клас, що представляє компонент в ігровому об'єкті, базовий клас для всіх компонентів
 class Component
@@ -11,10 +11,10 @@ public:
 	virtual ~Component();
 
 	// Повертає вказівник на об'єкт-власник (GameObject) цього компонента
-	GameObject* getOwner();
+	Entity* getOwner();
 
 protected:
-	GameObject* mOwner = nullptr;
+	Entity* mOwner = nullptr;
 
 	// Метод для створення копії компонента, реалізується в похідних класах
 	virtual Component* instantiate() const = 0;
@@ -23,7 +23,7 @@ protected:
 
 private:
 	// Встановлює власника (GameObject) для цього компонента
-	void setOwner(GameObject* gameObject);
+	void setOwner(Entity* gameObject);
 
 	// Викликається при активації компонента
 	virtual void awake();
@@ -32,7 +32,7 @@ private:
 	// Фіксоване оновлення компонента (викликається з фіксованим кроком часу)
 	virtual void fixedUpdate();
 
-	friend class GameObject;
+	friend class Entity;
 	friend class EntityManager;
 };
 

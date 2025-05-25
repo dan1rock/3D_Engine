@@ -1,11 +1,11 @@
-#include "GameObject.h"
+#include "Entity.h"
 #include "EntityManager.h"
 #include "RigidBody.h"
 
 // Конструктор класу GameObject, реєструє об'єкт у EntityManager та ініціалізує трансформацію за замовчуванням
-GameObject::GameObject()
+Entity::Entity()
 {
-	EntityManager::get()->registerGameObject(this);
+	EntityManager::get()->registerEntity(this);
     mTransform.setOwner(this);
 	mTransform.setPosition(Vector3(0.0f, 0.0f, 0.0f));
 	mTransform.setScale(Vector3(1.0f, 1.0f, 1.0f));
@@ -13,9 +13,9 @@ GameObject::GameObject()
 }
 
 // Конструктор класу GameObject з початковою позицією
-GameObject::GameObject(Vector3 position)
+Entity::Entity(Vector3 position)
 {
-    EntityManager::get()->registerGameObject(this);
+    EntityManager::get()->registerEntity(this);
     mTransform.setOwner(this);
 	mTransform.setPosition(position);
 	mTransform.setScale(Vector3(1.0f, 1.0f, 1.0f));
@@ -23,7 +23,7 @@ GameObject::GameObject(Vector3 position)
 }
 
 // Деструктор класу GameObject, видаляє всі компоненти та знімає реєстрацію об'єкта
-GameObject::~GameObject()
+Entity::~Entity()
 {
     for (auto* component : mComponents) {
         delete component;
@@ -31,23 +31,23 @@ GameObject::~GameObject()
 
     mComponents.clear();
 
-    EntityManager::get()->unregisterGameObject(this);
+    EntityManager::get()->unregisterEntity(this);
 }
 
 // Повертає вказівник на компонент Transform цього об'єкта
-Transform* GameObject::getTransform()
+Transform* Entity::getTransform()
 {
     return &mTransform;
 }
 
 // Знищує об'єкт
-void GameObject::destroy()
+void Entity::destroy()
 {
     delete this;
 }
 
 // Видаляє компонент з об'єкта, якщо він існує
-bool GameObject::removeComponent(Component* component)
+bool Entity::removeComponent(Component* component)
 {
     auto it = std::find_if(
         mComponents.begin(),
@@ -64,9 +64,9 @@ bool GameObject::removeComponent(Component* component)
 }
 
 // Створює копію об'єкта разом з усіма його компонентами
-GameObject* GameObject::instantiate()  
+Entity* Entity::instantiate()  
 {  
-   GameObject* newObject = new GameObject();
+   Entity* newObject = new Entity();
 
    newObject->mTransform.setPosition(mTransform.getPosition());
    newObject->mTransform.setScale(mTransform.getScale());

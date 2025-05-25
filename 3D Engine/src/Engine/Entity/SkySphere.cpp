@@ -4,7 +4,7 @@
 #include "TextureManager.h"
 #include "GlobalResources.h"
 #include "Material.h"
-#include "GameObject.h"
+#include "Entity.h"
 
 SkySphere::SkySphere()
 {

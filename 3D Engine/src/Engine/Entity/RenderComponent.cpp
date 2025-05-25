@@ -3,7 +3,7 @@
 #include "GlobalResources.h"
 #include "GraphicsEngine.h"
 #include "EntityManager.h"
-#include "GameObject.h"
+#include "Entity.h"
 
 RenderComponent::RenderComponent()
 {

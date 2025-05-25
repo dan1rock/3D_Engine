@@ -18,12 +18,14 @@ PhysicsEngine::~PhysicsEngine()
 // Ініціалізує PhysX, створює сцену, матеріали, диспатчер та інші ресурси
 void PhysicsEngine::init()
 {
+	// Створення аллокатора та обробника помилок
     gFoundation = PxCreateFoundation(
         PX_PHYSICS_VERSION,
         gAllocator,
         gErrorCallback
     );
 
+	// Створення PVD (Physics Visual Debugger) для відладки
     gPvd = PxCreatePvd(*gFoundation);
     PxPvdTransport* transport =
         PxDefaultPvdSocketTransportCreate("127.0.0.1", 5425, 10);
@@ -32,6 +34,7 @@ void PhysicsEngine::init()
         PxPvdInstrumentationFlag::eALL
     );
 
+	// Створення інстансу PhysX Physics API
     gPhysics = PxCreatePhysics(
         PX_PHYSICS_VERSION,
         *gFoundation,
@@ -40,8 +43,10 @@ void PhysicsEngine::init()
         gPvd
     );
 
+	// Створення матеріалу за замовчуванням
     gMaterial = gPhysics->createMaterial(0.5f, 0.5f, 0.6f);
 
+	// Створення сцени
     PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
     sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f);
 	sceneDesc.flags |= PxSceneFlag::eENABLE_CCD;
@@ -52,6 +57,7 @@ void PhysicsEngine::init()
     sceneDesc.filterShader = PxDefaultSimulationFilterShader;
     gScene = gPhysics->createScene(sceneDesc);
 
+	// Ініціалізація PVD (Physics Visual Debugger) для сцени
     if (auto* client = gScene->getScenePvdClient())
     {
         client->setScenePvdFlag(
@@ -62,6 +68,7 @@ void PhysicsEngine::init()
             PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
     }
 
+	// Створення інтерфейсу для роботи з мешами
     PxCookingParams params(gPhysics->getTolerancesScale());
     gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, params);
 }

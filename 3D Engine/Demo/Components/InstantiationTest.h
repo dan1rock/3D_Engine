@@ -3,7 +3,7 @@
 #include "Vector3.h"
 #include <list>
 
-class GameObject;
+class Entity;
 class Prefab;
 class Material;
 
@@ -23,7 +23,7 @@ protected:
 private:
 	void update() override;
 
-	std::list<GameObject*> mGameObjects = {};
+	std::list<Entity*> mGameObjects = {};
 
 	Vector3 mPosition = { 0.0f, 0.0f, 0.0f };
 };

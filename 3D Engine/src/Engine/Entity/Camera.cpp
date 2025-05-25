@@ -1,5 +1,5 @@
 #include "Camera.h"
-#include "GameObject.h"
+#include "Entity.h"
 #include "GraphicsEngine.h"
 #include "GlobalResources.h"
 #include "EntityManager.h"

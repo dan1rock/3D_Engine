@@ -1,6 +1,6 @@
 #include "EntityManager.h"
 #include "Component.h"
-#include "GameObject.h"
+#include "Entity.h"
 #include "RenderComponent.h"
 #include "Camera.h"
 #include "GraphicsEngine.h"
@@ -20,13 +20,13 @@ EntityManager::~EntityManager()
 }
 
 // Реєструє ігровий об'єкт у менеджері
-void EntityManager::registerGameObject(GameObject* gameObject)
+void EntityManager::registerEntity(Entity* gameObject)
 {
 	mGameObjects.push_back(gameObject);
 }
 
 // Видаляє ігровий об'єкт з менеджера
-void EntityManager::unregisterGameObject(GameObject* gameObject)
+void EntityManager::unregisterEntity(Entity* gameObject)
 {
 	mGameObjects.remove(gameObject);
 }
@@ -148,7 +148,7 @@ void EntityManager::onSceneLoadStart()
 	auto it = mGameObjects.begin();
 	while (it != mGameObjects.end())
 	{
-		GameObject* g = *it++;
+		Entity* g = *it++;
 		if (g->dontDestroyOnLoad)
 			continue;
 

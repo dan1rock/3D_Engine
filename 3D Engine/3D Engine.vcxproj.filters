@@ -105,10 +105,10 @@
     <ClCompile Include="src\Engine\Resource managers\GlobalResources.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\Component.cpp">
+    <ClCompile Include="src\Engine\Entity\Component.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\Transform.cpp">
+    <ClCompile Include="src\Engine\Entity\Transform.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine\Main parts\EntityManager.cpp">
@@ -117,16 +117,16 @@
     <ClCompile Include="src\Engine\Main parts\EngineTime.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\Camera.cpp">
+    <ClCompile Include="src\Engine\Entity\Camera.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\FreelookCameraController.cpp">
+    <ClCompile Include="src\Engine\Entity\FreelookCameraController.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine\Physics\PhysicsEngine.cpp">
       <Filter>Engine\Physics</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\RigidBody.cpp">
+    <ClCompile Include="src\Engine\Entity\RigidBody.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine\Resource managers\ConvexMesh.cpp">
@@ -135,16 +135,16 @@
     <ClCompile Include="src\Engine\Resource managers\ConvexMeshManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\GameObject.cpp">
+    <ClCompile Include="src\Engine\Entity\Entity.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\MeshRenderer.cpp">
+    <ClCompile Include="src\Engine\Entity\MeshRenderer.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\RenderComponent.cpp">
+    <ClCompile Include="src\Engine\Entity\RenderComponent.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\SkySphere.cpp">
+    <ClCompile Include="src\Engine\Entity\SkySphere.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine\Scene\Scene.cpp">
@@ -162,19 +162,19 @@
     <ClCompile Include="Demo\Scenes\Scene1.cpp">
       <Filter>Application\Scenes</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\Prefab.cpp">
+    <ClCompile Include="src\Engine\Entity\Prefab.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\Collider.cpp">
+    <ClCompile Include="src\Engine\Entity\Collider.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\MeshCollider.cpp">
+    <ClCompile Include="src\Engine\Entity\MeshCollider.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\SphereCollider.cpp">
+    <ClCompile Include="src\Engine\Entity\SphereCollider.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Component\PlaneCollider.cpp">
+    <ClCompile Include="src\Engine\Entity\PlaneCollider.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine\Physics\Physics.cpp">
@@ -260,28 +260,28 @@
     <ClInclude Include="src\Engine\Resource managers\GlobalResources.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\Component.h">
+    <ClInclude Include="src\Engine\Entity\Component.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\Transform.h">
+    <ClInclude Include="src\Engine\Entity\Transform.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Main parts\EntityManager.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\Camera.h">
+    <ClInclude Include="src\Engine\Entity\Camera.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Main parts\EngineTime.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\FreelookCameraController.h">
+    <ClInclude Include="src\Engine\Entity\FreelookCameraController.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Physics\PhysicsEngine.h">
       <Filter>Engine\Physics</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\RigidBody.h">
+    <ClInclude Include="src\Engine\Entity\RigidBody.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="src\Math\Quaternion.h">
@@ -293,16 +293,16 @@
     <ClInclude Include="src\Engine\Resource managers\ConvexMeshManager.h">
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\GameObject.h">
+    <ClInclude Include="src\Engine\Entity\Entity.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\MeshRenderer.h">
+    <ClInclude Include="src\Engine\Entity\MeshRenderer.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\RenderComponent.h">
+    <ClInclude Include="src\Engine\Entity\RenderComponent.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\SkySphere.h">
+    <ClInclude Include="src\Engine\Entity\SkySphere.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Scene\Scene.h">
@@ -320,19 +320,19 @@
     <ClInclude Include="Demo\Scenes\Scene1.h">
       <Filter>Application\Scenes</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\Prefab.h">
+    <ClInclude Include="src\Engine\Entity\Prefab.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\Collider.h">
+    <ClInclude Include="src\Engine\Entity\Collider.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\MeshCollider.h">
+    <ClInclude Include="src\Engine\Entity\MeshCollider.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\SphereCollider.h">
+    <ClInclude Include="src\Engine\Entity\SphereCollider.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Component\PlaneCollider.h">
+    <ClInclude Include="src\Engine\Entity\PlaneCollider.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Physics\Physics.h">
@@ -367,5 +367,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Demo\Components\packages.config" />
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
 </Project>

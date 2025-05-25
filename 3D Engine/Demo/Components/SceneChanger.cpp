@@ -1,5 +1,5 @@
 #include "SceneChanger.h"
-#include "GameObject.h"
+#include "Entity.h"
 #include "MainScene.h"
 #include "Scene1.h"
 #include "SceneManager.h"

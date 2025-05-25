@@ -1,7 +1,7 @@
 #include "LevitationTest.h"
 #include "RigidBody.h"
 #include "Physics.h"
-#include "GameObject.h"
+#include "Entity.h"
 #include "Input.h"
 
 LevitationTest::LevitationTest()
@@ -23,7 +23,7 @@ void LevitationTest::fixedUpdate()
 
 	float base = 1.0f;
 
-	Transform* transform = mRigidBody->getOwner()->getTransform();
+	Transform* transform = getOwner()->getTransform();
 
 	simulateSpring(transform->getPosition() + transform->getRight() * base + transform->getForward() * base * 2.0f);
 	simulateSpring(transform->getPosition() + -transform->getRight() * base + transform->getForward() * base * 2.0f);
@@ -45,7 +45,7 @@ void LevitationTest::fixedUpdate()
 void LevitationTest::simulateSpring(Vector3 position)
 {
 	RaycastHit hit;
-	Vector3 direction = -mRigidBody->getOwner()->getTransform()->getUp();
+	Vector3 direction = -getOwner()->getTransform()->getUp();
 	if (Physics::raycast(position, direction, maxDistance, hit, mRigidBody))
 	{
 		float velocity = mRigidBody->getVelocityAtPoint(position) * -direction;
