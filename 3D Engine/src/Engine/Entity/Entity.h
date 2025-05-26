@@ -57,6 +57,7 @@ protected:
 template<typename T, typename... Args>
 T* Entity::addComponent(Args&&... args)
 {
+	// Перевіряє, чи T є нащадком класу Component
 	static_assert(std::is_base_of<Component, T>::value, "addComponent<T>: T must inherit from Component");
 
 	if constexpr (std::is_base_of<RigidBody, T>::value) {
@@ -65,12 +66,15 @@ T* Entity::addComponent(Args&&... args)
 		}
 	}
 
+	// Створює новий компонент типу T з переданими аргументами
 	auto* comp = new T(std::forward<Args>(args)...);
 
+	// Встановлює власника компонента
 	comp->setOwner(this);
 
 	mComponents.push_back(comp);
 
+	// Якщо компонент є фізичним тілом, зберігає його вказівник
 	if constexpr (std::is_base_of<RigidBody, T>::value) {
 		auto* rb = static_cast<RigidBody*>(comp);
 		mRigidBody = rb;
@@ -78,6 +82,7 @@ T* Entity::addComponent(Args&&... args)
 
 	static_cast<Component*>(comp)->registerComponent();
 
+	// Якщо не є образом сутності, прокидає компонент
 	if (shouldAwakeComponents())
 	{
 		static_cast<Component*>(comp)->awake();

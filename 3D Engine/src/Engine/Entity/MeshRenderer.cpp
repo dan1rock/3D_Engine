@@ -24,13 +24,13 @@ MeshRenderer::~MeshRenderer()
 // Викликається при активації компонента
 void MeshRenderer::awake()
 {
-	RenderComponent::awake();
+	Renderer::awake();
 }
 
 // Викликається для рендеру об'єкта: встановлює буфери та викликає рендеринг
 void MeshRenderer::render()
 {
-	RenderComponent::render();
+	Renderer::render();
 
 	if (mMesh == nullptr) return;
 

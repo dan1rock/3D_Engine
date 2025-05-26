@@ -8,17 +8,21 @@ public:
 	~Time();
 
 	// Повертає різницю часу між двома кадрами
-	static float getDeltaTime();
+	static double getDeltaTime();
 	// Повертає час, що пройшов з моменту запуску програми
-	static float getCurrentTime();
+	static double getCurrentTime();
 
 private:
+	// Ініціалізує таймер, викликається при запуску програми
+	static void init();
 	// Оновлює поточний час і різницю часу між кадрами
 	static void update();
 
-	static float deltaTime;
-	static ULONGLONG lastTickTime;
-	static ULONGLONG currentTickTime;
+	static double deltaTime;
+	static double currentTickTime;
+	static LARGE_INTEGER s_frequency;
+	static LARGE_INTEGER s_startCount;
+	static LARGE_INTEGER s_lastCount;
 
 	friend class AppWindow;
 };

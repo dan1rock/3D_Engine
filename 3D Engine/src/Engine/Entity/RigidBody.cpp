@@ -67,7 +67,7 @@ Vector3 RigidBody::getAngularVelocity()
 	return Vector3(angularVelocity.x, angularVelocity.y, angularVelocity.z);
 }
 
-// Додає силу до тіла
+// Застосовує силу до тіла
 void RigidBody::addForce(const Vector3& force)
 {
 	if (!mActor) return;
@@ -77,7 +77,7 @@ void RigidBody::addForce(const Vector3& force)
 	dynamicActor->addForce(PxVec3(force.x, force.y, force.z), PxForceMode::eFORCE, true);
 }
 
-// Додає силу до тіла в певній точці
+// Застосовує силу до тіла в певній точці
 void RigidBody::addForce(const Vector3& force, const Vector3& position)
 {
 	if (!mActor) return;
@@ -87,7 +87,7 @@ void RigidBody::addForce(const Vector3& force, const Vector3& position)
 	PxRigidBodyExt::addForceAtPos(*dynamicActor, PxVec3(force.x, force.y, force.z), PxVec3(position.x, position.y, position.z), PxForceMode::eFORCE, true);
 }
 
-// Додає кутову силу до тіла
+// Застосовує кутову силу до тіла
 void RigidBody::addTorque(const Vector3& torque)
 {
 	if (!mActor) return;
@@ -112,6 +112,7 @@ void RigidBody::setContinousCollisionDetection(bool ccd)
 // Ініціалізує фізичне тіло, створює фізичного актора, додає коллайдери, реєструє в EntityManager
 void RigidBody::awake()
 {
+	// Беремо Transform з власника
     Transform* t = mOwner->getTransform();
     Vector3 pos = t->getPosition();
     Vector3 euler = t->getRotation();
@@ -124,6 +125,7 @@ void RigidBody::awake()
 
     PhysicsEngine* physics = PhysicsEngine::get();
 
+	// Створюємо фізичного актора в залежності від типу (статичний чи динамічний)
 	if (mIsStatic)
 	{
 		mActor = physics->getPhysics()->createRigidStatic(pose);
@@ -135,14 +137,17 @@ void RigidBody::awake()
 
 	mMaterial = physics->getMaterial();
 
+	// Беремо всі коллайдери з власника
 	std::list<Collider*> colliders = mOwner->getComponents<Collider>();
 
+	// Додаємо коллайдери до фізичного тіла
 	for (Collider* c : colliders) {
 		mColliders.push_back(c);
 	}
 
 	updateShape();
 
+	// Якщо це динамічне тіло, встановлюємо масу та інерцію
 	if (!mIsStatic)
 	{
 		PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
@@ -151,6 +156,7 @@ void RigidBody::awake()
 		dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, mCcd);
 	}
 
+	// Реєструємо фізичне тіло в PhysX сцені та в EntityManager
     physics->getScene()->addActor(*mActor);
 	EntityManager::get()->registerRigidBody(this);
 }
@@ -173,6 +179,7 @@ void RigidBody::fixedUpdate()
 	Vector3 euler = quat.toEuler();
 	t->setRotation(euler, false);
 
+	// Якщо масштаб змінився, оновлюємо масштаб коллайдерів
 	if (!(mOwner->getTransform()->getScale() == mScale))
 	{
 		mScale = mOwner->getTransform()->getScale();

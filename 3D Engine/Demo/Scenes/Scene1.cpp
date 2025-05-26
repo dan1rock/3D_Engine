@@ -25,11 +25,12 @@ void Scene1::init()
 	Texture* prototypeTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\1x1_grid_quarter_lines_numbered.png");
 
 	Mesh* planeMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\plane.obj");
+	Mesh* sphereMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
 
 	Material* prototypeMaterial = new Material();
 	prototypeMaterial->addTexture(prototypeTexture);
 	prototypeMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\PrototypePixelShader.hlsl", "main"));
-	prototypeMaterial->setColor(0.5f, 0.5f, 0.5f, 1.0f);
+	prototypeMaterial->setColor(0.5f, 0.1f, 0.5f, 1.0f);
 	prototypeMaterial->textureScale = 20.0f;
 	prototypeMaterial->clampTexture = false;
 
@@ -39,6 +40,12 @@ void Scene1::init()
 	plane->addComponent<MeshCollider>();
 	plane->addComponent<RigidBody>(true);
 
+	Material* sphereMaterial = new Material();
+	sphereMaterial->setColor(0.8f, 0.2f, 0.2f, 1.0f);
+
+	Entity* sphere = new Entity(Vector3(0.0f, 1.0f, 0.0f));
+	sphere->addComponent<MeshRenderer>(sphereMesh, sphereMaterial);
+
 	Entity* skyDome = new Entity();
 	skyDome->addComponent<SkySphere>();
 
@@ -46,7 +53,4 @@ void Scene1::init()
 	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
 	camera->addComponent<Camera>();
 	camera->addComponent<DemoPlayer>(2.0f, 0.002f);
-
-	Entity* test = new Entity(Vector3(0, 0, 0));
-	test->addComponent<InstantiationTest>();
 }

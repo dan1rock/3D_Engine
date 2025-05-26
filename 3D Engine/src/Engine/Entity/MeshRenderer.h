@@ -1,8 +1,8 @@
 #pragma once
-#include "RenderComponent.h"
+#include "Renderer.h"
 
 // Компонент для рендеру мешів
-class MeshRenderer : public RenderComponent
+class MeshRenderer : public Renderer
 {
 public:
 	MeshRenderer();

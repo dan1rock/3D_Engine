@@ -174,7 +174,7 @@
     <ClCompile Include="src\Engine\Shader managers\PixelShader.cpp" />
     <ClCompile Include="src\Engine\Entity\PlaneCollider.cpp" />
     <ClCompile Include="src\Engine\Entity\Prefab.cpp" />
-    <ClCompile Include="src\Engine\Entity\RenderComponent.cpp" />
+    <ClCompile Include="src\Engine\Entity\Renderer.cpp" />
     <ClCompile Include="src\Engine\Resource managers\Resource.cpp" />
     <ClCompile Include="src\Engine\Resource managers\ResourceManager.cpp" />
     <ClCompile Include="src\Engine\Resource managers\GlobalResources.cpp" />
@@ -225,7 +225,7 @@
     <ClInclude Include="src\Engine\Entity\PlaneCollider.h" />
     <ClInclude Include="src\Engine\Entity\Prefab.h" />
     <ClInclude Include="src\Math\Quaternion.h" />
-    <ClInclude Include="src\Engine\Entity\RenderComponent.h" />
+    <ClInclude Include="src\Engine\Entity\Renderer.h" />
     <ClInclude Include="src\Engine\Resource managers\Resource.h" />
     <ClInclude Include="src\Engine\Resource managers\ResourceManager.h" />
     <ClInclude Include="src\Engine\Resource managers\GlobalResources.h" />

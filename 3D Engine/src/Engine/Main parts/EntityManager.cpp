@@ -1,7 +1,7 @@
 #include "EntityManager.h"
 #include "Component.h"
 #include "Entity.h"
-#include "RenderComponent.h"
+#include "Renderer.h"
 #include "Camera.h"
 #include "GraphicsEngine.h"
 #include "PhysicsEngine.h"
@@ -22,13 +22,13 @@ EntityManager::~EntityManager()
 // Реєструє ігровий об'єкт у менеджері
 void EntityManager::registerEntity(Entity* gameObject)
 {
-	mGameObjects.push_back(gameObject);
+	mEntities.push_back(gameObject);
 }
 
 // Видаляє ігровий об'єкт з менеджера
 void EntityManager::unregisterEntity(Entity* gameObject)
 {
-	mGameObjects.remove(gameObject);
+	mEntities.remove(gameObject);
 }
 
 // Реєструє компонент у менеджері
@@ -44,13 +44,13 @@ void EntityManager::unregisterComponent(Component* component)
 }
 
 // Реєструє рендер-компонент у менеджері
-void EntityManager::registerRenderer(RenderComponent* renderer)
+void EntityManager::registerRenderer(Renderer* renderer)
 {
 	mRenderers.push_back(renderer);
 }
 
 // Видаляє рендер-компонент з менеджера
-void EntityManager::unregisterRenderer(RenderComponent* renderer)
+void EntityManager::unregisterRenderer(Renderer* renderer)
 {
 	mRenderers.remove(renderer);
 }
@@ -145,8 +145,8 @@ void EntityManager::updateCameras()
 // Викликається на початку завантаження сцени
 void EntityManager::onSceneLoadStart()
 {
-	auto it = mGameObjects.begin();
-	while (it != mGameObjects.end())
+	auto it = mEntities.begin();
+	while (it != mEntities.end())
 	{
 		Entity* g = *it++;
 		if (g->dontDestroyOnLoad)

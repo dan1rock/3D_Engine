@@ -1,8 +1,10 @@
 #include "EngineTime.h"
 
-float Time::deltaTime = 0.0f;
-ULONGLONG Time::lastTickTime = 0;
-ULONGLONG Time::currentTickTime = 0;
+LARGE_INTEGER Time::s_frequency = {};
+LARGE_INTEGER Time::s_startCount = {};
+LARGE_INTEGER Time::s_lastCount = {};
+double Time::deltaTime = 0.0f;
+double Time::currentTickTime = 0.0f;
 
 Time::Time()
 {
@@ -13,21 +15,33 @@ Time::~Time()
 }
 
 // Повертає різницю часу між двома кадрами
-float Time::getDeltaTime()
+double Time::getDeltaTime()
 {
     return deltaTime;
 }
 
 // Повертає час, що пройшов з моменту запуску програми
-float Time::getCurrentTime()
+double Time::getCurrentTime()
 {
-    return currentTickTime / 1000.0f;
+    return currentTickTime;
+}
+
+void Time::init()
+{
+	QueryPerformanceFrequency(&s_frequency);
+	QueryPerformanceCounter(&s_startCount);
+	s_lastCount = s_startCount;
 }
 
 // Оновлює поточний час і різницю часу між кадрами
 void Time::update()
 {
-	lastTickTime = currentTickTime;
-	currentTickTime = ::GetTickCount64();
-	deltaTime = (lastTickTime > 0) ? ((currentTickTime - lastTickTime) / 1000.0f) : 0;
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+
+    auto counts = now.QuadPart - s_lastCount.QuadPart;
+    deltaTime = static_cast<double>(counts) / static_cast<double>(s_frequency.QuadPart);
+	currentTickTime = static_cast<double>(now.QuadPart - s_startCount.QuadPart) / static_cast<double>(s_frequency.QuadPart);
+
+    s_lastCount = now;
 }

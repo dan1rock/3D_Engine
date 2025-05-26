@@ -1,8 +1,8 @@
 #pragma once
-#include "RenderComponent.h"
+#include "Renderer.h"
 
 // Компонент для рендеру неба
-class SkySphere : public RenderComponent
+class SkySphere : public Renderer
 {
 public:
 	SkySphere();

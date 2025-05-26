@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 class Component;
-class RenderComponent;
+class Renderer;
 class Camera;
 class Entity;
 class Material;
@@ -24,9 +24,9 @@ public:
 	// Видаляє компонент з менеджера
 	void unregisterComponent(Component* component);
 	// Реєструє рендер-компонент у менеджері
-	void registerRenderer(RenderComponent* renderer);
+	void registerRenderer(Renderer* renderer);
 	// Видаляє рендер-компонент з менеджера
-	void unregisterRenderer(RenderComponent* renderer);
+	void unregisterRenderer(Renderer* renderer);
 	// Реєструє камеру у менеджері
 	void registerCamera(Camera* camera);
 	// Видаляє камеру з менеджера
@@ -61,9 +61,9 @@ public:
 	static EntityManager* get();
 
 private:
-	std::list<Entity*> mGameObjects = {};
+	std::list<Entity*> mEntities = {};
 	std::list<Component*> mComponents = {};
-	std::list<RenderComponent*> mRenderers = {};
+	std::list<Renderer*> mRenderers = {};
 	std::list<Camera*> mCameras = {};
 	std::list<Material*> mMaterials = {};
 	std::unordered_map<void*, RigidBody*> mRigidBodies = {};

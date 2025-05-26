@@ -141,7 +141,7 @@
     <ClCompile Include="src\Engine\Entity\MeshRenderer.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Entity\RenderComponent.cpp">
+    <ClCompile Include="src\Engine\Entity\Renderer.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine\Entity\SkySphere.cpp">
@@ -299,7 +299,7 @@
     <ClInclude Include="src\Engine\Entity\MeshRenderer.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Entity\RenderComponent.h">
+    <ClInclude Include="src\Engine\Entity\Renderer.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Entity\SkySphere.h">

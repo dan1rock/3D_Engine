@@ -6,6 +6,8 @@
 #include "SceneManager.h"
 #include "MainScene.h"
 
+#include <iostream>
+
 constant* constantData = nullptr;
 
 AppWindow::AppWindow()
@@ -38,6 +40,8 @@ void AppWindow::onCreate()
 	constantData->lightColor[1] = 1.0f;
 	constantData->lightColor[2] = 1.0f;
 
+	Time::init();
+
 	SceneManager::get()->loadScene(new MainScene());
 }
 
@@ -59,17 +63,22 @@ void AppWindow::onUpdate()
 	}
 
 	Time::update();
-	constantData->time = Time::currentTickTime;
+	constantData->time = Time::getCurrentTime();
 
 	Input::update();
 	Input::updateMouse(this->getClientWindowRect(), isFocused);
 
 	EntityManager::get()->updateComponents();
 
-	if (Time::deltaTime > 0.0f)
+	static float accumulator = 0.0f;
+	constexpr float fixedStep = 1.0f / 60.0f;
+	accumulator += Time::deltaTime;
+
+	if (accumulator >= fixedStep)
 	{
 		EntityManager::get()->fixedUpdateComponents();
-		PhysicsEngine::get()->update(Time::deltaTime);
+		PhysicsEngine::get()->update(fixedStep);
+		accumulator -= fixedStep;
 	}
 
 	EntityManager::get()->updateCameras();

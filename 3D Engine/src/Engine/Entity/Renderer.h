@@ -9,12 +9,12 @@ class Material;
 class Matrix;
 
 // Базовий клас для всіх компонентів, які рендерять об'єкти
-class RenderComponent : public Component
+class Renderer : public Component
 {
 public:
-	RenderComponent();
+	Renderer();
 	// Знімає реєстрацію рендер-компонента в EntityManager
-	~RenderComponent() override;
+	~Renderer() override;
 
 	// Викликається для рендеру об'єкта: встановлює матеріал, оновлює матриці та константний буфер
 	virtual void render() = 0;
