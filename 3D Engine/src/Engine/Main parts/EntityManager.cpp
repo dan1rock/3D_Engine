@@ -11,13 +11,6 @@
 #include "Material.h"
 #include "RigidBody.h"
 
-EntityManager::EntityManager()
-{
-}
-
-EntityManager::~EntityManager()
-{
-}
 
 // Реєструє ігровий об'єкт у менеджері
 void EntityManager::registerEntity(Entity* gameObject)

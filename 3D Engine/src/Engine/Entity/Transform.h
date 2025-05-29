@@ -24,7 +24,9 @@ public:
 	Vector3 getRight();
 	// Повертає напрямок "вгору" (Y) у світових координатах
 	Vector3 getUp();
-
+	
+	// Встановлює матрицю трансформації, за потреби оновлює фізичне тіло
+	void setMatrix(const Matrix& matrix, bool updateRb = true);
 	// Встановлює позицію об'єкта, за потреби оновлює фізичне тіло
 	void setPosition(Vector3 position, bool updateRb = true);
 	// Встановлює масштаб об'єкта

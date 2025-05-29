@@ -54,6 +54,20 @@ Vector3 Transform::getUp()
 	return mMatrix.getYDirection().normalized();
 }
 
+void Transform::setMatrix(const Matrix& matrix, bool updateRb)
+{
+	mMatrix = matrix;
+	mPosition = mMatrix.getTranslation();
+	mScale = mMatrix.getScale();
+	mRotation = mMatrix.getRotation();
+
+	if (!updateRb) return;
+
+	if (RigidBody* rb = getOwner()->mRigidBody) {
+		rb->updateGlobalPose();
+	}
+}
+
 // Встановлює позицію об'єкта, за потреби оновлює фізичне тіло
 void Transform::setPosition(Vector3 position, bool updateRb)
 {

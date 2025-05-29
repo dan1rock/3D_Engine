@@ -19,10 +19,12 @@ Resource* ResourceManager::createResourceFromFile(const wchar_t* path)
 {
 	std::wstring fullPath = std::experimental::filesystem::absolute(path);
 
+	// Перевіряємо, чи ресурс вже є в кеші
 	auto it = resourceMap.find(fullPath);
 
 	Resource* rawRes = nullptr;
 
+	// Якщо ресурс знайдено в кеші, повертаємо його
 	if (it != resourceMap.end())
 	{
 		rawRes = it->second;
@@ -31,8 +33,10 @@ Resource* ResourceManager::createResourceFromFile(const wchar_t* path)
 		return rawRes;
 	}
 
+	// Якщо ресурс не знайдено в кеші, створюємо його з файлу
 	rawRes = this->createResourceFromFileConcrete(fullPath.c_str());
 
+	// Якщо ресурс успішно створено, додаємо його до кешу
 	if (rawRes)
 	{
 		resourceMap[fullPath] = rawRes;

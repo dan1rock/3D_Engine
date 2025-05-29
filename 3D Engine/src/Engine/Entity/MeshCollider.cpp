@@ -16,6 +16,7 @@ MeshCollider::~MeshCollider()
 // Повертає вказівник на геометрію коллайдера
 void* MeshCollider::getGeometry(Vector3& scale, bool convex)
 {
+	// Якщо геометрія вже існує і масштаб не змінився, повертаємо її
 	if (mGeometry) {
 		if (scale == mScale) {
 			return mGeometry;
@@ -27,6 +28,7 @@ void* MeshCollider::getGeometry(Vector3& scale, bool convex)
 
 	mScale = scale;
 
+	// Якщо меш не завантажено, намагаємося його взяти з MeshRenderer
 	if (!mConvexMesh) {
 		MeshRenderer* meshRenderer = mOwner->getComponent<MeshRenderer>();
 		if (meshRenderer) {
@@ -39,6 +41,7 @@ void* MeshCollider::getGeometry(Vector3& scale, bool convex)
 
 	PxMeshScale meshScale(PxVec3(scale.x, scale.y, scale.z), PxQuat(PxIdentity));
 
+	// Створюємо геометрію в залежності від типу меша
 	if (!convex)
 	{
 		mGeometry = new PxTriangleMeshGeometry(static_cast<PxTriangleMesh*>(mConvexMesh->getTriangleMesh()), meshScale);

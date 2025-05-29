@@ -12,9 +12,6 @@ class RigidBody;
 class EntityManager
 {
 public:
-	EntityManager();
-	~EntityManager();
-
 	// Реєструє Entity у менеджері
 	void registerEntity(Entity* gameObject);
 	// Видаляє Entity з менеджера

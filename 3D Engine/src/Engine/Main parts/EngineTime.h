@@ -1,12 +1,9 @@
 #pragma once
 #include "Windows.h"
 
-class Time
+static class Time
 {
 public:
-	Time();
-	~Time();
-
 	// Повертає різницю часу між двома кадрами
 	static double getDeltaTime();
 	// Повертає час, що пройшов з моменту запуску програми

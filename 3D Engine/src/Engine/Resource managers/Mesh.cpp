@@ -21,6 +21,7 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
     std::wstring ws(fullPath);
     std::string filePath(ws.begin(), ws.end());
 
+	// Використовує Assimp для імпорту моделі з файлу
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(
         filePath,
@@ -29,6 +30,7 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
         | aiProcess_FlipUVs
         | aiProcess_JoinIdenticalVertices);
 
+	// Перевіряємо, чи вдалося завантажити сцену
     if (!scene || !scene->HasMeshes())
     {
         std::cout << "Empty Scene" << std::endl;
@@ -38,6 +40,7 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
     std::vector<vertex> outVertices;
     std::vector<uint32_t> outIndices;
 
+	// Проходимо по всіх сітках сцени та збираємо вершини та індекси
     for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
         aiMesh* mesh = scene->mMeshes[m];
 
@@ -73,15 +76,21 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
         }
     }
 
+	// Створюємо вершинний та індексний буфери в графічному рушії
     mVertexBuffer = GraphicsEngine::get()->createVertexBuffer();
     mIndexBuffer = GraphicsEngine::get()->createIndexBuffer();
 
     void* shaderByteCode = nullptr;
     SIZE_T shaderSize = 0;
 
+	// Компілюємо вершинний шейдер для лейауту вершинного буфера
     GraphicsEngine::get()->compileVertexShader(L"src\\Shaders\\VertexLayoutShader.hlsl", "main", &shaderByteCode, &shaderSize);
+
+	// Завантажуємо вершинний та індексний буфери з даними
     mVertexBuffer->load(outVertices.data(), sizeof(vertex), outVertices.size(), shaderByteCode, shaderSize);
     mIndexBuffer->load(outIndices.data(), outIndices.size());
+
+	// Звільняємо ресурси вершинного шейдера
     GraphicsEngine::get()->releaseVertexShader();
 }
 

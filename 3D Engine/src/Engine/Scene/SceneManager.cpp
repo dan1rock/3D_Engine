@@ -12,6 +12,13 @@ SceneManager::~SceneManager()
 {
 }
 
+// Повертає єдиний екземпляр менеджера сцен (синглтон)
+SceneManager* SceneManager::get()
+{
+	static SceneManager instance;
+	return &instance;
+}
+
 // Встановлює сцену для завантаження
 void SceneManager::loadScene(Scene* scene)
 {
@@ -19,13 +26,6 @@ void SceneManager::loadScene(Scene* scene)
 		return;
 
 	mRequestedScene = scene;
-}
-
-// Повертає єдиний екземпляр менеджера сцен (синглтон)
-SceneManager* SceneManager::get()
-{
-	static SceneManager instance;
-	return &instance;
 }
 
 // Оновлює менеджер сцен, викликаючи завантаження нової сцени
@@ -36,12 +36,14 @@ void SceneManager::update()
 
 	std::wcout << L"Loading scene!" << std::endl;
 
+	// Очищаємо менеджер сутностей перед завантаженням нової сцени
 	EntityManager::get()->onSceneLoadStart();
 	mRequestedScene->init();
 	EntityManager::get()->onSceneLoadFinished();
 
 	std::wcout << L"Loaded scene!" << std::endl;
 
+	// Видаляємо запитану сцену
 	delete mRequestedScene;
 	mRequestedScene = nullptr;
 }

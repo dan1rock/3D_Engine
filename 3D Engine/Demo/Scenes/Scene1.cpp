@@ -30,7 +30,7 @@ void Scene1::init()
 	Material* prototypeMaterial = new Material();
 	prototypeMaterial->addTexture(prototypeTexture);
 	prototypeMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\PrototypePixelShader.hlsl", "main"));
-	prototypeMaterial->setColor(0.5f, 0.1f, 0.5f, 1.0f);
+	prototypeMaterial->setColor(0.0f, 0.5f, 0.5f, 1.0f);
 	prototypeMaterial->textureScale = 20.0f;
 	prototypeMaterial->clampTexture = false;
 

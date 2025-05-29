@@ -6,14 +6,6 @@ LARGE_INTEGER Time::s_lastCount = {};
 double Time::deltaTime = 0.0f;
 double Time::currentTickTime = 0.0f;
 
-Time::Time()
-{
-}
-
-Time::~Time()
-{
-}
-
 // Повертає різницю часу між двома кадрами
 double Time::getDeltaTime()
 {
@@ -26,6 +18,7 @@ double Time::getCurrentTime()
     return currentTickTime;
 }
 
+// Ініціалізує таймер, викликається при запуску програми
 void Time::init()
 {
 	QueryPerformanceFrequency(&s_frequency);

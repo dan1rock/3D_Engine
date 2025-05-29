@@ -186,9 +186,10 @@
     <ClCompile Include="Demo\Components\InstantiationTest.cpp">
       <Filter>Application\Components</Filter>
     </ClCompile>
-    <ClCompile Include="Demo\Components\LevitationTest.cpp">
+    <ClCompile Include="Demo\Components\CarComponent.cpp">
       <Filter>Application\Components</Filter>
     </ClCompile>
+    <ClCompile Include="Demo\Components\FollowComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Main\AppWindow.h">
@@ -344,9 +345,10 @@
     <ClInclude Include="Demo\Components\InstantiationTest.h">
       <Filter>Application\Components</Filter>
     </ClInclude>
-    <ClInclude Include="Demo\Components\LevitationTest.h">
+    <ClInclude Include="Demo\Components\CarComponent.h">
       <Filter>Application\Components</Filter>
     </ClInclude>
+    <ClInclude Include="Demo\Components\FollowComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\Shaders\PixelShader.hlsl">

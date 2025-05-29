@@ -145,6 +145,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Demo\Components\FollowComponent.cpp" />
     <ClCompile Include="src\Main\AppWindow.cpp" />
     <ClCompile Include="src\Engine\Entity\Camera.cpp" />
     <ClCompile Include="src\Engine\Entity\Collider.cpp" />
@@ -161,7 +162,7 @@
     <ClCompile Include="src\Engine\Buffer managers\IndexBuffer.cpp" />
     <ClCompile Include="src\Engine\Main parts\Input.cpp" />
     <ClCompile Include="Demo\Components\InstantiationTest.cpp" />
-    <ClCompile Include="Demo\Components\LevitationTest.cpp" />
+    <ClCompile Include="Demo\Components\CarComponent.cpp" />
     <ClCompile Include="src\Main\Main.cpp" />
     <ClCompile Include="Demo\Scenes\MainScene.cpp" />
     <ClCompile Include="src\Engine\Resource managers\Material.cpp" />
@@ -195,6 +196,7 @@
     <ClCompile Include="src\Engine\Main parts\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Demo\Components\FollowComponent.h" />
     <ClInclude Include="src\Main\AppWindow.h" />
     <ClInclude Include="src\Engine\Entity\Camera.h" />
     <ClInclude Include="src\Engine\Entity\Collider.h" />
@@ -211,7 +213,7 @@
     <ClInclude Include="src\Engine\Buffer managers\IndexBuffer.h" />
     <ClInclude Include="src\Engine\Main parts\Input.h" />
     <ClInclude Include="Demo\Components\InstantiationTest.h" />
-    <ClInclude Include="Demo\Components\LevitationTest.h" />
+    <ClInclude Include="Demo\Components\CarComponent.h" />
     <ClInclude Include="Demo\Scenes\MainScene.h" />
     <ClInclude Include="src\Engine\Resource managers\Material.h" />
     <ClInclude Include="src\Math\Matrix.h" />

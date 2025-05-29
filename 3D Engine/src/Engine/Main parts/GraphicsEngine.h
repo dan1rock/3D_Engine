@@ -21,12 +21,10 @@ class GlobalResources;
 class GraphicsEngine
 {
 public:
-	GraphicsEngine();
 	// Ініціалізує графічний рушій
 	bool init();
 	// Звільняє ресурси графічного рушія
 	bool release();
-	~GraphicsEngine();
 
 	// Повертає єдиний екземпляр GraphicsEngine (синглтон)
 	static GraphicsEngine* get();
@@ -70,6 +68,9 @@ public:
 	void setMaterial(Material* material);
 
 private:
+	GraphicsEngine();
+	~GraphicsEngine();
+
 	// Створює стани растеризатора
 	bool createRasterizerStates();
 	// Створює стани семплера

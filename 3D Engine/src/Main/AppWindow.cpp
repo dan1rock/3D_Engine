@@ -21,11 +21,13 @@ AppWindow::~AppWindow()
 // Викликається при створенні вікна: ініціалізує рушії, створює SwapChain, встановлює початкові константи та завантажує головну сцену
 void AppWindow::onCreate()
 {
+	// Ініціалізує рушії та створює SwapChain
 	PhysicsEngine::get()->init();
 
 	GraphicsEngine::get()->init();
 	mSwapChain = GraphicsEngine::get()->createSwapShain();
 
+	// Встановлює початкові константи для глобальних ресурсів
 	constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
 
 	constantData->world.setIdentity();
@@ -42,17 +44,20 @@ void AppWindow::onCreate()
 
 	Time::init();
 
+	// Завантажує головну сцену
 	SceneManager::get()->loadScene(new MainScene());
 }
 
 // Основний цикл оновлення: обробляє ввід, оновлює компоненти, фізику, рендеринг та сцену
 void AppWindow::onUpdate()
 {
+	// Перевіряє, чи вікно має фокус
 	if (!isFocused)
 	{
 		return;
 	}
 
+	// Очищає буфер кадру та встановлює розмір вьюпорту
 	GraphicsEngine::get()->getImmDeviceContext()->clearRenderTarget(mSwapChain, 0.1f, 0.1f, 0.1f, 1);
 	RECT windowSize = this->getClientWindowRect();
 	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
@@ -62,6 +67,7 @@ void AppWindow::onUpdate()
 		appIsRunning = false;
 	}
 
+	// Оновлює час, ввід, компоненти
 	Time::update();
 	constantData->time = Time::getCurrentTime();
 
@@ -70,6 +76,7 @@ void AppWindow::onUpdate()
 
 	EntityManager::get()->updateComponents();
 
+	// Виконує фіксоване оновлення фізики та компонентів
 	static float accumulator = 0.0f;
 	constexpr float fixedStep = 1.0f / 60.0f;
 	accumulator += Time::deltaTime;
@@ -81,11 +88,14 @@ void AppWindow::onUpdate()
 		accumulator -= fixedStep;
 	}
 
+	// Оновлює рендер-компоненти та камери
 	EntityManager::get()->updateCameras();
 	EntityManager::get()->updateRenderers();
 
+	// Оновлює стан менеджера сцен
 	SceneManager::get()->update();
 
+	// Виводить кадр на екран
 	mSwapChain->present(false);
 }
 
@@ -103,6 +113,14 @@ void AppWindow::onWindowResized()
 		0.1f,
 		100.0f
 	);
+}
+
+void AppWindow::onMouseWheel(INT16 delta)
+{
+	if (isFocused)
+	{
+		Input::updateMouseWheel(delta);
+	}
 }
 
 // Викликається при отриманні фокусу вікном: ховає курсор та оновлює час

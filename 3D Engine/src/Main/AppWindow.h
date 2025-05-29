@@ -27,6 +27,8 @@ public:
 	virtual void onUpdate() override;
 	// Викликається при зміні розміру вікна: оновлює SwapChain та матрицю проекції
 	virtual void onWindowResized() override;
+	// Викликається при прокрутці колеса миші
+	virtual void onMouseWheel(INT16 delta) override;
 	// Викликається при отриманні фокусу вікном: ховає курсор та оновлює час
 	virtual void onFocus() override;
 	// Викликається при втраті фокусу вікном: показує курсор

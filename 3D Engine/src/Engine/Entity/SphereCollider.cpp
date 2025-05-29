@@ -17,6 +17,7 @@ SphereCollider::~SphereCollider()
 // Повертає вказівник на геометрію коллайдера
 void* SphereCollider::getGeometry(Vector3& scale, bool convex)
 {
+	// Якщо геометрія вже існує і масштаб не змінився, повертаємо її
 	if (mGeometry) {
 		if (scale == mScale) {
 			return mGeometry;
@@ -28,6 +29,7 @@ void* SphereCollider::getGeometry(Vector3& scale, bool convex)
 
 	mScale = scale;
 
+	// Створюємо сферичну геометрію з урахуванням масштабу
 	float scaledRadius = radius * scale.x;
 
 	mGeometry = new physx::PxSphereGeometry(scaledRadius);

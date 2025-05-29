@@ -25,6 +25,8 @@ public:
 	virtual void onUpdate() = 0;
 	// Викликається при зміні розміру вікна (абстрактний метод)
 	virtual void onWindowResized() = 0;
+	// Викликається при прокрутці колеса миші
+	virtual void onMouseWheel(INT16 delta) = 0;
 	// Викликається при отриманні фокусу вікном
 	virtual void onFocus();
 	// Викликається при втраті фокусу вікном

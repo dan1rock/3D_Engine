@@ -10,12 +10,9 @@ enum MouseButton
     MB_Count
 };
 
-class Input  
+static class Input  
 {  
-public:  
-   Input();  
-   ~Input();  
-
+public:
    // Перевіряє, чи натиснута клавіша з вказаним кодом
    static bool getKey(int keycode);  
    // Повертає true тільки в той кадр, коли клавішу було натиснуто
@@ -29,6 +26,11 @@ public:
    static bool getMouseButtonDown(MouseButton button);
    // Повертає true тільки в той кадр, коли кнопку миші було відпущено
    static bool getMouseButtonUp(MouseButton button);
+
+   // Повертає true, якщо колесико миші прокручується вгору
+   static bool getMouseWheelUp();
+   // Повертає true, якщо колесико миші прокручується вниз
+   static bool getMouseWheelDown();
 
    // Повертає зміну позиції миші за кадр
    static Vector2 getDeltaMousePos();  
@@ -44,10 +46,16 @@ private:
    static Vector2 currentTickMousePos;  
    static Vector2 deltaMousePos;  
 
+   static INT16 mouseWheelDelta;
+   static INT16 oldMouseWheelDelta;
+
    // Оновлює стан клавіатури та кнопок миші
    static void update();  
    // Оновлює стан миші з урахуванням області вікна та фокусу
-   static void updateMouse(RECT windowRect, bool isFocused);  
+   static void updateMouse(RECT windowRect, bool isFocused);
+   // Оновлює стан колесика миші
+   static void updateMouseWheel(INT16 delta);
 
-   friend class AppWindow;  
+   friend class AppWindow;
+   friend class Window;
 };

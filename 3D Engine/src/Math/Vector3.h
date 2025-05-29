@@ -94,6 +94,18 @@ public:
 		return res;
 	}
 
+	// Повертає вектор, який є результатом обертання навколо вектора "вгору" на заданий кут
+	static Vector3 rotateAroundUp(const Vector3& forward, const Vector3& up, float angleRadians) {
+		Vector3 f = forward.normalized();
+		Vector3 k = up.normalized();
+		float c = cos(angleRadians);
+		float s = sin(angleRadians);
+
+		return f * c
+			+ (k.cross(f)) * s
+			+ k * ((k * f) * (1.0f - c));
+	}
+
 	~Vector3() 
 	{
 	

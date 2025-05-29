@@ -9,9 +9,6 @@ class ConvexMeshManager;
 class PhysicsEngine
 {
 public:
-	PhysicsEngine();
-	~PhysicsEngine();
-
 	// Ініціалізує PhysX, створює сцену, матеріали, диспатчер та інші ресурси
 	void init();
 	// Оновлює фізичну сцену (симуляція) на заданий крок часу
@@ -38,6 +35,9 @@ public:
 	static PhysicsEngine* get();
 
 private:
+	PhysicsEngine();
+	~PhysicsEngine();
+
 	ConvexMeshManager* mConvexMeshManager = nullptr;
 
 	PxDefaultAllocator gAllocator;

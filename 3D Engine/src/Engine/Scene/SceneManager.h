@@ -8,11 +8,11 @@ public:
 	SceneManager();
 	~SceneManager();
 
-	// Встановлює сцену для завантаження
-	void loadScene(Scene* scene);
-
 	// Повертає єдиний екземпляр менеджера сцен (синглтон)
 	static SceneManager* get();
+
+	// Встановлює сцену для завантаження
+	void loadScene(Scene* scene);
 
 private:
 	Scene* mRequestedScene = nullptr;
