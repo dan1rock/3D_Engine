@@ -67,18 +67,16 @@ void AppWindow::onUpdate()
 		appIsRunning = false;
 	}
 
-	// Оновлює час, ввід, компоненти
+	// Оновлює час та ввід
 	Time::update();
 	constantData->time = Time::getCurrentTime();
 
 	Input::update();
 	Input::updateMouse(this->getClientWindowRect(), isFocused);
 
-	EntityManager::get()->updateComponents();
-
 	// Виконує фіксоване оновлення фізики та компонентів
 	static float accumulator = 0.0f;
-	constexpr float fixedStep = 1.0f / 60.0f;
+	constexpr float fixedStep = 1.0f / 50.0f;
 	accumulator += Time::deltaTime;
 
 	if (accumulator >= fixedStep)
@@ -87,6 +85,9 @@ void AppWindow::onUpdate()
 		PhysicsEngine::get()->update(fixedStep);
 		accumulator -= fixedStep;
 	}
+
+	// Оновлює компоненти
+	EntityManager::get()->updateComponents();
 
 	// Оновлює рендер-компоненти та камери
 	EntityManager::get()->updateCameras();
@@ -111,7 +112,7 @@ void AppWindow::onWindowResized()
 		1.1f,
 		aspectRatio,
 		0.1f,
-		100.0f
+		200.0f
 	);
 }
 

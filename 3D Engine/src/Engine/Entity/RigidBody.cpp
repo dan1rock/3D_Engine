@@ -109,6 +109,28 @@ void RigidBody::setContinousCollisionDetection(bool ccd)
 	dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, ccd);
 }
 
+void RigidBody::setMass(float mass)
+{
+	if (mIsStatic) return;
+
+	mMass = mass;
+
+	if (!mActor) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	dynamicActor->setMass(mass);
+	PxRigidBodyExt::updateMassAndInertia(*dynamicActor, mass);
+}
+
+void RigidBody::setCenterOfMass(const Vector3& com)
+{
+	if (mIsStatic) return;
+	if (!mActor) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	dynamicActor->setCMassLocalPose(PxTransform(PxVec3(com.x, com.y, com.z)));
+}
+
 // Ініціалізує фізичне тіло, створює фізичного актора, додає коллайдери, реєструє в EntityManager
 void RigidBody::awake()
 {
@@ -165,7 +187,7 @@ void RigidBody::update()
 {
 }
 
-// Фіксоване оновлення компонента: синхронізує позицію та обертання з PhysX, оновлює форму при зміні масштабу
+// Фіксоване оновлення компонента: синхронізує позицію та обертання з PhysX
 void RigidBody::fixedUpdate()
 {
 	if (!mActor) return;
@@ -178,14 +200,6 @@ void RigidBody::fixedUpdate()
 	Quaternion quat{ p.q.x, p.q.y, p.q.z, p.q.w };
 	Vector3 euler = quat.toEuler();
 	t->setRotation(euler, false);
-
-	// Якщо масштаб змінився, оновлюємо масштаб коллайдерів
-	if (!(mOwner->getTransform()->getScale() == mScale))
-	{
-		mScale = mOwner->getTransform()->getScale();
-
-		updateShape();
-	}
 }
 
 // Оновлює коллайдери фізичного тіла відповідно до поточного масштабу
@@ -221,7 +235,12 @@ void RigidBody::updateGlobalPose()
 	Transform* t = mOwner->getTransform();
 	Vector3 pos = t->getPosition();
 	Vector3 euler = t->getRotation();
-	mScale = t->getScale();
+
+	if (!(mScale == t->getScale()))
+	{
+		mScale = t->getScale();
+		updateShape();
+	}
 
 	PxQuat q = PxQuat(euler.x, PxVec3(1, 0, 0))
 		* PxQuat(euler.y, PxVec3(0, 1, 0))

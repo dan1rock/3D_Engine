@@ -32,6 +32,10 @@ public:
 	void addTorque(const Vector3& torque);
 	// Вмикає або вимикає режим безперервного виявлення зіткнень (CCD)
 	void setContinousCollisionDetection(bool ccd);
+	// Встановлює масу тіла
+	void setMass(float mass);
+	// Встановлює центр мас тіла
+	void setCenterOfMass(const Vector3& com);
 
 protected:
 	// Конструктор копіювання
@@ -43,7 +47,7 @@ private:
 	// Ініціалізує фізичне тіло, створює фізичного актора, додає коллайдери, реєструє в EntityManager
 	void awake() override;
 	void update() override;
-	// Фіксоване оновлення компонента: синхронізує позицію та обертання з PhysX, оновлює форму при зміні масштабу
+	// Фіксоване оновлення компонента: синхронізує позицію та обертання з PhysX
 	void fixedUpdate() override;
 
 	// Оновлює коллайдери фізичного тіла відповідно до поточного масштабу

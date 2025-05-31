@@ -86,6 +86,10 @@ void Transform::setScale(Vector3 scale)
 {
 	mMatrix.setScale(scale);
 	mScale = scale;
+
+	if (RigidBody* rb = getOwner()->mRigidBody) {
+		rb->updateGlobalPose();
+	}
 }
 
 // Встановлює обертання об'єкта, за потреби оновлює фізичне тіло

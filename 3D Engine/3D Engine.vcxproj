@@ -146,6 +146,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Demo\Components\FollowComponent.cpp" />
+    <ClCompile Include="Demo\Components\FrameCounter.cpp" />
+    <ClCompile Include="Demo\Scenes\ScenePerformanceTest.cpp" />
+    <ClCompile Include="Demo\Components\ObjectSpawner.cpp" />
     <ClCompile Include="src\Main\AppWindow.cpp" />
     <ClCompile Include="src\Engine\Entity\Camera.cpp" />
     <ClCompile Include="src\Engine\Entity\Collider.cpp" />
@@ -197,6 +200,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Demo\Components\FollowComponent.h" />
+    <ClInclude Include="Demo\Components\FrameCounter.h" />
+    <ClInclude Include="Demo\Scenes\ScenePerformanceTest.h" />
+    <ClInclude Include="Demo\Components\ObjectSpawner.h" />
     <ClInclude Include="src\Main\AppWindow.h" />
     <ClInclude Include="src\Engine\Entity\Camera.h" />
     <ClInclude Include="src\Engine\Entity\Collider.h" />

@@ -46,20 +46,27 @@ void FollowComponent::update()
 	}
 
     Vector2 md = Input::getDeltaMousePos();
-    mYaw = md.x * mMouseSpeed;
-    mPitch = md.y * mMouseSpeed;
+    mYaw += md.x * mMouseSpeed;
+    mPitch += md.y * mMouseSpeed;
 
-    Vector3 baseDir = (mTarget->getPosition() - mOwner->getTransform()->getPosition()).normalized();
-    baseDir = mOwner->getTransform()->getForward();
+	if (mPitch > PITCH_LIMIT) {
+		mPitch = PITCH_LIMIT;
+	}
+	else if (mPitch < -PITCH_LIMIT) {
+		mPitch = -PITCH_LIMIT;
+	}
+
+    Vector3 baseDir = Vector3(0, 0, 1);
 
     Vector3 up = mTarget->getUp().normalized();
+	up = Vector3(0, 1, 0);
     Vector3 yawedDir = Vector3::rotateAroundUp(baseDir, up, mYaw);
 
     Vector3 right = up.cross(yawedDir).normalized();
 
     Vector3 finalDir = Vector3::rotateAroundUp(yawedDir, right, mPitch).normalized();
 
-    Vector3 desiredPos = mTarget->getPosition() - mOwner->getTransform()->getForward() * mOffset;
+    Vector3 desiredPos = mTarget->getPosition() - finalDir * mOffset;
 
     Vector3 curPos = mOwner->getTransform()->getPosition();
     Vector3 delta = desiredPos - curPos;

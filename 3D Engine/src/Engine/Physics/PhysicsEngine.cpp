@@ -2,6 +2,8 @@
 #include <ctype.h>
 #include "ConvexMeshManager.h"
 #include <stdexcept>
+#include <thread>
+#include <iostream>
 
 using namespace physx;
 
@@ -52,7 +54,7 @@ void PhysicsEngine::init()
 	sceneDesc.flags |= PxSceneFlag::eENABLE_CCD;
     sceneDesc.ccdThreshold = 0.001f;
     sceneDesc.ccdMaxPasses = 4;
-    gDispatcher = PxDefaultCpuDispatcherCreate(2);
+    gDispatcher = PxDefaultCpuDispatcherCreate(std::thread::hardware_concurrency());
     sceneDesc.cpuDispatcher = gDispatcher;
     sceneDesc.filterShader = PxDefaultSimulationFilterShader;
     gScene = gPhysics->createScene(sceneDesc);

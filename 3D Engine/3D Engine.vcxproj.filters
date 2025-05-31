@@ -190,6 +190,9 @@
       <Filter>Application\Components</Filter>
     </ClCompile>
     <ClCompile Include="Demo\Components\FollowComponent.cpp" />
+    <ClCompile Include="Demo\Components\FrameCounter.cpp" />
+    <ClCompile Include="Demo\Scenes\ScenePerformanceTest.cpp" />
+    <ClCompile Include="Demo\Components\ObjectSpawner.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Main\AppWindow.h">
@@ -349,6 +352,9 @@
       <Filter>Application\Components</Filter>
     </ClInclude>
     <ClInclude Include="Demo\Components\FollowComponent.h" />
+    <ClInclude Include="Demo\Components\FrameCounter.h" />
+    <ClInclude Include="Demo\Scenes\ScenePerformanceTest.h" />
+    <ClInclude Include="Demo\Components\ObjectSpawner.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\Shaders\PixelShader.hlsl">

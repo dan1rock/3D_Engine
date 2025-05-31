@@ -26,7 +26,7 @@ void SkySphere::awake()
 
 	Renderer::awake();
 
-	mOwner->getTransform()->setScale(Vector3(100.0f, 100.0f, 100.0f));
+	mOwner->getTransform()->setScale(Vector3(200.0f, 200.0f, 200.0f));
 }
 
 // Викликається для рендеру: тимчасово зміщує камеру в центр, рендерить небо, повертає камеру назад

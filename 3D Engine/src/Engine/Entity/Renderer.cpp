@@ -61,3 +61,8 @@ Mesh* Renderer::getMesh()
 {
 	return mMesh;
 }
+
+Material* Renderer::getMaterial()
+{
+	return mMaterial;
+}

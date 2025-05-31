@@ -34,6 +34,7 @@ private:
 		float spin;
 		float spinSpeed;
 		float acceleration;
+		float springDistance;
 	};
 
 	void awake() override;

@@ -18,6 +18,7 @@ CarComponent::~CarComponent()
 void CarComponent::awake()
 {
 	mRigidBody = getOwner()->getComponent<RigidBody>();
+	mRigidBody->setCenterOfMass(Vector3(0.0f, 0.3f, -0.1f));
 
 	mWheelFR.transform = wheelPrefab->instantiate()->getTransform();
 	mWheelFL.transform = wheelPrefab->instantiate()->getTransform();
@@ -89,24 +90,48 @@ void CarComponent::simulateWheel(wheel& wheel)
 	Vector3 direction = -getOwner()->getTransform()->getUp();
 	Vector3 position = wheel.position;
 
-	if (Physics::raycast(position, direction, maxDistance, hit, mRigidBody))
+	if (Physics::raycast(position + getOwner()->getTransform()->getUp() * 0.5f, direction, maxDistance + 0.5f, hit, mRigidBody))
 	{
+		hit.distance -= 0.5f;
+
+		Vector3 forward = Vector3::rotateAroundUp(transform->getForward(), transform->getUp(), wheel.steering);
+
+		// Grip
+
+		Vector3 movementDir = mRigidBody->getVelocityAtPoint(position);
+		Vector3 wheelForward = forward;
+
+		if (movementDir.length() < 10.00f)
+		{
+			movementDir = forward;
+		}
+
+		movementDir.y = 0.0f;
+		wheelForward.y = 0.0f;
+
+		movementDir.normalize();
+		wheelForward.normalize();
+
+		float slip = movementDir * wheelForward;
+
+		if (slip < 0.0f) slip = -slip;
+		if (slip < 0.5f) slip = 0.5f;
+
+		float grip = 3.0f * slip * slip;
+
 		// Suspension
 		float velocity = mRigidBody->getVelocityAtPoint(position) * -direction;
 		float springForce = (maxDistance - hit.distance) / maxDistance * this->force - velocity * damping;
-		mRigidBody->addForce(-direction * springForce, position);
+		mRigidBody->addForce(-direction * springForce, hit.point - direction * 0.3f);
 
 		// Steering
-		Vector3 forward = Vector3::rotateAroundUp(transform->getForward(), transform->getUp(), wheel.steering);
-
 		Vector3 up = Vector3(0, 1, 0);
 		Vector3 lateral = up.cross(forward).normalized();
 
 		Vector3 wheelVel = mRigidBody->getVelocityAtPoint(hit.point);
 		float latSpeed = lateral * wheelVel;
 
-		float frictionCoef = 2.0f;
-		Vector3 frictionForce = -lateral * (latSpeed * frictionCoef);
+		Vector3 frictionForce = -lateral * (latSpeed * grip);
 
 		mRigidBody->addForce(frictionForce, hit.point);
 
@@ -120,6 +145,11 @@ void CarComponent::simulateWheel(wheel& wheel)
 		wheel.spinSpeed = wheelVel * forward * 0.04f;
 		wheel.spin += wheel.spinSpeed;
 
+		float maxDiff = 0.01f;
+		float distanceDiff = (hit.distance - 0.3f) - wheel.springDistance;
+		if (distanceDiff < -maxDiff) distanceDiff = -maxDiff;
+		wheel.springDistance += distanceDiff;
+
 		Matrix wheelMatrix = {};
 		wheelMatrix.setIdentity();
 		wheelMatrix.setTranslation(Vector3());
@@ -129,13 +159,14 @@ void CarComponent::simulateWheel(wheel& wheel)
 		wheelMatrix *= newMatrix;
 
 		wheel.transform->setMatrix(wheelMatrix);
-		wheel.transform->setPosition(hit.point - direction * 0.3f);
+		wheel.transform->setPosition(position + direction * wheel.springDistance);
 
 		// Drag
 		float wheelSpeed = wheelVel * forward;
 
 		float dragForce = wheelSpeed;
-		if (dragForce > 1.0f) dragForce = 1.0f;
+		if (dragForce > 0.5f) dragForce = 0.5f;
+		if (dragForce < -2.0f) dragForce = -2.0f;
 
 		mRigidBody->addForce(-forward * dragForce, hit.point);
 	}
@@ -153,6 +184,11 @@ void CarComponent::simulateWheel(wheel& wheel)
 
 		wheel.transform->setMatrix(wheelMatrix);
 
-		wheel.transform->setPosition(position + direction * (maxDistance - 0.3f));
+		float maxDiff = 0.01f;
+		float distanceDiff = (maxDistance - 0.3f) - wheel.springDistance;
+		if (distanceDiff < -maxDiff) distanceDiff = -maxDiff;
+		wheel.springDistance += distanceDiff;
+
+		wheel.transform->setPosition(position + direction * wheel.springDistance);
 	}
 }

@@ -15,6 +15,7 @@
 #include "SphereCollider.h"
 #include "CarComponent.h"
 #include "FollowComponent.h"
+#include "FrameCounter.h"
 
 #include <iostream>
 
@@ -61,7 +62,7 @@ void MainScene::init()
 	Material* wheelMaterial = new Material();
 	wheelMaterial->addTexture(wheelTexture);
 
-	Entity* offroad = new Entity(Vector3(0.0f, -2.0f, 0.0f));
+	Entity* offroad = new Entity(Vector3(100.0f, -2.0f, 0.0f));
 	offroad->getTransform()->setScale(Vector3(40.0f, 1.0f, 40.0f));
 	offroad->getTransform()->setScale(Vector3(2.0f, 0.3f, 2.0f));
 	offroad->addComponent<MeshRenderer>(offroadMesh);
@@ -74,11 +75,11 @@ void MainScene::init()
 	plane->addComponent<MeshCollider>();
 	plane->addComponent<RigidBody>(true);
 
-	Entity* penguin = new Entity(Vector3(1.0f, 0.0f, 0.0f));
+	/*Entity* penguin = new Entity(Vector3(1.0f, 0.0f, 0.0f));
 	penguin->addComponent<MeshRenderer>(penguinMesh, penguinMaterial);
 
 	Entity* rabbit = new Entity(Vector3(-1.0f, 0.0f, 0.0f));
-	rabbit->addComponent<MeshRenderer>(rabbitMesh, rabbitMaterial);
+	rabbit->addComponent<MeshRenderer>(rabbitMesh, rabbitMaterial);*/
 
 	Entity* skyDome = new Entity();
 	skyDome->addComponent<SkySphere>();
@@ -121,6 +122,7 @@ void MainScene::init()
 	i->prefab = carPrefab;
 
 	Entity* sceneChanger = new Entity();
+	sceneChanger->addComponent<FrameCounter>();
 	sceneChanger->addComponent<SceneChanger>();
 	sceneChanger->dontDestroyOnLoad = true;
 
