@@ -7,6 +7,7 @@
 #include "VertexShader.h"
 #include "PixelShader.h"
 #include "Texture.h"
+#include "imgui_impl_dx11.h"
 
 DeviceContext::DeviceContext(ID3D11DeviceContext* deviceContext) : mDeviceContext(deviceContext)
 {
@@ -19,6 +20,8 @@ void DeviceContext::clearRenderTarget(SwapChain* swapChain, float r, float g, fl
 	mDeviceContext->ClearRenderTargetView(swapChain->mRenderTargetView, color);
 	mDeviceContext->ClearDepthStencilView(swapChain->mDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1, 0);
 	mDeviceContext->OMSetRenderTargets(1, &swapChain->mRenderTargetView, swapChain->mDepthStencilView);
+
+	ImGui_ImplDX11_NewFrame();
 }
 
 // Встановлює стан семплера для піксельного та вершинного шейдерів

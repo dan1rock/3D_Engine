@@ -1,5 +1,7 @@
 #include "AppWindow.h"
 #include <Windows.h>
+#include "imgui.h"
+#include "imgui_impl_win32.h"
 #include "GlobalResources.h"
 #include "EntityManager.h"
 #include "EngineTime.h"
@@ -24,6 +26,12 @@ void AppWindow::onCreate()
 	// Ініціалізує рушії та створює SwapChain
 	PhysicsEngine::get()->init();
 
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplWin32_Init(this->mHwnd);
 	GraphicsEngine::get()->init();
 	mSwapChain = GraphicsEngine::get()->createSwapShain();
 
@@ -62,6 +70,9 @@ void AppWindow::onUpdate()
 	RECT windowSize = this->getClientWindowRect();
 	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
 
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
 	if (Input::getKeyDown(VK_ESCAPE))
 	{
 		appIsRunning = false;
@@ -93,11 +104,14 @@ void AppWindow::onUpdate()
 	EntityManager::get()->updateCameras();
 	EntityManager::get()->updateRenderers();
 
+	// Виконує рендеринг інтерфейсу користувача
+	GraphicsEngine::get()->renderUI();
+
 	// Оновлює стан менеджера сцен
 	SceneManager::get()->update();
 
 	// Виводить кадр на екран
-	mSwapChain->present(false);
+	mSwapChain->present(true);
 }
 
 // Викликається при зміні розміру вікна: оновлює SwapChain та матрицю проекції

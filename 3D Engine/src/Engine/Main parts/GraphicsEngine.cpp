@@ -13,6 +13,7 @@
 #include "Material.h"
 #include "DirectXTex.h"
 #include <d3dcompiler.h>
+#include "imgui_impl_dx11.h"
 
 #include <iostream>
 
@@ -69,6 +70,9 @@ bool GraphicsEngine::init()
 
 	// Ініціалізація менеджеру глобальних ресурсів
 	mGlobalResources->init();
+
+	// Ініціалізація imgui
+	ImGui_ImplDX11_Init(mD3dDevice, mImmContext);
 
 	return true;
 }
@@ -287,6 +291,12 @@ void GraphicsEngine::setMaterial(Material* material)
 
 		mImmDeviceContext->setSamplerState(material->clampTexture ? mSamplerClamp : mSamplerWrap);
 	}
+}
+
+void GraphicsEngine::renderUI()
+{
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
 // Створює стани растеризатора

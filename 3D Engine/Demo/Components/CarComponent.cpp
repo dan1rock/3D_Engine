@@ -4,6 +4,7 @@
 #include "Prefab.h"
 #include "Input.h"
 #include "EngineTime.h"
+#include "imgui.h"
 
 #include <iostream>
 
@@ -29,9 +30,23 @@ void CarComponent::awake()
 	mWheelBR.rightSide = true;
 }
 
+void CarComponent::update()
+{
+	ImGui::Begin("Player Car", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+	ImGui::SliderFloat("Speed", &mSpeed, 0.0f, 100.0f);
+	ImGui::End();
+}
+
 void CarComponent::fixedUpdate()
 {
 	if (!mRigidBody) return;
+
+	float carSpeed = mRigidBody->getVelocity() * mOwner->getTransform()->getForward();
+	float absoluteSpeed = carSpeed;
+	if (absoluteSpeed < 0.0f) absoluteSpeed = -absoluteSpeed;
+	mSpeed = absoluteSpeed;
+
+	float accelerationRatio = 1.0f - absoluteSpeed / 70.0f;
 
 	float targetSteering = 0.0f;
 
@@ -57,6 +72,11 @@ void CarComponent::fixedUpdate()
 		acceleration += -10.0f;
 	}
 
+	if (carSpeed * acceleration >= 0.0f)
+	{
+		acceleration *= accelerationRatio;
+	}
+
 	mWheelFR.steering = mSteering;
 	mWheelFL.steering = mSteering;
 
@@ -79,7 +99,7 @@ void CarComponent::fixedUpdate()
 	simulateWheel(mWheelBL);
 	simulateWheel(mWheelBR);
 
-	mRigidBody->addForce(Vector3(0, -10, 0));
+	mRigidBody->addForce(Vector3(0, -9.81, 0));
 }
 
 void CarComponent::simulateWheel(wheel& wheel)

@@ -40,8 +40,8 @@ void ScenePerformanceTest::init()
 	plane->addComponent<MeshCollider>();
 	plane->addComponent<RigidBody>(true);
 
-	Entity* camera = new Entity(Vector3(0, 1, 3));
-	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
+	Entity* camera = new Entity(Vector3(0, 2, 10));
+	camera->getTransform()->setRotation(Vector3(0.5f, 3.1416f, 0));
 	camera->addComponent<Camera>();
 	camera->addComponent<DemoPlayer>(2.0f, 0.002f);
 

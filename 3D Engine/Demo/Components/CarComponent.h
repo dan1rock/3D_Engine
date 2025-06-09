@@ -38,6 +38,7 @@ private:
 	};
 
 	void awake() override;
+	void update() override;
 	void fixedUpdate() override;
 
 	void simulateWheel(wheel& wheel);
@@ -50,5 +51,6 @@ private:
 	wheel mWheelBL = {};
 
 	float mSteering = 0.0f;
+	float mSpeed = 0.0f;
 };
 

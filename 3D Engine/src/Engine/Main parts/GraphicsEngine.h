@@ -67,6 +67,9 @@ public:
 	// Встановлює матеріал в шейдерах
 	void setMaterial(Material* material);
 
+	// Виконує рендеринг інтерфейсу користувача
+	void renderUI();
+
 private:
 	GraphicsEngine();
 	~GraphicsEngine();
