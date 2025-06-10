@@ -1,5 +1,6 @@
 #include "Input.h"
 #include "Windows.h"
+#include "imgui.h"
 
 unsigned char Input::keys_state[256] = {};
 unsigned char Input::old_keys_state[256] = {};
@@ -13,6 +14,8 @@ Vector2 Input::deltaMousePos = Vector2(0.0f, 0.0f);
 
 INT16 Input::mouseWheelDelta = 0;
 INT16 Input::oldMouseWheelDelta = 0;
+
+bool Input::isCursorHidden = false;
 
 // Перевіряє, чи натиснута клавіша з вказаним кодом
 bool Input::getKey(int keycode)
@@ -66,6 +69,27 @@ Vector2 Input::getDeltaMousePos()
 	return deltaMousePos;
 }
 
+void Input::hideCursor(bool hide)
+{
+
+	if (hide && !isCursorHidden)
+	{
+		::ShowCursor(FALSE);
+		isCursorHidden = true;
+	}
+
+	if (!hide && isCursorHidden)
+	{
+		::ShowCursor(TRUE);
+		isCursorHidden = false;
+	}
+}
+
+bool Input::getCursorState()
+{
+	return isCursorHidden;
+}
+
 // Оновлює стан клавіатури та кнопок миші
 void Input::update()
 {
@@ -78,6 +102,11 @@ void Input::update()
 	mouse_state[MB_Left] = (::GetAsyncKeyState(VK_LBUTTON) & 0x8000) ? 0x80 : 0;
 	mouse_state[MB_Right] = (::GetAsyncKeyState(VK_RBUTTON) & 0x8000) ? 0x80 : 0;
 	mouse_state[MB_Middle] = (::GetAsyncKeyState(VK_MBUTTON) & 0x8000) ? 0x80 : 0;
+
+	ImGuiIO& io = ImGui::GetIO();
+	io.AddMouseButtonEvent(MB_Left, mouse_state[MB_Left]);
+	io.AddMouseButtonEvent(MB_Right, mouse_state[MB_Right]);
+	io.AddMouseButtonEvent(MB_Middle, mouse_state[MB_Middle]);
 
 	// Оновлюємо стан колеса миші
 	oldMouseWheelDelta = mouseWheelDelta;
@@ -101,14 +130,21 @@ void Input::updateMouse(RECT windowRect, bool isFocused)
 			lastTickMousePos = Vector2(currentMousePos.x, currentMousePos.y);
 		}
 
-		// Обмеження позиції миші в межах вікна
-		::SetCursorPos((windowRect.right - windowRect.left) / 2, (windowRect.bottom - windowRect.top) / 2);
 		deltaMousePos = Vector2(
 			currentMousePos.x - lastTickMousePos.x,
 			currentMousePos.y - lastTickMousePos.y
 		);
 
-		lastTickMousePos = Vector2((windowRect.right - windowRect.left) / 2, (windowRect.bottom - windowRect.top) / 2);
+		// Обмеження позиції миші в межах вікна
+		if (isCursorHidden)
+		{
+			::SetCursorPos((windowRect.right - windowRect.left) / 2, (windowRect.bottom - windowRect.top) / 2);
+			lastTickMousePos = Vector2((windowRect.right - windowRect.left) / 2, (windowRect.bottom - windowRect.top) / 2);
+		}
+		else 
+		{
+			lastTickMousePos = Vector2(currentMousePos.x, currentMousePos.y);
+		}
 	}
 	else deltaMousePos = Vector2(0.0f, 0.0f);
 

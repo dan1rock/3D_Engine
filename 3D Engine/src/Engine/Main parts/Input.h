@@ -33,7 +33,12 @@ public:
    static bool getMouseWheelDown();
 
    // Повертає зміну позиції миші за кадр
-   static Vector2 getDeltaMousePos();  
+   static Vector2 getDeltaMousePos();
+
+   // Встановлює стан миші
+   static void hideCursor(bool hide);
+   // Повертає true, якщо курсор прихований
+   static bool getCursorState();
 
 private:  
    static unsigned char keys_state[256];  
@@ -48,6 +53,8 @@ private:
 
    static INT16 mouseWheelDelta;
    static INT16 oldMouseWheelDelta;
+
+   static bool isCursorHidden;
 
    // Оновлює стан клавіатури та кнопок миші
    static void update();  

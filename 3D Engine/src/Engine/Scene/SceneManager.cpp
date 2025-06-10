@@ -28,6 +28,11 @@ void SceneManager::loadScene(Scene* scene)
 	mRequestedScene = scene;
 }
 
+void SceneManager::exit()
+{
+	mExitRequested = true;
+}
+
 // Оновлює менеджер сцен, викликаючи завантаження нової сцени
 void SceneManager::update()
 {

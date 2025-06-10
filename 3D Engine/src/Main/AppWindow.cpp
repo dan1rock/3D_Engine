@@ -73,11 +73,6 @@ void AppWindow::onUpdate()
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
-	if (Input::getKeyDown(VK_ESCAPE))
-	{
-		appIsRunning = false;
-	}
-
 	// Оновлює час та ввід
 	Time::update();
 	constantData->time = Time::getCurrentTime();
@@ -109,6 +104,12 @@ void AppWindow::onUpdate()
 
 	// Оновлює стан менеджера сцен
 	SceneManager::get()->update();
+
+	// Якщо запитано вихід з програми, завершує роботу
+	if (SceneManager::get()->mExitRequested)
+	{
+		appIsRunning = false;
+	}
 
 	// Виводить кадр на екран
 	mSwapChain->present(true);
@@ -142,7 +143,12 @@ void AppWindow::onMouseWheel(INT16 delta)
 void AppWindow::onFocus()
 {
 	isFocused = true;
-	::ShowCursor(false);
+
+	if (Input::getCursorState())
+	{
+		::ShowCursor(false);
+	}
+	
 	Time::update();
 }
 
@@ -160,4 +166,5 @@ void AppWindow::onDestroy()
 	mSwapChain->release();
 	PhysicsEngine::get()->shutdown();
 	GraphicsEngine::get()->release();
+	ImGui_ImplWin32_Shutdown();
 }

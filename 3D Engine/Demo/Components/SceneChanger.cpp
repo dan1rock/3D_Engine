@@ -25,6 +25,7 @@ void SceneChanger::awake()
 	if (instance == nullptr)
 	{
 		instance = this;
+		mOwner->dontDestroyOnLoad = true;
 	}
 	else
 	{
@@ -45,5 +46,10 @@ void SceneChanger::update()
 	if (Input::getKeyDown('3'))
 	{
 		SceneManager::get()->loadScene(new ScenePerformanceTest());
+	}
+
+	if (Input::getKeyDown(VK_ESCAPE))
+	{
+		Input::hideCursor(!Input::getCursorState());
 	}
 }

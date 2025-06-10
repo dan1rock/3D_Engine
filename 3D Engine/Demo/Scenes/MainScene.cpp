@@ -124,7 +124,6 @@ void MainScene::init()
 	Entity* sceneChanger = new Entity();
 	sceneChanger->addComponent<FrameCounter>();
 	sceneChanger->addComponent<SceneChanger>();
-	sceneChanger->dontDestroyOnLoad = true;
 
 	Entity* playerCar = carPrefab->instantiate();
 
