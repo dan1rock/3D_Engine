@@ -15,7 +15,7 @@ Vector2 Input::deltaMousePos = Vector2(0.0f, 0.0f);
 INT16 Input::mouseWheelDelta = 0;
 INT16 Input::oldMouseWheelDelta = 0;
 
-bool Input::isCursorHidden = false;
+bool Input::mIsCursorHidden = false;
 
 // Перевіряє, чи натиснута клавіша з вказаним кодом
 bool Input::getKey(int keycode)
@@ -72,22 +72,22 @@ Vector2 Input::getDeltaMousePos()
 void Input::hideCursor(bool hide)
 {
 
-	if (hide && !isCursorHidden)
+	if (hide && !mIsCursorHidden)
 	{
 		::ShowCursor(FALSE);
-		isCursorHidden = true;
+		mIsCursorHidden = true;
 	}
 
-	if (!hide && isCursorHidden)
+	if (!hide && mIsCursorHidden)
 	{
 		::ShowCursor(TRUE);
-		isCursorHidden = false;
+		mIsCursorHidden = false;
 	}
 }
 
-bool Input::getCursorState()
+bool Input::isCursorHidden()
 {
-	return isCursorHidden;
+	return mIsCursorHidden;
 }
 
 // Оновлює стан клавіатури та кнопок миші
@@ -136,7 +136,7 @@ void Input::updateMouse(RECT windowRect, bool isFocused)
 		);
 
 		// Обмеження позиції миші в межах вікна
-		if (isCursorHidden)
+		if (mIsCursorHidden)
 		{
 			::SetCursorPos((windowRect.right - windowRect.left) / 2, (windowRect.bottom - windowRect.top) / 2);
 			lastTickMousePos = Vector2((windowRect.right - windowRect.left) / 2, (windowRect.bottom - windowRect.top) / 2);

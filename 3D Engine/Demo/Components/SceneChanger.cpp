@@ -22,15 +22,16 @@ SceneChanger::~SceneChanger()
 
 void SceneChanger::awake()
 {
-	if (instance == nullptr)
-	{
-		instance = this;
-		mOwner->dontDestroyOnLoad = true;
-	}
-	else
+	if (instance != nullptr)
 	{
 		mOwner->destroy();
+		return;
 	}
+
+	instance = this;
+	mOwner->dontDestroyOnLoad = true;
+
+	Input::hideCursor(true);
 }
 
 void SceneChanger::update()
@@ -50,6 +51,6 @@ void SceneChanger::update()
 
 	if (Input::getKeyDown(VK_ESCAPE))
 	{
-		Input::hideCursor(!Input::getCursorState());
+		Input::hideCursor(!Input::isCursorHidden());
 	}
 }

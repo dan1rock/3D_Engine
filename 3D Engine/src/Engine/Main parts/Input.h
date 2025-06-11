@@ -38,7 +38,7 @@ public:
    // Встановлює стан миші
    static void hideCursor(bool hide);
    // Повертає true, якщо курсор прихований
-   static bool getCursorState();
+   static bool isCursorHidden();
 
 private:  
    static unsigned char keys_state[256];  
@@ -54,7 +54,7 @@ private:
    static INT16 mouseWheelDelta;
    static INT16 oldMouseWheelDelta;
 
-   static bool isCursorHidden;
+   static bool mIsCursorHidden;
 
    // Оновлює стан клавіатури та кнопок миші
    static void update();  

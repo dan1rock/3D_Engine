@@ -38,18 +38,65 @@ bool SwapChain::init(HWND hwnd, UINT width, UINT height)
 	if (FAILED(hr))
 		return false;
 
-	// Створення цілі рендеру
+	updateBuffers(width, height);
+
+	return true;
+}
+
+// Відображає (презентує) зображення на екран, з можливістю вертикальної синхронізації
+bool SwapChain::present(bool vSync)
+{
+	mSwapChain->Present(vSync, NULL);
+	return true;
+}
+
+// Змінює розміри буферів SwapChain
+void SwapChain::resize(UINT width, UINT height)
+{
+	if (mRenderTargetView) mRenderTargetView->Release();
+	if (mDepthStencilView) mDepthStencilView->Release();
+
+	mSwapChain->ResizeBuffers(1, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
+	updateBuffers(width, height);
+}
+
+// Встановлює повноекранний режим
+void SwapChain::setFullscreen(bool fullscreen)
+{
+	mSwapChain->SetFullscreenState(fullscreen, nullptr);
+}
+
+// Звільняє ресурси SwapChain
+bool SwapChain::release()
+{
+	mSwapChain->Release();
+	delete this;
+	return true;
+}
+
+SwapChain::~SwapChain()
+{
+}
+
+// Оновлює буфери SwapChain відповідно до нових розмірів
+void SwapChain::updateBuffers(UINT width, UINT height)
+{
+	ID3D11Device* device = GraphicsEngine::get()->mD3dDevice;
+
+	// Оновлення цілі рендеру
 	ID3D11Texture2D* buffer;
-	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&buffer);
+	HRESULT hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&buffer);
+	
 	if (FAILED(hr))
-		return false;
+		return;
 
 	hr = device->CreateRenderTargetView(buffer, NULL, &mRenderTargetView);
 	buffer->Release();
-	if (FAILED(hr))
-		return false;
 
-	// Створення текстури для глибини
+	if (FAILED(hr))
+		return;
+
+	// Оновлення текстури для глибини
 	D3D11_TEXTURE2D_DESC texDesc = {};
 	texDesc.Width = width;
 	texDesc.Height = height;
@@ -66,32 +113,11 @@ bool SwapChain::init(HWND hwnd, UINT width, UINT height)
 	hr = device->CreateTexture2D(&texDesc, nullptr, &buffer);
 
 	if (FAILED(hr))
-		return false;
+		return;
 
 	hr = device->CreateDepthStencilView(buffer, nullptr, &mDepthStencilView);
 	buffer->Release();
 
 	if (FAILED(hr))
-		return false;
-
-	return true;
-}
-
-// Відображає (презентує) зображення на екран, з можливістю вертикальної синхронізації
-bool SwapChain::present(bool vSync)
-{
-	mSwapChain->Present(vSync, NULL);
-	return true;
-}
-
-// Звільняє ресурси SwapChain
-bool SwapChain::release()
-{
-	mSwapChain->Release();
-	delete this;
-	return true;
-}
-
-SwapChain::~SwapChain()
-{
+		return;
 }

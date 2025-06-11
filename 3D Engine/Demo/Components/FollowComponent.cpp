@@ -46,6 +46,7 @@ void FollowComponent::update()
 	}
 
     Vector2 md = Input::getDeltaMousePos();
+	if (!Input::isCursorHidden()) md = Vector2();
     mYaw += md.x * mMouseSpeed;
     mPitch += md.y * mMouseSpeed;
 

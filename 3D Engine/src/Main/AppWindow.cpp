@@ -35,6 +35,10 @@ void AppWindow::onCreate()
 	GraphicsEngine::get()->init();
 	mSwapChain = GraphicsEngine::get()->createSwapShain();
 
+	RECT rc = this->getClientWindowRect();
+
+	mSwapChain->init(this->mHwnd, rc.right - rc.left, rc.bottom - rc.top);
+
 	// Встановлює початкові константи для глобальних ресурсів
 	constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
 
@@ -120,7 +124,7 @@ void AppWindow::onWindowResized()
 {
 	RECT rc = this->getClientWindowRect();
 
-	mSwapChain->init(this->mHwnd, rc.right - rc.left, rc.bottom - rc.top);
+	mSwapChain->resize(rc.right - rc.left, rc.bottom - rc.top);
 
 	float aspectRatio = (float)(rc.right - rc.left) / (float)(rc.bottom - rc.top);
 	constantData->projection.setPerspectivePM(
@@ -131,6 +135,14 @@ void AppWindow::onWindowResized()
 	);
 }
 
+// Викликається при перемиканні повноекранного режиму
+void AppWindow::onFullscreenToggle()
+{
+	isFullscreen = !isFullscreen;
+	mSwapChain->setFullscreen(isFullscreen);
+}
+
+// Викликається при прокрутці колеса миші
 void AppWindow::onMouseWheel(INT16 delta)
 {
 	if (isFocused)
@@ -144,7 +156,7 @@ void AppWindow::onFocus()
 {
 	isFocused = true;
 
-	if (Input::getCursorState())
+	if (Input::isCursorHidden())
 	{
 		::ShowCursor(false);
 	}

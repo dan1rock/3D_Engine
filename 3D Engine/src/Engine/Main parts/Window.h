@@ -16,6 +16,8 @@ public:
 
 	// Повертає прямокутник клієнтської області вікна
 	RECT getClientWindowRect();
+	// Повертає прямокутник екрану
+	RECT getScreenRect();
 	// Встановлює дескриптор вікна
 	void setHWND(HWND hwnd);
 
@@ -25,6 +27,8 @@ public:
 	virtual void onUpdate() = 0;
 	// Викликається при зміні розміру вікна (абстрактний метод)
 	virtual void onWindowResized() = 0;
+	// Викликається при перемиканні повноекранного режиму (абстрактний метод)
+	virtual void onFullscreenToggle() = 0;
 	// Викликається при прокрутці колеса миші
 	virtual void onMouseWheel(INT16 delta) = 0;
 	// Викликається при отриманні фокусу вікном

@@ -10,9 +10,9 @@ bool windowIsResizing = false;
 
 // Головна процедура обробки повідомлень Windows
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
-	switch (msg) 
+	switch (msg)
 	{
-	case WM_CREATE: 
+	case WM_CREATE:
 	{
 		// Обробка створення вікна
 		window->setHWND(hwnd);
@@ -65,6 +65,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 		short delta = GET_WHEEL_DELTA_WPARAM(wparam);
 
 		window->onMouseWheel(delta / WHEEL_DELTA);
+		break;
+	}
+	case WM_SYSKEYDOWN:
+	{
+		// ALT+Enter
+		if (wparam == VK_RETURN)
+		{
+			window->onFullscreenToggle();
+			break;
+		}
 		break;
 	}
 	default:
@@ -145,6 +155,16 @@ RECT Window::getClientWindowRect()
 {
 	RECT rect;
 	::GetClientRect(this->mHwnd, &rect);
+	return rect;
+}
+
+RECT Window::getScreenRect()
+{
+	RECT rect{};
+
+	rect.right = GetSystemMetrics(SM_CXSCREEN);
+	rect.bottom = GetSystemMetrics(SM_CYSCREEN);
+
 	return rect;
 }
 
