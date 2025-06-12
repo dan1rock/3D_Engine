@@ -82,8 +82,7 @@ void ConvexMesh::createTriangleMesh()
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(
 		filePath,
-		aiProcess_Triangulate
-		| aiProcess_JoinIdenticalVertices);
+		aiProcess_Triangulate);
 
 	if (!scene || !scene->HasMeshes())
 	{

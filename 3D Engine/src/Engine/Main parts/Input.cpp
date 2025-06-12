@@ -1,6 +1,5 @@
 #include "Input.h"
 #include "Windows.h"
-#include "imgui.h"
 
 unsigned char Input::keys_state[256] = {};
 unsigned char Input::old_keys_state[256] = {};
@@ -102,11 +101,6 @@ void Input::update()
 	mouse_state[MB_Left] = (::GetAsyncKeyState(VK_LBUTTON) & 0x8000) ? 0x80 : 0;
 	mouse_state[MB_Right] = (::GetAsyncKeyState(VK_RBUTTON) & 0x8000) ? 0x80 : 0;
 	mouse_state[MB_Middle] = (::GetAsyncKeyState(VK_MBUTTON) & 0x8000) ? 0x80 : 0;
-
-	ImGuiIO& io = ImGui::GetIO();
-	io.AddMouseButtonEvent(MB_Left, mouse_state[MB_Left]);
-	io.AddMouseButtonEvent(MB_Right, mouse_state[MB_Right]);
-	io.AddMouseButtonEvent(MB_Middle, mouse_state[MB_Middle]);
 
 	// Оновлюємо стан колеса миші
 	oldMouseWheelDelta = mouseWheelDelta;

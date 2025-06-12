@@ -15,5 +15,7 @@ protected:
 private:
 	void awake() override;
 	void update() override;
+
+	void drawUI();
 };
 

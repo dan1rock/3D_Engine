@@ -59,5 +59,5 @@ void ScenePerformanceTest::init()
 	testPrefab->addComponent<RigidBody>(1.0f);
 
 	Entity* spawner = new Entity();
-	spawner->addComponent<ObjectSpawner>(testPrefab, 100);
+	spawner->addComponent<ObjectSpawner>(testPrefab);
 }

@@ -5,6 +5,7 @@
 #include "ScenePerformanceTest.h"
 #include "SceneManager.h"
 #include "Input.h"
+#include "imgui.h"
 
 SceneChanger* instance = nullptr;
 
@@ -36,21 +37,32 @@ void SceneChanger::awake()
 
 void SceneChanger::update()
 {
-	if (Input::getKeyDown('1'))
-	{
-		SceneManager::get()->loadScene(new MainScene());
-	}
-	if (Input::getKeyDown('2'))
-	{
-		SceneManager::get()->loadScene(new Scene1());
-	}
-	if (Input::getKeyDown('3'))
-	{
-		SceneManager::get()->loadScene(new ScenePerformanceTest());
-	}
+	drawUI();
 
 	if (Input::getKeyDown(VK_ESCAPE))
 	{
 		Input::hideCursor(!Input::isCursorHidden());
 	}
+}
+
+void SceneChanger::drawUI()
+{
+	ImGui::Begin("Scene Changer", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+	if (ImGui::Button("Main Scene", ImVec2(150, 0)))
+	{
+		SceneManager::get()->loadScene(new MainScene());
+	}
+	if (ImGui::Button("Scene 1", ImVec2(150, 0)))
+	{
+		SceneManager::get()->loadScene(new Scene1());
+	}
+	if (ImGui::Button("Performance Test", ImVec2(150, 0)))
+	{
+		SceneManager::get()->loadScene(new ScenePerformanceTest());
+	}
+	if (ImGui::Button("Exit", ImVec2(150, 0)))
+	{
+		SceneManager::get()->exit();
+	}
+	ImGui::End();
 }

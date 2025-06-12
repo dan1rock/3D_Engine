@@ -22,6 +22,8 @@ void DemoPlayer::awake()
 
 void DemoPlayer::update()
 {
+	if (!Input::isCursorHidden()) return;
+
 	FreelookCameraController::update();
 
 	if (Input::getMouseButtonDown(MB_Left) && projectilePrefab)
