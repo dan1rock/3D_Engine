@@ -103,7 +103,7 @@ RigidBody* EntityManager::getRigidBody(void* actor)
 void EntityManager::updateComponents()
 {
 	for (auto* c : mComponents) {
-		if (!c->getOwner()->isActive) continue;
+		if (!c->getOwner()->isActive()) continue;
 		c->update();
 	}
 }
@@ -112,7 +112,7 @@ void EntityManager::updateComponents()
 void EntityManager::fixedUpdateComponents()
 {
 	for (auto* c : mComponents) {
-		if (!c->getOwner()->isActive) continue;
+		if (!c->getOwner()->isActive()) continue;
 		c->fixedUpdate();
 	}
 }
@@ -121,7 +121,7 @@ void EntityManager::fixedUpdateComponents()
 void EntityManager::updateRenderers()
 {
 	for (auto* r : mRenderers) {
-		if (!r->getOwner()->isActive) continue;
+		if (!r->getOwner()->isActive()) continue;
 		r->render();
 	}
 }
@@ -130,7 +130,7 @@ void EntityManager::updateRenderers()
 void EntityManager::updateCameras()
 {
 	for (auto* c : mCameras) {
-		if (!c->getOwner()->isActive) continue;
+		if (!c->getOwner()->isActive()) continue;
 		c->updateCamera();
 	}
 }

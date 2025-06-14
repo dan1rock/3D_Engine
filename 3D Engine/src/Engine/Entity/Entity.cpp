@@ -31,6 +31,11 @@ Entity::~Entity()
 
     mComponents.clear();
 
+	if (mParent) {
+		mParent->mChildren.remove(this);
+		mParent = nullptr;
+	}
+
     EntityManager::get()->unregisterEntity(this);
 }
 
@@ -43,6 +48,13 @@ Transform* Entity::getTransform()
 // Знищує об'єкт
 void Entity::destroy()
 {
+	auto it = mChildren.begin();
+
+	while (it != mChildren.end()) {
+		Entity* child = *it++;
+		child->destroy();
+	}
+    
     delete this;
 }
 
@@ -72,6 +84,10 @@ Entity* Entity::instantiate()
    newObject->mTransform.setScale(mTransform.getScale());
    newObject->mTransform.setRotation(mTransform.getRotation());
 
+   newObject->mTransform.setLocalPosition(mTransform.getLocalPosition());
+   newObject->mTransform.setLocalScale(mTransform.getLocalScale());
+   newObject->mTransform.setLocalRotation(mTransform.getLocalRotation());
+
    for (auto* component : mComponents) {
        auto* newComponent = component->instantiate();
        newComponent->setOwner(newObject);
@@ -81,5 +97,44 @@ Entity* Entity::instantiate()
     newObject->mRigidBody = newObject->getComponent<RigidBody>();
    }
 
+   for (auto* child : mChildren) {
+	   Entity* newChild = child->instantiate();
+	   newChild->setParent(newObject);
+   }
+
    return newObject;
+}
+
+Entity* Entity::getParent()
+{
+    return mParent;
+}
+
+void Entity::setParent(Entity* parent)
+{
+	if (mParent == parent) return;
+	if (mParent) {
+		mParent->mChildren.remove(this);
+	}
+
+	mParent = parent;
+	if (mParent) {
+		mParent->mChildren.push_back(this);
+	}
+}
+
+bool Entity::isActive()
+{
+	if (!isActiveSelf) return false;
+
+	Entity* parent = getParent();
+
+    while (parent) {
+		if (!parent->isActiveSelf) {
+			return false;
+		}
+		parent = parent->getParent();
+    }
+
+    return true;
 }

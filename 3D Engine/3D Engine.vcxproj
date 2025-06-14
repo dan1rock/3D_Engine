@@ -123,7 +123,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)Demo\Scenes;$(ProjectDir)Demo\Components;$(ProjectDir)src\imgui;$(ProjectDir)src\Math;$(ProjectDir)src\Main;$(ProjectDir)src\Engine\Shader managers;$(ProjectDir)src\Engine\Scene;$(ProjectDir)src\Engine\Resource managers;$(ProjectDir)src\Engine\Physics;$(ProjectDir)src\Engine\Main parts;$(ProjectDir)src\Engine\Entity;$(ProjectDir)src\Engine\Buffer managers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>

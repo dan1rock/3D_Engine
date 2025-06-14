@@ -38,8 +38,16 @@ public:
 	// Створює копію об'єкта разом з усіма його компонентами
 	Entity* instantiate();
 
+	// Повертає вказівник на батьківський об'єкт
+	Entity* getParent();
+	// Встановлює батьківський об'єкт для цього об'єкта
+	void setParent(Entity* parent);
+
+	// Перевіряє, чи об'єкт активний
+	bool isActive();
+
 	bool dontDestroyOnLoad = false;
-	bool isActive = true;
+	bool isActiveSelf = true;
 
 protected:
 	// Чи повинен об'єкт прокидати компоненти при створенні
@@ -49,6 +57,9 @@ protected:
 	RigidBody* mRigidBody = nullptr;
 
 	std::list<Component*> mComponents;
+
+	Entity* mParent = nullptr;
+	std::list<Entity*> mChildren;
 
 	friend class Transform;
 };
