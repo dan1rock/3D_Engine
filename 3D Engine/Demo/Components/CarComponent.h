@@ -15,6 +15,9 @@ public:
 	float force = 1.0f;
 	float damping = 0.1f;
 	float maxDistance = 1.0f;
+	float maxSpeed = 70.0f;
+	float maxSteering = 0.3f;
+	float gripRatio = 0.5f;
 
 	Prefab* wheelPrefab = nullptr;
 
@@ -27,10 +30,9 @@ protected:
 private:
 	struct wheel
 	{
-		Transform* transform;
-		Vector3 position;
+		Transform* wheelTransform;
+		Transform* positionTransform;
 		bool rightSide;
-		float steering;
 		float spin;
 		float spinSpeed;
 		float acceleration;
@@ -42,6 +44,7 @@ private:
 	void fixedUpdate() override;
 
 	void simulateWheel(wheel& wheel);
+	void initWheel(wheel& wheel, Vector3 position);
 
 	RigidBody* mRigidBody = nullptr;
 

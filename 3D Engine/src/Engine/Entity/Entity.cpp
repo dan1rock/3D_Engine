@@ -2,6 +2,8 @@
 #include "EntityManager.h"
 #include "RigidBody.h"
 
+#include <iostream>
+
 // Конструктор класу GameObject, реєструє об'єкт у EntityManager та ініціалізує трансформацію за замовчуванням
 Entity::Entity()
 {

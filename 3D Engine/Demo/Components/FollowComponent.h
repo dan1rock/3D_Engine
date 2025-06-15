@@ -30,6 +30,6 @@ private:
 	static constexpr float PITCH_LIMIT = 89.0f * (3.14159265f / 180.0f);
 
 	float mYaw = 0.0f;
-	float mPitch = 0.0f;
+	float mPitch = 0.5f;
 };
 

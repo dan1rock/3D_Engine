@@ -6,8 +6,6 @@
 #include "EngineTime.h"
 #include "imgui.h"
 
-#include <iostream>
-
 CarComponent::CarComponent()
 {
 }
@@ -21,10 +19,14 @@ void CarComponent::awake()
 	mRigidBody = getOwner()->getComponent<RigidBody>();
 	mRigidBody->setCenterOfMass(Vector3(0.0f, 0.3f, -0.1f));
 
-	mWheelFR.transform = wheelPrefab->instantiate()->getTransform();
-	mWheelFL.transform = wheelPrefab->instantiate()->getTransform();
-	mWheelBR.transform = wheelPrefab->instantiate()->getTransform();
-	mWheelBL.transform = wheelPrefab->instantiate()->getTransform();
+	Transform* transform = mOwner->getTransform();
+	Vector3 basePos = transform->getUp() * 0.1f;
+	float base = 0.85f;
+
+	initWheel(mWheelFR, basePos + transform->getRight() * base + transform->getForward() * base * 1.53f);
+	initWheel(mWheelFL, basePos - transform->getRight() * base + transform->getForward() * base * 1.53f);
+	initWheel(mWheelBR, basePos + transform->getRight() * base - transform->getForward() * base * 1.8f);
+	initWheel(mWheelBL, basePos - transform->getRight() * base - transform->getForward() * base * 1.8f);
 
 	mWheelFR.rightSide = true;
 	mWheelBR.rightSide = true;
@@ -34,6 +36,12 @@ void CarComponent::update()
 {
 	ImGui::Begin("Player Car", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 	ImGui::SliderFloat("Speed", &mSpeed, 0.0f, 100.0f);
+	ImGui::SliderFloat("MaxSpeed", &maxSpeed, 0.0f, 200.0f);
+	ImGui::SliderFloat("MaxSteering", &maxSteering, 0.0f, 1.0f);
+	ImGui::SliderFloat("SpringForce", &force, 0.0f, 100.0f);
+	ImGui::SliderFloat("SpringDamping", &damping, 0.0f, 50.0f);
+	ImGui::SliderFloat("SpringDistance", &maxDistance, 0.0f, 2.0f);
+	ImGui::SliderFloat("Grip", &gripRatio, 0.0f, 2.0f);
 	ImGui::End();
 }
 
@@ -46,17 +54,17 @@ void CarComponent::fixedUpdate()
 	if (absoluteSpeed < 0.0f) absoluteSpeed = -absoluteSpeed;
 	mSpeed = absoluteSpeed;
 
-	float accelerationRatio = 1.0f - absoluteSpeed / 70.0f;
+	float accelerationRatio = 1.0f - absoluteSpeed / maxSpeed;
 
 	float targetSteering = 0.0f;
 
 	if (Input::getKey('A'))
 	{
-		targetSteering += -0.5f;
+		targetSteering -= maxSteering;
 	}
 	if (Input::getKey('D'))
 	{
-		targetSteering += 0.5f;
+		targetSteering += maxSteering;
 	}
 
 	mSteering += (targetSteering - mSteering) * 0.1f;
@@ -77,22 +85,11 @@ void CarComponent::fixedUpdate()
 		acceleration *= accelerationRatio;
 	}
 
-	mWheelFR.steering = mSteering;
-	mWheelFL.steering = mSteering;
+	mWheelFR.positionTransform->setLocalRotation(Vector3(0, mSteering, 0));
+	mWheelFL.positionTransform->setLocalRotation(Vector3(0, mSteering, 0));
 
 	mWheelBL.acceleration = acceleration;
 	mWheelBR.acceleration = acceleration;
-
-	float base = 0.85f;
-
-	Transform* transform = getOwner()->getTransform();
-
-	Vector3 basePos = transform->getPosition() + transform->getUp() * 0.1f;
-
-	mWheelFR.position = basePos + transform->getRight() * base + transform->getForward() * base * 1.53f;
-	mWheelFL.position = basePos - transform->getRight() * base + transform->getForward() * base * 1.53f;
-	mWheelBR.position = basePos + transform->getRight() * base - transform->getForward() * base * 1.8f;
-	mWheelBL.position = basePos - transform->getRight() * base - transform->getForward() * base * 1.8f;
 
 	simulateWheel(mWheelFR);
 	simulateWheel(mWheelFL);
@@ -108,13 +105,13 @@ void CarComponent::simulateWheel(wheel& wheel)
 
 	RaycastHit hit;
 	Vector3 direction = -getOwner()->getTransform()->getUp();
-	Vector3 position = wheel.position;
+	Vector3 position = wheel.positionTransform->getPosition();
 
 	if (Physics::raycast(position + getOwner()->getTransform()->getUp() * 0.5f, direction, maxDistance + 0.5f, hit, mRigidBody))
 	{
 		hit.distance -= 0.5f;
 
-		Vector3 forward = Vector3::rotateAroundUp(transform->getForward(), transform->getUp(), wheel.steering);
+		Vector3 forward = wheel.positionTransform->getForward();
 
 		// Grip
 
@@ -137,7 +134,7 @@ void CarComponent::simulateWheel(wheel& wheel)
 		if (slip < 0.0f) slip = -slip;
 		if (slip < 0.5f) slip = 0.5f;
 
-		float grip = 3.0f * slip * slip;
+		float grip = 6.0f * slip * slip * gripRatio;
 
 		// Suspension
 		float velocity = mRigidBody->getVelocityAtPoint(position) * -direction;
@@ -167,19 +164,13 @@ void CarComponent::simulateWheel(wheel& wheel)
 
 		float maxDiff = 0.01f;
 		float distanceDiff = (hit.distance - 0.3f) - wheel.springDistance;
-		if (distanceDiff < -maxDiff) distanceDiff = -maxDiff;
+		if (distanceDiff > maxDiff) distanceDiff = maxDiff;
 		wheel.springDistance += distanceDiff;
 
-		Matrix wheelMatrix = {};
-		wheelMatrix.setIdentity();
-		wheelMatrix.setTranslation(Vector3());
-		wheelMatrix.setRotation(Vector3(wheel.spin * (wheel.rightSide ? -1.0f : 1.0f), wheel.steering + (wheel.rightSide ? 3.1415f : 0.0f), 0.0f));
+		wheel.wheelTransform->setLocalRotation(Vector3(wheel.spin * (wheel.rightSide ? -1.0f : 1.0f), 
+			wheel.rightSide ? 3.1415f : 0.0f, 0.0f));
 
-		Matrix newMatrix = *transform->getMatrix();
-		wheelMatrix *= newMatrix;
-
-		wheel.transform->setMatrix(wheelMatrix);
-		wheel.transform->setPosition(position + direction * wheel.springDistance);
+		wheel.wheelTransform->setLocalPosition(-Vector3(0, 1, 0) * wheel.springDistance);
 
 		// Drag
 		float wheelSpeed = wheelVel * forward;
@@ -195,20 +186,23 @@ void CarComponent::simulateWheel(wheel& wheel)
 		wheel.spin += wheel.spinSpeed;
 		wheel.spinSpeed *= 0.995f;
 
-		Matrix wheelMatrix = {};
-		wheelMatrix.setIdentity();
-		wheelMatrix.setRotation(Vector3(wheel.spin * (wheel.rightSide ? -1.0f : 1.0f), wheel.steering + (wheel.rightSide ? 3.1415f : 0.0f), 0.0f));
-
-		Matrix newMatrix = *transform->getMatrix();
-		wheelMatrix *= newMatrix;
-
-		wheel.transform->setMatrix(wheelMatrix);
-
 		float maxDiff = 0.01f;
 		float distanceDiff = (maxDistance - 0.3f) - wheel.springDistance;
-		if (distanceDiff < -maxDiff) distanceDiff = -maxDiff;
+		if (distanceDiff > maxDiff) distanceDiff = maxDiff;
 		wheel.springDistance += distanceDiff;
 
-		wheel.transform->setPosition(position + direction * wheel.springDistance);
+		wheel.wheelTransform->setLocalRotation(Vector3(wheel.spin * (wheel.rightSide ? -1.0f : 1.0f),
+			wheel.rightSide ? 3.1415f : 0.0f, 0.0f));
+
+		wheel.wheelTransform->setLocalPosition(-Vector3(0, 1, 0) * wheel.springDistance);
 	}
+}
+
+void CarComponent::initWheel(wheel& wheel, Vector3 position)
+{
+	wheel.positionTransform = (new Entity())->getTransform();
+	wheel.positionTransform->getOwner()->setParent(mOwner);
+	wheel.positionTransform->setLocalPosition(position);
+	wheel.wheelTransform = wheelPrefab->instantiate()->getTransform();
+	wheel.wheelTransform->getOwner()->setParent(wheel.positionTransform->getOwner());
 }

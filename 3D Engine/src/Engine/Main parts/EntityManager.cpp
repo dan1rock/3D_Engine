@@ -11,6 +11,7 @@
 #include "Material.h"
 #include "RigidBody.h"
 
+#include <iostream>
 
 // Реєструє ігровий об'єкт у менеджері
 void EntityManager::registerEntity(Entity* gameObject)
@@ -138,8 +139,10 @@ void EntityManager::updateCameras()
 // Викликається на початку завантаження сцени
 void EntityManager::onSceneLoadStart()
 {
-	auto it = mEntities.begin();
-	while (it != mEntities.end())
+	std::list<Entity*> toDestroy = mEntities;
+
+	auto it = toDestroy.begin();
+	while (it != toDestroy.end())
 	{
 		Entity* g = *it++;
 		if (g->dontDestroyOnLoad)
