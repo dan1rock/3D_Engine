@@ -75,12 +75,6 @@ void MainScene::init()
 	plane->addComponent<MeshCollider>();
 	plane->addComponent<RigidBody>(true);
 
-	/*Entity* penguin = new Entity(Vector3(1.0f, 0.0f, 0.0f));
-	penguin->addComponent<MeshRenderer>(penguinMesh, penguinMaterial);
-
-	Entity* rabbit = new Entity(Vector3(-1.0f, 0.0f, 0.0f));
-	rabbit->addComponent<MeshRenderer>(rabbitMesh, rabbitMaterial);*/
-
 	Entity* skyDome = new Entity();
 	skyDome->addComponent<SkySphere>();
 
@@ -116,10 +110,6 @@ void MainScene::init()
 	c->damping = 10.0f;
 	c->maxDistance = 0.15f;
 	c->wheelPrefab = wheelPrefab;
-
-	Entity* test = new Entity(Vector3(0, 0, 0));
-	InstantiationTest* i = test->addComponent<InstantiationTest>();
-	i->prefab = carPrefab;
 
 	Entity* sceneChanger = new Entity();
 	sceneChanger->addComponent<FrameCounter>();

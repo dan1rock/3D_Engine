@@ -12,6 +12,7 @@
 #include "RigidBody.h"
 #include "MeshCollider.h"
 #include "SphereCollider.h"
+#include "PlaneCollider.h"
 
 Scene1::Scene1()
 {
@@ -25,10 +26,11 @@ void Scene1::init()
 {
 	// Отримуємо текстури та меші
 	Texture* prototypeTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\1x1_grid_quarter_lines_numbered.png");
-	Texture* baseTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\base.png");
+	Texture* cityTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\city_shadows.png");
 
 	Mesh* sphereMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
-	Mesh* baseMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\base.obj");
+	Mesh* cityMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\city.obj");
+	Mesh* cityBaseMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\city_base.obj");
 
 	// Створюємо матеріал для прототипу
 	Material* prototypeMaterial = new Material();
@@ -37,14 +39,6 @@ void Scene1::init()
 	prototypeMaterial->setColor(0.0f, 0.5f, 0.5f, 1.0f);
 	prototypeMaterial->textureScale = 2.0f;
 	prototypeMaterial->clampTexture = false;
-
-	// Створюємо матеріал для сфери
-	Material* sphereMaterial = new Material();
-	sphereMaterial->setColor(0.8f, 0.2f, 0.2f, 1.0f);
-
-	// Створюємо сферу
-	Entity* sphere = new Entity(Vector3(0.0f, 1.0f, 0.0f));
-	sphere->addComponent<MeshRenderer>(sphereMesh, sphereMaterial);
 
 	// Створюємо небесну сферу
 	Entity* skyDome = new Entity();
@@ -63,12 +57,26 @@ void Scene1::init()
 	DemoPlayer* demoPlayer = camera->addComponent<DemoPlayer>(2.0f, 0.002f);
 	demoPlayer->projectilePrefab = testPrefab;
 
-	Material* baseMaterial = new Material();
-	baseMaterial->addTexture(baseTexture);
+	Material* cityMaterial = new Material();
+	Material* cityBaseMaterial = new Material(*cityMaterial);
+	cityBaseMaterial->addTexture(cityTexture);
 
-	Entity* base = new Entity(Vector3(0, -10, -50));
-	base->getTransform()->setRotation(Vector3(0, -3.1416f / 2.0f, 0));
-	base->addComponent<MeshRenderer>(baseMesh, baseMaterial);
-	base->addComponent<MeshCollider>();
-	base->addComponent<RigidBody>(true);
+	Entity* cityBase = new Entity(Vector3(0, -10, -10));
+	cityBase->getTransform()->setRotation(Vector3(0, 0, 0));
+	cityBase->addComponent<MeshRenderer>(cityBaseMesh, cityBaseMaterial);
+	cityBase->addComponent<MeshCollider>();
+	cityBase->addComponent<RigidBody>(true);
+
+	Entity* city = new Entity();
+	city->setParent(cityBase);
+	city->addComponent<MeshRenderer>(cityMesh, cityMaterial);
+	city->addComponent<MeshCollider>();
+	city->addComponent<RigidBody>(true);
+
+	Entity* plane = new Entity(Vector3(0, -1, 0));
+	plane->setParent(cityBase);
+	plane->getTransform()->setLocalPosition(Vector3(0, 0.02f, 0));
+	plane->getTransform()->setLocalRotation(Vector3(0, 0, -3.1416f / 2.0f));
+	plane->addComponent<PlaneCollider>();
+	plane->addComponent<RigidBody>(true);
 }

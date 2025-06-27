@@ -48,11 +48,11 @@ void SceneChanger::update()
 void SceneChanger::drawUI()
 {
 	ImGui::Begin("Scene Changer", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-	if (ImGui::Button("Main Scene", ImVec2(150, 0)))
+	if (ImGui::Button("Car Test", ImVec2(150, 0)))
 	{
 		SceneManager::get()->loadScene(new MainScene());
 	}
-	if (ImGui::Button("Scene 1", ImVec2(150, 0)))
+	if (ImGui::Button("Collision Test", ImVec2(150, 0)))
 	{
 		SceneManager::get()->loadScene(new Scene1());
 	}

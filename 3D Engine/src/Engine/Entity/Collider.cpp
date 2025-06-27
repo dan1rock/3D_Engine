@@ -17,6 +17,8 @@ Collider::~Collider()
 // Додає коллайдер до фізичного тіла
 void Collider::awake()
 {
+	mGeometry = nullptr;
+
 	if (RigidBody* rb = mOwner->getComponent<RigidBody>()) {
 		rb->addCollider(this);
 	}

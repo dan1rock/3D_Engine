@@ -6,6 +6,8 @@
 #include "EngineTime.h"
 #include "imgui.h"
 
+#include <string>
+
 CarComponent::CarComponent()
 {
 }
@@ -16,25 +18,46 @@ CarComponent::~CarComponent()
 
 void CarComponent::awake()
 {
+	isStarted = false;
+}
+
+void CarComponent::start()
+{
 	mRigidBody = getOwner()->getComponent<RigidBody>();
 	mRigidBody->setCenterOfMass(Vector3(0.0f, 0.3f, -0.1f));
 
 	Transform* transform = mOwner->getTransform();
-	Vector3 basePos = transform->getUp() * 0.1f;
+	Vector3 basePos = Vector3(0, 1, 0) * 0.1f;
 	float base = 0.85f;
 
-	initWheel(mWheelFR, basePos + transform->getRight() * base + transform->getForward() * base * 1.53f);
-	initWheel(mWheelFL, basePos - transform->getRight() * base + transform->getForward() * base * 1.53f);
-	initWheel(mWheelBR, basePos + transform->getRight() * base - transform->getForward() * base * 1.8f);
-	initWheel(mWheelBL, basePos - transform->getRight() * base - transform->getForward() * base * 1.8f);
+	std::list<Entity*> children = *mOwner->getChildren();
+
+	for (auto* child : children) {
+		child->destroy();
+	}
+
+	initWheel(mWheelFR, basePos + Vector3(1, 0, 0) * base + Vector3(0, 0, 1) * base * 1.53f);
+	initWheel(mWheelFL, basePos - Vector3(1, 0, 0) * base + Vector3(0, 0, 1) * base * 1.53f);
+	initWheel(mWheelBR, basePos + Vector3(1, 0, 0) * base - Vector3(0, 0, 1) * base * 1.8f);
+	initWheel(mWheelBL, basePos - Vector3(1, 0, 0) * base - Vector3(0, 0, 1) * base * 1.8f);
 
 	mWheelFR.rightSide = true;
 	mWheelBR.rightSide = true;
+
+	isStarted = true;
 }
 
 void CarComponent::update()
 {
-	ImGui::Begin("Player Car", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+	if (!isStarted)
+	{
+		start();
+	}
+
+	std::string name = "Car " + std::to_string(id);
+	const char* cname = name.c_str();
+
+	ImGui::Begin(cname, nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 	ImGui::SliderFloat("Speed", &mSpeed, 0.0f, 100.0f);
 	ImGui::SliderFloat("MaxSpeed", &maxSpeed, 0.0f, 200.0f);
 	ImGui::SliderFloat("MaxSteering", &maxSteering, 0.0f, 1.0f);
@@ -42,6 +65,11 @@ void CarComponent::update()
 	ImGui::SliderFloat("SpringDamping", &damping, 0.0f, 50.0f);
 	ImGui::SliderFloat("SpringDistance", &maxDistance, 0.0f, 2.0f);
 	ImGui::SliderFloat("Grip", &gripRatio, 0.0f, 2.0f);
+	if (ImGui::Button("Copy")) {
+		Entity* newCar = mOwner->instantiate();
+		newCar->getComponent<CarComponent>()->id = id + 1;
+		newCar->getTransform()->setPosition(mOwner->getTransform()->getPosition() + mOwner->getTransform()->getRight() * 3.0f);
+	};
 	ImGui::End();
 }
 

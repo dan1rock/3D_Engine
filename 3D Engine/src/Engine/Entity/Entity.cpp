@@ -82,13 +82,13 @@ Entity* Entity::instantiate()
 {  
    Entity* newObject = new Entity();
 
-   newObject->mTransform.setPosition(mTransform.getPosition());
-   newObject->mTransform.setScale(mTransform.getScale());
-   newObject->mTransform.setRotation(mTransform.getRotation());
-
    newObject->mTransform.setLocalPosition(mTransform.getLocalPosition());
    newObject->mTransform.setLocalScale(mTransform.getLocalScale());
    newObject->mTransform.setLocalRotation(mTransform.getLocalRotation());
+
+   newObject->mTransform.setPosition(mTransform.getPosition());
+   newObject->mTransform.setScale(mTransform.getScale());
+   newObject->mTransform.setRotation(mTransform.getRotation());
 
    for (auto* component : mComponents) {
        auto* newComponent = component->instantiate();
@@ -96,7 +96,7 @@ Entity* Entity::instantiate()
        static_cast<Component*>(newComponent)->registerComponent();
        newObject->mComponents.push_back(newComponent);
        newObject->mComponents.back()->awake();
-    newObject->mRigidBody = newObject->getComponent<RigidBody>();
+	   newObject->mRigidBody = newObject->getComponent<RigidBody>();
    }
 
    for (auto* child : mChildren) {
@@ -122,7 +122,13 @@ void Entity::setParent(Entity* parent)
 	mParent = parent;
 	if (mParent) {
 		mParent->mChildren.push_back(this);
+		mTransform.updateGlobalMatrix();
 	}
+}
+
+std::list<Entity*>* Entity::getChildren()
+{
+	return &mChildren;
 }
 
 bool Entity::isActive()

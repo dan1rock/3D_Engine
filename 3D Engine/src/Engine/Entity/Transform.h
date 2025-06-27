@@ -71,5 +71,7 @@ private:
 	Vector3 mLocalPosition = {};
 	Vector3 mLocalScale = { 1.0f, 1.0f, 1.0f };
 	Vector3 mLocalRotation = { 0.0f, 0.0f, 0.0f };
+
+	friend class Entity;
 };
 

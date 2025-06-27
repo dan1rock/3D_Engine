@@ -43,6 +43,9 @@ public:
 	// Встановлює батьківський об'єкт для цього об'єкта
 	void setParent(Entity* parent);
 
+	// Повертає список дочірніх об'єктів
+	std::list<Entity*>* getChildren();
+
 	// Перевіряє, чи об'єкт активний
 	bool isActive();
 

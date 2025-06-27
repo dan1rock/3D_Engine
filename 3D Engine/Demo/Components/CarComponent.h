@@ -12,6 +12,8 @@ public:
 	CarComponent();
 	~CarComponent();
 
+	int id = 0;
+
 	float force = 1.0f;
 	float damping = 0.1f;
 	float maxDistance = 1.0f;
@@ -40,6 +42,7 @@ private:
 	};
 
 	void awake() override;
+	void start();
 	void update() override;
 	void fixedUpdate() override;
 
@@ -55,5 +58,7 @@ private:
 
 	float mSteering = 0.0f;
 	float mSpeed = 0.0f;
+
+	bool isStarted = false;
 };
 

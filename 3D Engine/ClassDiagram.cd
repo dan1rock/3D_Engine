@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
   <Class Name="GraphicsEngine">
-    <Position X="1" Y="0.5" Width="2.25" />
+    <Position X="1.5" Y="0.5" Width="1.75" />
     <TypeIdentifier>
       <HashCode>EQkKAAAFAAAAAEAEAABCYBAABE2AjAKAKAAAASESNQk=</HashCode>
       <FileName>src\Engine\Main parts\GraphicsEngine.h</FileName>
@@ -85,35 +85,35 @@
     </TypeIdentifier>
   </Class>
   <Class Name="EntityManager">
-    <Position X="1" Y="10.25" Width="2" />
+    <Position X="1.5" Y="10.25" Width="2" />
     <TypeIdentifier>
       <HashCode>AAABAAgCAEAYAACgCiAAQAAKBEACABAAAAADAUAAAIA=</HashCode>
       <FileName>src\Engine\Main parts\EntityManager.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="Entity">
-    <Position X="3.5" Y="9.5" Width="2.25" />
+    <Position X="3.75" Y="9.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>EAAABABAAAgABEgECgAAAFAAACAAAAAAAAIAAAAAAAA=</HashCode>
       <FileName>src\Engine\Entity\Entity.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="Component">
-    <Position X="6" Y="9.5" Width="2" />
+    <Position X="5.75" Y="9.25" Width="2" />
     <TypeIdentifier>
       <HashCode>AAgigAAAAAAABAAgAAAAAAAAAAAAAAAAAABCQAAEAAA=</HashCode>
       <FileName>src\Engine\Entity\Component.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="Renderer">
-    <Position X="9" Y="10.5" Width="1.75" />
+    <Position X="8.5" Y="11.5" Width="1.75" />
     <TypeIdentifier>
-      <HashCode>AAAgAAAAAAAAAAIgARAAAAAAAAQAAAAEIACAQAAQAAA=</HashCode>
+      <HashCode>QAAgAAAAAAAAAAIgARAAAAAAAAQAAAAEIACAQAAQAAA=</HashCode>
       <FileName>src\Engine\Entity\Renderer.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MeshRenderer">
-    <Position X="11.75" Y="10.75" Width="2.25" />
+    <Position X="11" Y="10.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAABAAMAAAAAAAAAAAAAAAAAAAAQAAQAAA=</HashCode>
       <FileName>src\Engine\Entity\MeshRenderer.h</FileName>
@@ -127,35 +127,52 @@
     </TypeIdentifier>
   </Class>
   <Class Name="RigidBody">
-    <Position X="5.75" Y="15.75" Width="2.5" />
+    <Position X="5.75" Y="13" Width="2" />
     <TypeIdentifier>
-      <HashCode>AAASARAAgAAABgIAAMAAAAAAQAAACQAAAgBAUAQkCUA=</HashCode>
+      <HashCode>AAASARAAiAAABgIAAMAAAQAAQAAACQAAAgBAUAQkCUA=</HashCode>
       <FileName>src\Engine\Entity\RigidBody.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="Collider">
-    <Position X="10.25" Y="15.75" Width="1.5" />
+    <Position X="10.75" Y="14.75" Width="1.5" />
+    <InheritanceLine Type="Component" FixedToPoint="true">
+      <Path>
+        <Point X="6.75" Y="12.344" />
+        <Point X="6.75" Y="12.75" />
+        <Point X="8" Y="12.75" />
+        <Point X="8" Y="15.375" />
+        <Point X="10.375" Y="15.375" />
+        <Point X="10.375" Y="15.875" />
+        <Point X="10.75" Y="15.875" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
       <HashCode>AACAAAAAAAAAAAAQAAAAAAAAAAAACAAQAAAAQAQAAAA=</HashCode>
       <FileName>src\Engine\Entity\Collider.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MeshCollider">
-    <Position X="12.75" Y="16" Width="1.5" />
+    <Position X="12.75" Y="11" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AACAAAAAAAAAhAAAAAAAEAAAAAAAAAAAAAQAAAAAAAQ=</HashCode>
       <FileName>src\Engine\Entity\MeshCollider.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="PlaneCollider">
-    <Position X="9" Y="19.25" Width="1.5" />
+    <Position X="13.25" Y="15.25" Width="1.5" />
+    <InheritanceLine Type="Collider" FixedToPoint="true">
+      <Path>
+        <Point X="12.25" Y="15.937" />
+        <Point X="13.25" Y="15.937" />
+      </Path>
+    </InheritanceLine>
     <TypeIdentifier>
       <HashCode>AACAAAAAAAgABAAAAAAAAAAAAAAIAAAAAAAAAAAAAAA=</HashCode>
       <FileName>src\Engine\Entity\PlaneCollider.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="SphereCollider">
-    <Position X="10.75" Y="19.25" Width="1.5" />
+    <Position X="14.75" Y="12" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AACAAAAACAAABAABIAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>src\Engine\Entity\SphereCollider.h</FileName>
@@ -164,21 +181,21 @@
   <Class Name="Input">
     <Position X="9.25" Y="6" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAAEEMABAAAQABAAACAgAAABAAABAAAgACABEAQA=</HashCode>
+      <HashCode>AAAAAAEEMABACQQABAAACEgAAABAAABAAAhACADEAQA=</HashCode>
       <FileName>src\Engine\Main parts\Input.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="AppWindow">
-    <Position X="1.25" Y="17" Width="1.75" />
+    <Position X="1.5" Y="16.75" Width="1.75" />
     <TypeIdentifier>
-      <HashCode>AQAAAABAAAIAAAAAAQIAACAAAAAAAAAgAABAQAAAAQA=</HashCode>
+      <HashCode>AQAAAABAAIIAAAAAAQIAACAAAAAAAAAgAABAQAAAAQA=</HashCode>
       <FileName>src\Main\AppWindow.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="Window">
-    <Position X="3.75" Y="13.75" Width="1.5" />
+    <Position X="4" Y="16" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>EQAAAIAAAAIAAABAACIAAAAASQAAAAIgAIAASAAAAQA=</HashCode>
+      <HashCode>EQAAAIAAAIIAAABAACIAAAAASQAAAAIgAIAASAAAAQA=</HashCode>
       <FileName>src\Engine\Main parts\Window.h</FileName>
     </TypeIdentifier>
   </Class>
@@ -190,45 +207,52 @@
     </TypeIdentifier>
   </Class>
   <Class Name="ResourceManager">
-    <Position X="14.75" Y="16.5" Width="2.5" />
+    <Position X="14" Y="0.5" Width="1.75" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAABAAAAAAAAAEAAAAAAACAAAAAAAAwAIgAA=</HashCode>
       <FileName>src\Engine\Resource managers\ResourceManager.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="Resource">
-    <Position X="18" Y="16.25" Width="1.5" />
+    <Position X="15" Y="6.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAIAAAAAAAAAAAAAAAAAACAAAgAAAAAAwAAAA=</HashCode>
       <FileName>src\Engine\Resource managers\Resource.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="TextureManager">
-    <Position X="15.25" Y="20" Width="1.5" />
+    <Position X="15" Y="4" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAABAAAAAAAABAAAAAAABAAAAAAAAAAAAAAAgAA=</HashCode>
       <FileName>src\Engine\Resource managers\TextureManager.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="Texture">
-    <Position X="18" Y="19.5" Width="1.5" />
+    <Position X="12.75" Y="8.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAAgABAAAAAAAAQAAAAAAAAAAIAAAAAAAA=</HashCode>
       <FileName>src\Engine\Resource managers\Texture.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="Mesh">
-    <Position X="19.75" Y="19.5" Width="1.5" />
+    <Position X="14.75" Y="9.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAQAAAAAAEAAAAAAAAAAAAAAAAAAAAIAQAAAAAAAAg=</HashCode>
       <FileName>src\Engine\Resource managers\Mesh.h</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="MeshManager">
-    <Position X="13.5" Y="20" Width="1.5" />
+    <Position X="12.75" Y="6.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAIAgAAAAAAAAAAAAAAAAAAAAAAIAAAAAgAA=</HashCode>
       <FileName>src\Engine\Resource managers\MeshManager.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Prefab">
+    <Position X="3.75" Y="14.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAgAAAAIAgAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>src\Engine\Entity\Prefab.h</FileName>
     </TypeIdentifier>
   </Class>
   <Struct Name="RaycastHit">
