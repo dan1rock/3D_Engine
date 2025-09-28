@@ -85,7 +85,6 @@ Run the produced executable from your `bin/` or VS output directory. Ensure the 
 - **Mouse** — Look around
 - **Space / Ctrl** — Up / Down
 - **Shift** — Fast move
-- (Adjust to match current bindings.)
 
 ---
 
