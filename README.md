@@ -8,12 +8,12 @@ A custom **3D game engine prototype** written in **C++** with **DirectX** and **
 
 - Custom rendering pipeline (DirectX 11).
 - Basic scene management / entity–component system.
-- Basic lighting (ambient, diffuse, specular).
+- Basic lighting (ambient, diffuse, specular) with a directional light component.
+- Real-time shadows (directional shadow map, camera-following, PCF filtered).
 - Camera system (FPS + orbital) with smooth input.
 - Material system (albedo/normal/roughness/metalness).
 - Input handling (keyboard & mouse).
-> *Planned:* Visual scene editor and Object manager, Shadow rendering, Post-processing.
-
+> *Planned:* Visual scene editor and Object manager, Cascaded shadow maps, Post-processing.
 ---
 
 ## 📂 Project Structure

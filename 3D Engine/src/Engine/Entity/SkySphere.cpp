@@ -24,6 +24,9 @@ void SkySphere::awake()
 
 	mMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
 
+	// Небо оточує всю сцену, тому не повинно потрапляти в карту тіней
+	castShadows = false;
+
 	Renderer::awake();
 
 	mOwner->getTransform()->setScale(Vector3(200.0f, 200.0f, 200.0f));

@@ -5,6 +5,7 @@
 class Component;
 class Renderer;
 class Camera;
+class DirectionalLight;
 class Entity;
 class Material;
 class RigidBody;
@@ -28,6 +29,10 @@ public:
 	void registerCamera(Camera* camera);
 	// Видаляє камеру з менеджера
 	void unregisterCamera(Camera* camera);
+	// Реєструє напрямлене світло у менеджері
+	void registerLight(DirectionalLight* light);
+	// Видаляє напрямлене світло з менеджера
+	void unregisterLight(DirectionalLight* light);
 	// Реєструє матеріал у менеджері
 	void registerMaterial(Material* material);
 	// Видаляє матеріал з менеджера
@@ -46,8 +51,12 @@ public:
 	void fixedUpdateComponents();
 	// Оновлює всі рендер-компоненти
 	void updateRenderers();
+	// Рендерить глибину всіх рендер-компонентів, які кидають тінь
+	void renderShadowCasters();
 	// Оновлює всі камери
 	void updateCameras();
+	// Оновлює всі джерела напрямленого світла
+	void updateLights();
 
 	// Викликається на початку завантаження сцени
 	void onSceneLoadStart();
@@ -62,6 +71,7 @@ private:
 	std::list<Component*> mComponents = {};
 	std::list<Renderer*> mRenderers = {};
 	std::list<Camera*> mCameras = {};
+	std::list<DirectionalLight*> mLights = {};
 	std::list<Material*> mMaterials = {};
 	std::unordered_map<void*, RigidBody*> mRigidBodies = {};
 };

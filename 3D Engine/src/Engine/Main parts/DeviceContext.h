@@ -17,9 +17,15 @@ public:
 
 	// Очищає ціль рендеру та буфер глибини для вказаного SwapChain
 	void clearRenderTarget(SwapChain* swapChain, float r, float g, float b, float a);
+	// Повертає ціль рендеру вказаного SwapChain без очищення його буферів
+	void setRenderTarget(SwapChain* swapChain);
+	// Очищає вказаний буфер глибини та встановлює його єдиною ціллю рендеру
+	void clearDepthTarget(ID3D11DepthStencilView* depthStencilView);
+	// Знімає всі цілі рендеру, щоб їхні буфери можна було читати в шейдерах
+	void unsetRenderTargets();
 
-	// Встановлює стан семплера для піксельного та вершинного шейдерів
-	void setSamplerState(ID3D11SamplerState* samplerState);
+	// Встановлює стан семплера для піксельного та вершинного шейдерів у вказаний слот
+	void setSamplerState(ID3D11SamplerState* samplerState, UINT slot = 0);
 	// Встановлює стан растеризатора
 	void setRasterizer(ID3D11RasterizerState* rasterState);
 	// Встановлює вершинний буфер
@@ -46,6 +52,8 @@ public:
 	void setTexture(VertexShader* vertexShader, Texture* texture);
 	// Встановлює текстуру для піксельного шейдера
 	void setTexture(PixelShader* pixelShader, Texture* texture);
+	// Встановлює ресурс шейдера для піксельного шейдера у вказаний слот
+	void setShaderResource(ID3D11ShaderResourceView* shaderResourceView, UINT slot);
 
 	// Встановлює константний буфер для вершинного шейдера
 	void setConstantBuffer(VertexShader* vertexShader, ConstantBuffer* buffer, UINT slot = 0);

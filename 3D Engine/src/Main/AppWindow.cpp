@@ -99,8 +99,18 @@ void AppWindow::onUpdate()
 	// Оновлює компоненти
 	EntityManager::get()->updateComponents();
 
-	// Оновлює рендер-компоненти та камери
+	// Оновлює камери та джерела світла
 	EntityManager::get()->updateCameras();
+	EntityManager::get()->updateLights();
+
+	// Рендерить сцену в карту тіней з точки зору світла
+	GraphicsEngine::get()->renderShadowPass();
+
+	// Повертає ціль рендеру та вьюпорт вікна після проходу карти тіней
+	GraphicsEngine::get()->getImmDeviceContext()->setRenderTarget(mSwapChain);
+	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
+
+	// Оновлює рендер-компоненти
 	EntityManager::get()->updateRenderers();
 
 	// Виконує рендеринг інтерфейсу користувача

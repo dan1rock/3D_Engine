@@ -1,0 +1,5565 @@
+
+#pragma once
+#include "Window.h"
+#include "GraphicsEngine.h"
+#include "SwapChain.h"
+#include "DeviceContext.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
+#include "ConstantBuffer.h"
+#include "Input.h"
+#include "VertexShader.h"
+#include "PixelShader.h"
+#include "Entity.h"
+#include "Vector2.h"
+#include "Vector3.h"
+#include "Matrix.h"
+#include "PhysicsEngine.h"
+
+class AppWindow: public Window
+{
+public:
+	AppWindow();
+	~AppWindow();
+
+	// Викликається при створенні вікна: ініціалізує рушії, створює SwapChain, встановлює початкові константи та завантажує головну сцену
+	virtual void onCreate() override;
+	// Основний цикл оновлення: обробляє ввід, оновлює компоненти, фізику, рендеринг та сцену
+	virtual void onUpdate() override;
+	// Викликається при зміні розміру вікна: оновлює SwapChain та матрицю проекції
+	virtual void onWindowResized() override;
+	// Викликається при прокрутці колеса миші
+	virtual void onMouseWheel(INT16 delta) override;
+	// Викликається при отриманні фокусу вікном: ховає курсор та оновлює час
+	virtual void onFocus() override;
+	// Викликається при втраті фокусу вікном: показує курсор
+	virtual void onKillFocus() override;
+	// Викликається при знищенні вікна: звільняє ресурси та завершує роботу рушіїв
+	virtual void onDestroy() override;
+private:
+	SwapChain* mSwapChain = nullptr;
+
+	bool isFocused = false;
+};
+
+#include "AppWindow.h"
+#include <Windows.h>
+#include "GlobalResources.h"
+#include "EntityManager.h"
+#include "EngineTime.h"
+#include "SceneManager.h"
+#include "MainScene.h"
+
+#include <iostream>
+
+constant* constantData = nullptr;
+
+AppWindow::AppWindow()
+{
+}
+
+AppWindow::~AppWindow()
+{
+}
+
+// Викликається при створенні вікна: ініціалізує рушії, створює SwapChain, встановлює початкові константи та завантажує головну сцену
+void AppWindow::onCreate()
+{
+	// Ініціалізує рушії та створює SwapChain
+	PhysicsEngine::get()->init();
+
+	GraphicsEngine::get()->init();
+	mSwapChain = GraphicsEngine::get()->createSwapShain();
+
+	// Встановлює початкові константи для глобальних ресурсів
+	constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
+
+	constantData->world.setIdentity();
+
+	onWindowResized();
+
+	constantData->lightPos[0] = 50.0f;
+	constantData->lightPos[1] = 50.0f;
+	constantData->lightPos[2] = 50.0f;
+
+	constantData->lightColor[0] = 1.0f;
+	constantData->lightColor[1] = 1.0f;
+	constantData->lightColor[2] = 1.0f;
+
+	Time::init();
+
+	// Завантажує головну сцену
+	SceneManager::get()->loadScene(new MainScene());
+}
+
+// Основний цикл оновлення: обробляє ввід, оновлює компоненти, фізику, рендеринг та сцену
+void AppWindow::onUpdate()
+{
+	// Перевіряє, чи вікно має фокус
+	if (!isFocused)
+	{
+		return;
+	}
+
+	// Очищає буфер кадру та встановлює розмір вьюпорту
+	GraphicsEngine::get()->getImmDeviceContext()->clearRenderTarget(mSwapChain, 0.1f, 0.1f, 0.1f, 1);
+	RECT windowSize = this->getClientWindowRect();
+	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
+
+	if (Input::getKeyDown(VK_ESCAPE))
+	{
+		appIsRunning = false;
+	}
+
+	// Оновлює час та ввід
+	Time::update();
+	constantData->time = Time::getCurrentTime();
+
+	Input::update();
+	Input::updateMouse(this->getClientWindowRect(), isFocused);
+
+	// Виконує фіксоване оновлення фізики та компонентів
+	static float accumulator = 0.0f;
+	constexpr float fixedStep = 1.0f / 50.0f;
+	accumulator += Time::deltaTime;
+
+	if (accumulator >= fixedStep)
+	{
+		EntityManager::get()->fixedUpdateComponents();
+		PhysicsEngine::get()->update(fixedStep);
+		accumulator -= fixedStep;
+	}
+
+	// Оновлює компоненти
+	EntityManager::get()->updateComponents();
+
+	// Оновлює рендер-компоненти та камери
+	EntityManager::get()->updateCameras();
+	EntityManager::get()->updateRenderers();
+
+	// Оновлює стан менеджера сцен
+	SceneManager::get()->update();
+
+	// Виводить кадр на екран
+	mSwapChain->present(true);
+}
+
+// Викликається при зміні розміру вікна: оновлює SwapChain та матрицю проекції
+void AppWindow::onWindowResized()
+{
+	RECT rc = this->getClientWindowRect();
+
+	mSwapChain->init(this->mHwnd, rc.right - rc.left, rc.bottom - rc.top);
+
+	float aspectRatio = (float)(rc.right - rc.left) / (float)(rc.bottom - rc.top);
+	constantData->projection.setPerspectivePM(
+		1.1f,
+		aspectRatio,
+		0.1f,
+		200.0f
+	);
+}
+
+void AppWindow::onMouseWheel(INT16 delta)
+{
+	if (isFocused)
+	{
+		Input::updateMouseWheel(delta);
+	}
+}
+
+// Викликається при отриманні фокусу вікном: ховає курсор та оновлює час
+void AppWindow::onFocus()
+{
+	isFocused = true;
+	::ShowCursor(false);
+	Time::update();
+}
+
+// Викликається при втраті фокусу вікном: показує курсор
+void AppWindow::onKillFocus()
+{
+	isFocused = false;
+	::ShowCursor(true);
+}
+
+// Викликається при знищенні вікна: звільняє ресурси та завершує роботу рушіїв
+void AppWindow::onDestroy()
+{
+	Window::onDestroy();
+	mSwapChain->release();
+	PhysicsEngine::get()->shutdown();
+	GraphicsEngine::get()->release();
+}
+
+#pragma once
+#include "Component.h"
+
+// Копонент камери, що відповідає за позицію точки зору в сцені
+class Camera : public Component
+{
+public:
+	Camera();
+	// Деструктор класу Camera, знімає реєстрацію камери в EntityManager
+	~Camera() override;
+
+protected:
+	// Конструктор копіювання
+	Camera* instantiate() const override {
+		return new Camera(*this);
+	};
+
+	// Реєструє компонент як звичайний компонент і як камеру в EntityManager
+	void registerComponent() override;
+
+private:
+	// Оновлює дані камери у глобальних константах (позиція, матриця виду)
+	void updateCamera();
+	void awake() override;
+
+	friend class EntityManager;
+};
+
+
+#include "Camera.h"
+#include "Entity.h"
+#include "GraphicsEngine.h"
+#include "GlobalResources.h"
+#include "EntityManager.h"
+
+Camera::Camera()
+{
+}
+
+// Деструктор класу Camera, знімає реєстрацію камери в EntityManager
+Camera::~Camera()
+{
+	EntityManager::get()->unregisterCamera(this);
+}
+
+// Реєструє компонент як звичайний компонент і як камеру в EntityManager
+void Camera::registerComponent()
+{
+	Component::registerComponent();
+	EntityManager::get()->registerCamera(this);
+}
+
+// Оновлює дані камери у глобальних константах (позиція, матриця виду)
+void Camera::updateCamera()
+{
+	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
+
+	constantData->cameraPos[0] = mOwner->getTransform()->getPosition().x;
+	constantData->cameraPos[1] = mOwner->getTransform()->getPosition().y;
+	constantData->cameraPos[2] = mOwner->getTransform()->getPosition().z;
+
+	Matrix view = *mOwner->getTransform()->getMatrix();
+
+	view.inverse();
+
+	constantData->view = view;
+
+	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
+}
+
+void Camera::awake()
+{
+}
+
+#pragma once
+#include "Component.h"
+#include "Vector3.h"
+
+// Компонент, що представляє коллайдер в ігровому об'єкті
+class Collider : public Component
+{
+public:
+	Collider();
+	virtual ~Collider();
+
+	// Повертає вказівник на геометрію коллайдера
+	virtual void* getGeometry(Vector3& scale, bool convex = true) = 0;
+
+protected:
+	// Додає коллайдер до фізичного тіла
+	void awake() override;
+
+	void* mGeometry = nullptr;
+
+	Vector3 mScale = {};
+};
+
+
+#include "Collider.h"
+#include "Entity.h"
+#include "RigidBody.h"
+
+Collider::Collider()
+{
+}
+
+Collider::~Collider()
+{
+	if (mGeometry)
+	{
+		delete mGeometry;
+	}
+}
+
+// Додає коллайдер до фізичного тіла
+void Collider::awake()
+{
+	if (RigidBody* rb = mOwner->getComponent<RigidBody>()) {
+		rb->addCollider(this);
+	}
+}
+
+#pragma once
+
+class Entity;
+
+// Клас, що представляє компонент в ігровому об'єкті, базовий клас для всіх компонентів
+class Component
+{
+public:
+	Component();
+	// Автоматично знімає реєстрацію компонента в EntityManager
+	virtual ~Component();
+
+	// Повертає вказівник на об'єкт-власник (GameObject) цього компонента
+	Entity* getOwner();
+
+protected:
+	Entity* mOwner = nullptr;
+
+	// Метод для створення копії компонента, реалізується в похідних класах
+	virtual Component* instantiate() const = 0;
+	// Реєструє компонент в EntityManager
+	virtual void registerComponent();
+
+private:
+	// Встановлює власника (GameObject) для цього компонента
+	void setOwner(Entity* gameObject);
+
+	// Викликається при активації компонента
+	virtual void awake();
+	// Оновлення компонента (викликається кожен кадр)
+	virtual void update();
+	// Фіксоване оновлення компонента (викликається з фіксованим кроком часу)
+	virtual void fixedUpdate();
+
+	friend class Entity;
+	friend class EntityManager;
+};
+
+
+#include "Component.h"
+#include "EntityManager.h"
+
+Component::Component()
+{
+}
+
+// Автоматично знімає реєстрацію компонента в EntityManager
+Component::~Component()
+{
+    EntityManager::get()->unregisterComponent(this);
+}
+
+// Повертає вказівник на об'єкт-власник (GameObject) цього компонента
+Entity* Component::getOwner()
+{
+    return mOwner;
+}
+
+// Реєструє компонент в EntityManager
+void Component::registerComponent()
+{
+    EntityManager::get()->registerComponent(this);
+}
+
+// Встановлює власника (GameObject) для цього компонента
+void Component::setOwner(Entity* gameObject)
+{
+    mOwner = gameObject;
+}
+
+// Викликається при активації компонента
+void Component::awake()
+{
+}
+
+// Оновлення компонента (викликається кожен кадр)
+void Component::update()
+{
+}
+
+// Фіксоване оновлення компонента (викликається з фіксованим кроком часу)
+void Component::fixedUpdate()
+{
+}
+
+#pragma once
+#include <d3d11.h>
+
+class DeviceContext;
+
+class ConstantBuffer
+{
+public:
+	ConstantBuffer();
+	// Створює та завантажує константний буфер з переданими даними
+	bool load(void* buffer, UINT bufferSize);
+	// Оновлює дані в константному буфері для заданого контексту пристрою
+	void update(DeviceContext* context, void* buffer);
+	// Звільняє ресурси константного буфера
+	bool release();
+	~ConstantBuffer();
+private:
+	ID3D11Buffer* mBuffer = nullptr;
+
+	friend class DeviceContext;
+};
+
+#include "ConstantBuffer.h"
+#include "GraphicsEngine.h"
+#include "DeviceContext.h"
+
+ConstantBuffer::ConstantBuffer()
+{
+}
+
+// Створює та завантажує константний буфер з переданими даними
+bool ConstantBuffer::load(void* buffer, UINT bufferSize)
+{
+	if (mBuffer) mBuffer->Release();
+
+	D3D11_BUFFER_DESC bufferDesc = {};
+	bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	bufferDesc.ByteWidth = bufferSize;
+	bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	bufferDesc.CPUAccessFlags = 0;
+	bufferDesc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA subresData = {};
+	subresData.pSysMem = buffer;
+
+	HRESULT hr;
+	hr = GraphicsEngine::get()->mD3dDevice->CreateBuffer(&bufferDesc, &subresData, &mBuffer);
+	if (FAILED(hr))
+		return false;
+
+	return true;
+}
+
+// Оновлює дані в константному буфері для заданого контексту пристрою
+void ConstantBuffer::update(DeviceContext* context, void* buffer)
+{
+	context->mDeviceContext->UpdateSubresource(this->mBuffer, NULL, NULL, buffer, NULL, NULL);
+}
+
+// Звільняє ресурси константного буфера
+bool ConstantBuffer::release()
+{
+	mBuffer->Release();
+	delete this;
+	return true;
+}
+
+ConstantBuffer::~ConstantBuffer()
+{
+}
+
+#pragma once
+#include "Resource.h"
+
+class ConvexMesh : public Resource
+{
+public:
+	ConvexMesh(const wchar_t* fullPath);
+	~ConvexMesh();
+
+	// Повертає вказівник на опуклий меш, створює його при необхідності
+	void* getConvexMesh();
+	// Повертає вказівник на трикутний меш, створює його при необхідності
+	void* getTriangleMesh();
+
+private:
+	void* mConvexMesh = nullptr;
+	void* mTriangleMesh = nullptr;
+
+	// Створює опуклий меш з моделі, завантаженої через Assimp
+	void createConvexMesh();
+	// Створює трикутний меш з моделі, завантаженої через Assimp
+	void createTriangleMesh();
+};
+
+
+#include "ConvexMesh.h"
+#include "PhysicsEngine.h"
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include "Vector3.h"
+#include "Vector2.h"
+#include <vector>
+#include <PxPhysics.h>
+
+ConvexMesh::ConvexMesh(const wchar_t* fullPath) : Resource(fullPath)
+{
+}
+
+ConvexMesh::~ConvexMesh()
+{
+	if (mConvexMesh)
+	{
+		static_cast<PxConvexMesh*>(mConvexMesh)->release();
+		mConvexMesh = nullptr;
+	}
+	if (mTriangleMesh)
+	{
+		static_cast<PxTriangleMesh*>(mTriangleMesh)->release();
+		mTriangleMesh = nullptr;
+	}
+}
+
+// Повертає вказівник на опуклий меш, створює його при необхідності
+void* ConvexMesh::getConvexMesh()
+{
+	if (mConvexMesh == nullptr) createConvexMesh();
+    return mConvexMesh;
+}
+
+// Повертає вказівник на трикутний меш, створює його при необхідності
+void* ConvexMesh::getTriangleMesh()
+{
+	if (mTriangleMesh == nullptr) createTriangleMesh();
+	return mTriangleMesh;
+}
+
+// Створює опуклий меш з моделі, завантаженої через Assimp
+void ConvexMesh::createConvexMesh()
+{
+	std::wstring ws = getFullPath();
+	std::string filePath(ws.begin(), ws.end());
+
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(
+		filePath,
+		aiProcess_Triangulate
+		| aiProcess_JoinIdenticalVertices);
+
+	if (!scene || !scene->HasMeshes())
+	{
+		return;
+	}
+
+	std::vector<PxVec3> points;
+
+	for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
+		aiMesh* mesh = scene->mMeshes[m];
+
+		for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
+			points.emplace_back(PxVec3(
+				mesh->mVertices[i].x,
+				mesh->mVertices[i].y,
+				mesh->mVertices[i].z));
+		}
+	}
+
+	mConvexMesh = PhysicsEngine::get()->cookConvexMesh(points);
+}
+
+// Створює трикутний меш з моделі, завантаженої через Assimp
+void ConvexMesh::createTriangleMesh()
+{
+	std::wstring ws = getFullPath();
+	std::string filePath(ws.begin(), ws.end());
+
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(
+		filePath,
+		aiProcess_Triangulate
+		| aiProcess_JoinIdenticalVertices);
+
+	if (!scene || !scene->HasMeshes())
+	{
+		return;
+	}
+
+	std::vector<PxVec3> points;
+	std::vector<PxU32> indices;
+
+	for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
+		aiMesh* mesh = scene->mMeshes[m];
+		for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
+			points.emplace_back(PxVec3(
+				mesh->mVertices[i].x,
+				mesh->mVertices[i].y,
+				mesh->mVertices[i].z));
+		}
+		for (unsigned i = 0; i < mesh->mNumFaces; ++i) {
+			const aiFace& face = mesh->mFaces[i];
+			for (unsigned j = 0; j < face.mNumIndices; ++j) {
+				indices.push_back(face.mIndices[j]);
+			}
+		}
+	}
+
+	mTriangleMesh = PhysicsEngine::get()->cookTriangleMesh(points, indices);
+}
+
+#pragma once
+#include "ResourceManager.h"
+#include "ConvexMesh.h"
+
+class ConvexMeshManager : public ResourceManager
+{
+public:
+	ConvexMeshManager();
+	~ConvexMeshManager();
+
+	// Створює або повертає опуклий меш з файлу, використовуючи кешування
+	ConvexMesh* createConvexMeshFromFile(const wchar_t* fullPath);
+
+protected:
+	// Створює новий об'єкт ConvexMesh з файлу (фабричний метод)
+	virtual Resource* createResourceFromFileConcrete(const wchar_t* filePath);
+};
+
+
+#include "ConvexMeshManager.h"
+
+ConvexMeshManager::ConvexMeshManager() : ResourceManager()
+{
+}
+
+ConvexMeshManager::~ConvexMeshManager()
+{
+}
+
+// Створює або повертає опуклий меш з файлу, використовуючи кешування
+ConvexMesh* ConvexMeshManager::createConvexMeshFromFile(const wchar_t* fullPath)
+{
+	return static_cast<ConvexMesh*>(ResourceManager::createResourceFromFile(fullPath));
+}
+
+// Створює новий об'єкт ConvexMesh з файлу (фабричний метод)
+Resource* ConvexMeshManager::createResourceFromFileConcrete(const wchar_t* filePath)
+{
+	ConvexMesh* mesh = nullptr;
+
+	try
+	{
+		mesh = new ConvexMesh(filePath);
+	}
+	catch (...) {}
+
+	return mesh;
+}
+
+#pragma once
+#include <d3d11.h>
+
+class SwapChain;
+class VertexBuffer;
+class IndexBuffer;
+class ConstantBuffer;
+class VertexShader;
+class GraphicsEngine;
+class PixelShader;
+class Texture;
+
+class DeviceContext
+{
+public:
+	DeviceContext(ID3D11DeviceContext* deviceContext);
+
+	// Очищає ціль рендеру та буфер глибини для вказаного SwapChain
+	void clearRenderTarget(SwapChain* swapChain, float r, float g, float b, float a);
+
+	// Встановлює стан семплера для піксельного та вершинного шейдерів
+	void setSamplerState(ID3D11SamplerState* samplerState);
+	// Встановлює стан растеризатора
+	void setRasterizer(ID3D11RasterizerState* rasterState);
+	// Встановлює вершинний буфер
+	void setVertexBuffer(VertexBuffer* vertexBuffer);
+	// Встановлює індексний буфер
+	void setIndexBuffer(IndexBuffer* indexBuffer);
+
+	// Рендерить трикутники без індексів, по списку вершин
+	void drawTriangleList(UINT vertexCount, UINT startIndex);
+	// Рендерить трикутники за індексами
+	void drawIndexedTriangleList(UINT indexCount, UINT startIndexLocation, UINT startIndex);
+	// Рендерить трикутники за смугою
+	void drawTriangleStrip(UINT vertexCount, UINT startIndex);
+
+	// Встановлює розмір вихідного зображення
+	void setViewportSize(UINT width, UINT height);
+
+	// Встановлює вершинний шейдер
+	void setVertexShader(VertexShader* vertexShader);
+	// Встановлює піксельний шейдер
+	void setPixelShader(PixelShader* pixelShader);
+
+	// Встановлює текстуру для вершинного шейдера
+	void setTexture(VertexShader* vertexShader, Texture* texture);
+	// Встановлює текстуру для піксельного шейдера
+	void setTexture(PixelShader* pixelShader, Texture* texture);
+
+	// Встановлює константний буфер для вершинного шейдера
+	void setConstantBuffer(VertexShader* vertexShader, ConstantBuffer* buffer, UINT slot = 0);
+	// Встановлює константний буфер для піксельного шейдера
+	void setConstantBuffer(PixelShader* pixelShader, ConstantBuffer* buffer, UINT slot = 0);
+
+	// Звільняє ресурси контексту пристрою
+	bool release();
+	~DeviceContext();
+private:
+	ID3D11DeviceContext* mDeviceContext;
+	ID3D11RasterizerState* mRasterizer = nullptr;
+
+	friend class ConstantBuffer;
+};
+
+#include "DeviceContext.h"
+#include "GraphicsEngine.h"
+#include "SwapChain.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
+#include "ConstantBuffer.h"
+#include "VertexShader.h"
+#include "PixelShader.h"
+#include "Texture.h"
+
+DeviceContext::DeviceContext(ID3D11DeviceContext* deviceContext) : mDeviceContext(deviceContext)
+{
+}
+
+// Очищає ціль рендеру та буфер глибини для вказаного SwapChain
+void DeviceContext::clearRenderTarget(SwapChain* swapChain, float r, float g, float b, float a)
+{
+	FLOAT color[] = { r,g,b,a };
+	mDeviceContext->ClearRenderTargetView(swapChain->mRenderTargetView, color);
+	mDeviceContext->ClearDepthStencilView(swapChain->mDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1, 0);
+	mDeviceContext->OMSetRenderTargets(1, &swapChain->mRenderTargetView, swapChain->mDepthStencilView);
+}
+
+// Встановлює стан семплера для піксельного та вершинного шейдерів
+void DeviceContext::setSamplerState(ID3D11SamplerState* samplerState)
+{
+	mDeviceContext->PSSetSamplers(0, 1, &samplerState);
+	mDeviceContext->VSSetSamplers(0, 1, &samplerState);
+}
+
+// Встановлює стан растеризатора
+void DeviceContext::setRasterizer(ID3D11RasterizerState* rasterState)
+{
+	mDeviceContext->RSSetState(rasterState);
+}
+
+// Встановлює вершинний буфер
+void DeviceContext::setVertexBuffer(VertexBuffer* vertexBuffer)
+{
+	UINT stride = vertexBuffer->mVertSize;
+	UINT offset = 0;
+
+	mDeviceContext->IASetVertexBuffers(0, 1, &vertexBuffer->mBuffer, &stride, &offset);
+	mDeviceContext->IASetInputLayout(vertexBuffer->mInputLayout);
+}
+
+// Встановлює індексний буфер
+void DeviceContext::setIndexBuffer(IndexBuffer* indexBuffer)
+{
+	mDeviceContext->IASetIndexBuffer(indexBuffer->mBuffer, DXGI_FORMAT_R32_UINT, 0);
+}
+
+// Рендерить трикутники без індексів, по списку вершин
+void DeviceContext::drawTriangleList(UINT vertexCount, UINT startIndex)
+{
+	mDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	mDeviceContext->Draw(vertexCount, startIndex);
+}
+
+// Рендерить трикутники за індексами
+void DeviceContext::drawIndexedTriangleList(UINT indexCount, UINT startIndexLocation, UINT startIndex)
+{
+	mDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	mDeviceContext->DrawIndexed(indexCount, startIndexLocation, startIndex);
+}
+
+// Рендерить трикутники за смугою
+void DeviceContext::drawTriangleStrip(UINT vertexCount, UINT startIndex)
+{
+	mDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	mDeviceContext->Draw(vertexCount, startIndex);
+}
+
+// Встановлює розмір вихідного зображення
+void DeviceContext::setViewportSize(UINT width, UINT height)
+{
+	D3D11_VIEWPORT vp = {};
+	vp.Width = width;
+	vp.Height = height;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+
+	mDeviceContext->RSSetViewports(1, &vp);
+}
+
+// Встановлює вершинний шейдер
+void DeviceContext::setVertexShader(VertexShader* vertexShader)
+{
+	mDeviceContext->VSSetShader(vertexShader->mVertexShader, nullptr, 0);
+}
+
+// Встановлює піксельний шейдер
+void DeviceContext::setPixelShader(PixelShader* pixelShader)
+{
+	mDeviceContext->PSSetShader(pixelShader->mPixelShader, nullptr, 0);
+}
+
+// Встановлює текстуру для вершинного шейдера
+void DeviceContext::setTexture(VertexShader* vertexShader, Texture* texture)
+{
+	mDeviceContext->VSSetShaderResources(0, 1, &texture->mShaderResourceView);
+}
+
+// Встановлює текстуру для піксельного шейдера
+void DeviceContext::setTexture(PixelShader* pixelShader, Texture* texture)
+{
+	mDeviceContext->PSSetShaderResources(0, 1, &texture->mShaderResourceView);
+}
+
+// Встановлює константний буфер для вершинного шейдера
+void DeviceContext::setConstantBuffer(VertexShader* vertexShader, ConstantBuffer* buffer, UINT slot)
+{
+	mDeviceContext->VSSetConstantBuffers(slot, 1, &buffer->mBuffer);
+}
+
+// Встановлює константний буфер для піксельного шейдера
+void DeviceContext::setConstantBuffer(PixelShader* pixelShader, ConstantBuffer* buffer, UINT slot)
+{
+	mDeviceContext->PSSetConstantBuffers(slot, 1, &buffer->mBuffer);
+}
+
+// Звільняє ресурси контексту пристрою
+bool DeviceContext::release()
+{
+	mDeviceContext->Release();
+	delete this;
+	return true;
+}
+
+DeviceContext::~DeviceContext()
+{
+}
+
+#pragma once
+#include "Windows.h"
+
+static class Time
+{
+public:
+	// Повертає різницю часу між двома кадрами
+	static double getDeltaTime();
+	// Повертає час, що пройшов з моменту запуску програми
+	static double getCurrentTime();
+
+private:
+	// Ініціалізує таймер, викликається при запуску програми
+	static void init();
+	// Оновлює поточний час і різницю часу між кадрами
+	static void update();
+
+	static double deltaTime;
+	static double currentTickTime;
+	static LARGE_INTEGER s_frequency;
+	static LARGE_INTEGER s_startCount;
+	static LARGE_INTEGER s_lastCount;
+
+	friend class AppWindow;
+};
+
+
+#include "EngineTime.h"
+
+LARGE_INTEGER Time::s_frequency = {};
+LARGE_INTEGER Time::s_startCount = {};
+LARGE_INTEGER Time::s_lastCount = {};
+double Time::deltaTime = 0.0f;
+double Time::currentTickTime = 0.0f;
+
+// Повертає різницю часу між двома кадрами
+double Time::getDeltaTime()
+{
+    return deltaTime;
+}
+
+// Повертає час, що пройшов з моменту запуску програми
+double Time::getCurrentTime()
+{
+    return currentTickTime;
+}
+
+// Ініціалізує таймер, викликається при запуску програми
+void Time::init()
+{
+	QueryPerformanceFrequency(&s_frequency);
+	QueryPerformanceCounter(&s_startCount);
+	s_lastCount = s_startCount;
+}
+
+// Оновлює поточний час і різницю часу між кадрами
+void Time::update()
+{
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+
+    auto counts = now.QuadPart - s_lastCount.QuadPart;
+    deltaTime = static_cast<double>(counts) / static_cast<double>(s_frequency.QuadPart);
+	currentTickTime = static_cast<double>(now.QuadPart - s_startCount.QuadPart) / static_cast<double>(s_frequency.QuadPart);
+
+    s_lastCount = now;
+}
+
+#pragma once
+#include "Transform.h"
+#include <list>
+
+class RigidBody;
+
+// Представляє об'єкт у сцені, що може мати компоненти
+class Entity
+{
+public:
+	// Конструктор класу GameObject, реєструє об'єкт у EntityManager та ініціалізує трансформацію за замовчуванням
+	Entity();
+	// Конструктор класу GameObject з початковою позицією
+	Entity(Vector3 position);
+	// Деструктор класу GameObject, видаляє всі компоненти та знімає реєстрацію об'єкта
+	virtual ~Entity();
+
+	// Повертає вказівник на компонент Transform цього об'єкта
+	Transform* getTransform();
+	// Знищує об'єкт
+	void destroy();
+
+	// Створює новий компонент типу T і додає його до об'єкта
+	template<typename T, typename... Args>
+	T* addComponent(Args&&... args);
+
+	// Повертає вказівник на компонент типу T, якщо він існує
+	template<typename T>
+	T* getComponent();
+
+	// Повертає список вказівників на компоненти типу T, якщо вони існують
+	template<typename T>
+	std::list<T*> getComponents();
+
+	// Видаляє компонент з об'єкта, якщо він існує
+	bool removeComponent(Component* component);
+
+	// Створює копію об'єкта разом з усіма його компонентами
+	Entity* instantiate();
+
+	bool dontDestroyOnLoad = false;
+	bool isActive = true;
+
+protected:
+	// Чи повинен об'єкт прокидати компоненти при створенні
+	virtual bool shouldAwakeComponents() const { return true; }
+
+	Transform mTransform;
+	RigidBody* mRigidBody = nullptr;
+
+	std::list<Component*> mComponents;
+
+	friend class Transform;
+};
+
+// Створює новий компонент типу T і додає його до об'єкта
+template<typename T, typename... Args>
+T* Entity::addComponent(Args&&... args)
+{
+	// Перевіряє, чи T є нащадком класу Component
+	static_assert(std::is_base_of<Component, T>::value, "addComponent<T>: T must inherit from Component");
+
+	if constexpr (std::is_base_of<RigidBody, T>::value) {
+		if (mRigidBody) {
+			return mRigidBody;
+		}
+	}
+
+	// Створює новий компонент типу T з переданими аргументами
+	auto* comp = new T(std::forward<Args>(args)...);
+
+	// Встановлює власника компонента
+	comp->setOwner(this);
+
+	mComponents.push_back(comp);
+
+	// Якщо компонент є фізичним тілом, зберігає його вказівник
+	if constexpr (std::is_base_of<RigidBody, T>::value) {
+		auto* rb = static_cast<RigidBody*>(comp);
+		mRigidBody = rb;
+	}
+
+	static_cast<Component*>(comp)->registerComponent();
+
+	// Якщо не є образом сутності, прокидає компонент
+	if (shouldAwakeComponents())
+	{
+		static_cast<Component*>(comp)->awake();
+	}
+
+	return comp;
+}
+
+// Повертає вказівник на компонент типу T, якщо він існує
+template<typename T>
+T* Entity::getComponent()
+{
+	static_assert(std::is_base_of<Component, T>::value, "getComponent<T>: T must inherit from Component");
+
+	for (auto* compPtr : mComponents)
+	{
+		if (auto casted = dynamic_cast<T*>(compPtr))
+			return casted;
+	}
+	return nullptr;
+}
+
+// Повертає список вказівників на компоненти типу T, якщо вони існують
+template<typename T>
+std::list<T*> Entity::getComponents()
+{
+	static_assert(std::is_base_of<Component, T>::value, "getComponents<T>: T must inherit from Component");
+
+	std::list<T*> results;
+
+	for (auto* compPtr : mComponents)
+	{
+		if (auto casted = dynamic_cast<T*>(compPtr))
+			results.push_back(casted);
+	}
+	return results;
+}
+
+#include "Entity.h"
+#include "EntityManager.h"
+#include "RigidBody.h"
+
+// Конструктор класу GameObject, реєструє об'єкт у EntityManager та ініціалізує трансформацію за замовчуванням
+Entity::Entity()
+{
+	EntityManager::get()->registerEntity(this);
+    mTransform.setOwner(this);
+	mTransform.setPosition(Vector3(0.0f, 0.0f, 0.0f));
+	mTransform.setScale(Vector3(1.0f, 1.0f, 1.0f));
+	mTransform.setRotation(Vector3(0.0f, 0.0f, 0.0f));
+}
+
+// Конструктор класу GameObject з початковою позицією
+Entity::Entity(Vector3 position)
+{
+    EntityManager::get()->registerEntity(this);
+    mTransform.setOwner(this);
+	mTransform.setPosition(position);
+	mTransform.setScale(Vector3(1.0f, 1.0f, 1.0f));
+	mTransform.setRotation(Vector3(0.0f, 0.0f, 0.0f));
+}
+
+// Деструктор класу GameObject, видаляє всі компоненти та знімає реєстрацію об'єкта
+Entity::~Entity()
+{
+    for (auto* component : mComponents) {
+        delete component;
+    }
+
+    mComponents.clear();
+
+    EntityManager::get()->unregisterEntity(this);
+}
+
+// Повертає вказівник на компонент Transform цього об'єкта
+Transform* Entity::getTransform()
+{
+    return &mTransform;
+}
+
+// Знищує об'єкт
+void Entity::destroy()
+{
+    delete this;
+}
+
+// Видаляє компонент з об'єкта, якщо він існує
+bool Entity::removeComponent(Component* component)
+{
+    auto it = std::find_if(
+        mComponents.begin(),
+        mComponents.end(),
+        [component](const Component* ptr) {
+            return ptr == component;
+        });
+
+    if (it != mComponents.end()) {
+        mComponents.erase(it);
+        return true;
+    }
+    return false;
+}
+
+// Створює копію об'єкта разом з усіма його компонентами
+Entity* Entity::instantiate()  
+{  
+   Entity* newObject = new Entity();
+
+   newObject->mTransform.setPosition(mTransform.getPosition());
+   newObject->mTransform.setScale(mTransform.getScale());
+   newObject->mTransform.setRotation(mTransform.getRotation());
+
+   for (auto* component : mComponents) {
+       auto* newComponent = component->instantiate();
+       newComponent->setOwner(newObject);
+       static_cast<Component*>(newComponent)->registerComponent();
+       newObject->mComponents.push_back(newComponent);
+       newObject->mComponents.back()->awake();
+    newObject->mRigidBody = newObject->getComponent<RigidBody>();
+   }
+
+   return newObject;
+}
+
+#pragma once
+#include <list>
+#include <unordered_map>
+
+class Component;
+class Renderer;
+class Camera;
+class Entity;
+class Material;
+class RigidBody;
+
+class EntityManager
+{
+public:
+	// Реєструє Entity у менеджері
+	void registerEntity(Entity* gameObject);
+	// Видаляє Entity з менеджера
+	void unregisterEntity(Entity* gameObject);
+	// Реєструє компонент у менеджері
+	void registerComponent(Component* component);
+	// Видаляє компонент з менеджера
+	void unregisterComponent(Component* component);
+	// Реєструє рендер-компонент у менеджері
+	void registerRenderer(Renderer* renderer);
+	// Видаляє рендер-компонент з менеджера
+	void unregisterRenderer(Renderer* renderer);
+	// Реєструє камеру у менеджері
+	void registerCamera(Camera* camera);
+	// Видаляє камеру з менеджера
+	void unregisterCamera(Camera* camera);
+	// Реєструє матеріал у менеджері
+	void registerMaterial(Material* material);
+	// Видаляє матеріал з менеджера
+	void unregisterMaterial(Material* material);
+	// Реєструє фізичне тіло у менеджері
+	void registerRigidBody(RigidBody* rigidBody);
+	// Видаляє фізичне тіло з менеджера
+	void unregisterRigidBody(RigidBody* rigidBody);
+
+	// Повертає фізичне тіло за вказаним актором
+	RigidBody* getRigidBody(void* actor);
+
+	// Оновлює всі компоненти
+	void updateComponents();
+	// Виконує фіксоване оновлення для всіх компонентів
+	void fixedUpdateComponents();
+	// Оновлює всі рендер-компоненти
+	void updateRenderers();
+	// Оновлює всі камери
+	void updateCameras();
+
+	// Викликається на початку завантаження сцени
+	void onSceneLoadStart();
+	// Викликається після завершення завантаження сцени
+	void onSceneLoadFinished();
+
+	// Повертає єдиний екземпляр менеджера сутностей (синглтон)
+	static EntityManager* get();
+
+private:
+	std::list<Entity*> mEntities = {};
+	std::list<Component*> mComponents = {};
+	std::list<Renderer*> mRenderers = {};
+	std::list<Camera*> mCameras = {};
+	std::list<Material*> mMaterials = {};
+	std::unordered_map<void*, RigidBody*> mRigidBodies = {};
+};
+
+#include "EntityManager.h"
+#include "Component.h"
+#include "Entity.h"
+#include "Renderer.h"
+#include "Camera.h"
+#include "GraphicsEngine.h"
+#include "PhysicsEngine.h"
+#include "TextureManager.h"
+#include "MeshManager.h"
+#include "ConvexMeshManager.h"
+#include "Material.h"
+#include "RigidBody.h"
+
+
+// Реєструє ігровий об'єкт у менеджері
+void EntityManager::registerEntity(Entity* gameObject)
+{
+	mEntities.push_back(gameObject);
+}
+
+// Видаляє ігровий об'єкт з менеджера
+void EntityManager::unregisterEntity(Entity* gameObject)
+{
+	mEntities.remove(gameObject);
+}
+
+// Реєструє компонент у менеджері
+void EntityManager::registerComponent(Component* component)
+{
+	mComponents.push_back(component);
+}
+
+// Видаляє компонент з менеджера
+void EntityManager::unregisterComponent(Component* component)
+{
+	mComponents.remove(component);
+}
+
+// Реєструє рендер-компонент у менеджері
+void EntityManager::registerRenderer(Renderer* renderer)
+{
+	mRenderers.push_back(renderer);
+}
+
+// Видаляє рендер-компонент з менеджера
+void EntityManager::unregisterRenderer(Renderer* renderer)
+{
+	mRenderers.remove(renderer);
+}
+
+// Реєструє камеру у менеджері
+void EntityManager::registerCamera(Camera* camera)
+{
+	mCameras.push_back(camera);
+}
+
+// Видаляє камеру з менеджера
+void EntityManager::unregisterCamera(Camera* camera)
+{
+	mCameras.remove(camera);
+}
+
+// Реєструє матеріал у менеджері
+void EntityManager::registerMaterial(Material* material)
+{
+	mMaterials.push_back(material);
+}
+
+// Видаляє матеріал з менеджера
+void EntityManager::unregisterMaterial(Material* material)
+{
+	mMaterials.remove(material);
+}
+
+// Реєструє фізичне тіло у менеджері
+void EntityManager::registerRigidBody(RigidBody* rigidBody)
+{
+	if (rigidBody->mActor) {
+		mRigidBodies[rigidBody->mActor] = rigidBody;
+	}
+}
+
+// Видаляє фізичне тіло з менеджера
+void EntityManager::unregisterRigidBody(RigidBody* rigidBody)
+{
+	if (rigidBody->mActor) {
+		mRigidBodies.erase(rigidBody->mActor);
+	}
+}
+
+// Повертає фізичне тіло за вказаним актором
+RigidBody* EntityManager::getRigidBody(void* actor)
+{
+	auto it = mRigidBodies.find(actor);
+	if (it != mRigidBodies.end()) {
+		return it->second;
+	}
+
+	return nullptr;
+}
+
+// Оновлює всі компоненти
+void EntityManager::updateComponents()
+{
+	for (auto* c : mComponents) {
+		if (!c->getOwner()->isActive) continue;
+		c->update();
+	}
+}
+
+// Виконує фіксоване оновлення для всіх компонентів
+void EntityManager::fixedUpdateComponents()
+{
+	for (auto* c : mComponents) {
+		if (!c->getOwner()->isActive) continue;
+		c->fixedUpdate();
+	}
+}
+
+// Оновлює всі рендер-компоненти
+void EntityManager::updateRenderers()
+{
+	for (auto* r : mRenderers) {
+		if (!r->getOwner()->isActive) continue;
+		r->render();
+	}
+}
+
+// Оновлює всі камери
+void EntityManager::updateCameras()
+{
+	for (auto* c : mCameras) {
+		if (!c->getOwner()->isActive) continue;
+		c->updateCamera();
+	}
+}
+
+// Викликається на початку завантаження сцени
+void EntityManager::onSceneLoadStart()
+{
+	auto it = mEntities.begin();
+	while (it != mEntities.end())
+	{
+		Entity* g = *it++;
+		if (g->dontDestroyOnLoad)
+			continue;
+
+		g->destroy();
+	}
+
+	auto it2 = mMaterials.begin();
+	while (it2 != mMaterials.end())
+	{
+		Material* m = *it2++;
+		if (m->dontDeleteOnLoad)
+			continue;
+		delete m;
+	}
+
+	GraphicsEngine::get()->getTextureManager()->markResourcesAsUnused();
+	GraphicsEngine::get()->getMeshManager()->markResourcesAsUnused();
+	PhysicsEngine::get()->getConvexMeshManager()->markResourcesAsUnused();
+}
+
+// Викликається після завершення завантаження сцени
+void EntityManager::onSceneLoadFinished()
+{
+	GraphicsEngine::get()->getTextureManager()->unloadUnusedResources();
+	GraphicsEngine::get()->getMeshManager()->unloadUnusedResources();
+	PhysicsEngine::get()->getConvexMeshManager()->unloadUnusedResources();
+}
+
+// Повертає єдиний екземпляр менеджера сутностей (синглтон)
+EntityManager* EntityManager::get()
+{
+	static EntityManager instance;
+	return &instance;
+}
+
+#pragma once
+#include "Component.h"
+
+// Компонент для управління камерою в стилі "вільного погляду" (freelook)
+class FreelookCameraController : public Component
+{
+public:
+	FreelookCameraController();
+	FreelookCameraController(float speed, float mouseSpeed);
+	~FreelookCameraController() override;
+
+protected:
+	// Оновлює стан камери в стилі "вільного погляду"
+	void update() override;
+
+	float speed = 2.0f;
+	float speedIncrement = 1.0f;
+	float mouseSpeed = 0.002f;
+};
+
+
+#include "FreelookCameraController.h"
+#include "GlobalResources.h"
+#include "Input.h"
+#include "EngineTime.h"
+#include "Entity.h"
+
+FreelookCameraController::FreelookCameraController()
+{
+}
+
+FreelookCameraController::FreelookCameraController(float speed, float mouseSpeed)
+{
+	this->speed = speed;
+	this->mouseSpeed = mouseSpeed;
+}
+
+FreelookCameraController::~FreelookCameraController()
+{
+}
+
+// Оновлює стан камери в стилі "вільного погляду"
+void FreelookCameraController::update()
+{
+	Vector3 rotation = mOwner->getTransform()->getRotation();
+	rotation.x += Input::getDeltaMousePos().y * mouseSpeed;
+	rotation.y += Input::getDeltaMousePos().x * mouseSpeed;
+
+	Vector3 direction = Vector3(0, 0, 0);
+
+	if (Input::getKey('W'))
+	{
+		direction.x += 1.0f;
+	}
+	if (Input::getKey('S'))
+	{
+		direction.x -= 1.0f;
+	}
+	if (Input::getKey('A'))
+	{
+		direction.y -= 1.0f;
+	}
+	if (Input::getKey('D'))
+	{
+		direction.y += 1.0f;
+	}
+	if (Input::getKey(VK_CONTROL))
+	{
+		direction.z -= 1.0f;
+	}
+	if (Input::getKey(VK_SPACE))
+	{
+		direction.z += 1.0f;
+	}
+
+	direction.normalize();
+	direction *= speed;
+
+	if (Input::getKey(VK_SHIFT))
+	{
+		direction *= 2.0f * speedIncrement;
+		speedIncrement *= 1.0f + Time::getDeltaTime();
+	}
+	else
+	{
+		speedIncrement = 1.0f;
+	}
+
+	mOwner->getTransform()->setRotation(rotation);
+
+	Vector3 newPos = mOwner->getTransform()->getPosition() + mOwner->getTransform()->getMatrix()->getZDirection() * direction.x * Time::getDeltaTime() +
+		mOwner->getTransform()->getMatrix()->getXDirection() * direction.y * Time::getDeltaTime() +
+		Vector3(0, direction.z * Time::getDeltaTime(), 0);
+	mOwner->getTransform()->setPosition(newPos);
+}
+
+#pragma once
+#include "Matrix.h"
+
+class Material;
+class ConstantBuffer;
+
+// Глобальна структура для зберігання константних даних
+__declspec(align(16))
+struct constant {
+	Matrix world;
+	Matrix model;
+	Matrix invTransModel;
+	Matrix view;
+	Matrix projection;
+	float cameraPos[4];
+	float lightPos[4];
+	float lightColor[4];
+	unsigned int time;
+};
+
+class GlobalResources
+{
+public:
+	GlobalResources();
+	// Ініціалізує глобальні ресурси: створює константний буфер і матеріал за замовчуванням
+	void init();
+	// Звільняє глобальний константний буфер
+	~GlobalResources();
+
+	// Оновлює дані в константному буфері
+	void updateConstantBuffer();
+
+	// Повертає вказівник на структуру з глобальними константними даними
+	constant* getConstantData();
+	// Повертає вказівник на глобальний константний буфер
+	ConstantBuffer* getConstantBuffer();
+	// Повертає вказівник на матеріал за замовчуванням
+	Material* getDefaultMaterial();
+
+private:
+	constant mConstantData = {};
+	ConstantBuffer* mConstantBuffer = nullptr;
+	Material* mDefaultMaterial = nullptr;
+};
+
+
+#include "GlobalResources.h"
+#include "GraphicsEngine.h"
+#include "Material.h"
+#include "ConstantBuffer.h"
+
+GlobalResources::GlobalResources()
+{
+}
+
+// Ініціалізує глобальні ресурси: створює константний буфер і матеріал за замовчуванням
+void GlobalResources::init()
+{
+    mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
+    mConstantBuffer->load(&mConstantData, sizeof(mConstantData));
+
+    mDefaultMaterial = new Material();
+	mDefaultMaterial->dontDeleteOnLoad = true;
+}
+
+// Звільняє глобальний константний буфер
+GlobalResources::~GlobalResources()
+{
+    mConstantBuffer->release();
+}
+
+// Оновлює дані в константному буфері
+void GlobalResources::updateConstantBuffer()
+{
+    mConstantBuffer->update(GraphicsEngine::get()->getImmDeviceContext(), &mConstantData);
+}
+
+// Повертає вказівник на структуру з глобальними константними даними
+constant* GlobalResources::getConstantData()
+{
+    return &mConstantData;
+}
+
+// Повертає вказівник на глобальний константний буфер
+ConstantBuffer* GlobalResources::getConstantBuffer()
+{
+    return mConstantBuffer;
+}
+
+// Повертає вказівник на матеріал за замовчуванням
+Material* GlobalResources::getDefaultMaterial()
+{
+    return mDefaultMaterial;
+}
+
+#pragma once
+#include <d3d11.h>
+#include <d2d1.h>
+#include <unordered_map>
+#include <string>
+
+class SwapChain;
+class DeviceContext;
+class VertexBuffer;
+class IndexBuffer;
+class ConstantBuffer;
+class VertexShader;
+class PixelShader;
+class Texture;
+class TextureManager;
+class Mesh;
+class MeshManager;
+class Material;
+class GlobalResources;
+
+class GraphicsEngine
+{
+public:
+	// Ініціалізує графічний рушій
+	bool init();
+	// Звільняє ресурси графічного рушія
+	bool release();
+
+	// Повертає єдиний екземпляр GraphicsEngine (синглтон)
+	static GraphicsEngine* get();
+
+	// Створює новий SwapChain
+	SwapChain* createSwapShain();
+	// Повертає основний DeviceContext
+	DeviceContext* getImmDeviceContext();
+	// Створює новий VertexBuffer
+	VertexBuffer* createVertexBuffer();
+	// Створює новий IndexBuffer
+	IndexBuffer* createIndexBuffer();
+	// Створює новий ConstantBuffer
+	ConstantBuffer* createConstantBuffer();
+	// Створює новий VertexShader з байткоду
+	VertexShader* createVertexShader(const void* shaderBytecode, SIZE_T bytecodeLength);
+	// Створює новий PixelShader з байткоду
+	PixelShader* createPixelShader(const void* shaderBytecode, SIZE_T bytecodeLength);
+	// Повертає VertexShader за ім'ям файлу та точкою входу
+	VertexShader* getVertexShader(const wchar_t* fileName, const char* entryPoint);
+	// Повертає PixelShader за ім'ям файлу та точкою входу
+	PixelShader* getPixelShader(const wchar_t* fileName, const char* entryPoint);
+
+	// Повертає менеджер текстур
+	TextureManager* getTextureManager();
+	// Повертає менеджер мешів
+	MeshManager* getMeshManager();
+	// Повертає менеджер глобальних ресурсів
+	GlobalResources* getGlobalResources();
+
+	// Компілює вершинний шейдер з файлу
+	bool compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
+	// Звільняє ресурси вершинного шейдера
+	void releaseVertexShader();
+	// Компілює піксельний шейдер з файлу
+	bool compilePixelShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
+	// Звільняє ресурси піксельного шейдера
+	void releasePixelShader();
+
+	// Встановлює матеріал в шейдерах
+	void setMaterial(Material* material);
+
+private:
+	GraphicsEngine();
+	~GraphicsEngine();
+
+	// Створює стани растеризатора
+	bool createRasterizerStates();
+	// Створює стани семплера
+	bool createSamplerStates();
+
+	ID3D11Device* mD3dDevice = nullptr;
+	D3D_FEATURE_LEVEL mFeatureLevel = {};
+	DeviceContext* mImmDeviceContext = nullptr;
+
+	ID3D11RasterizerState* mRasterStateCullFront = nullptr;
+	ID3D11RasterizerState* mRasterStateCullBack = nullptr;
+
+	ID3D11SamplerState* mSamplerWrap = nullptr;
+	ID3D11SamplerState* mSamplerClamp = nullptr;
+
+	IDXGIDevice* mDxgiDevice = nullptr;
+	IDXGIAdapter* mDxgiAdapter = nullptr;
+	IDXGIFactory* mDxgiFactory = nullptr;
+
+	ID3DBlob* mVSBlob = nullptr;
+	ID3DBlob* mPSBlob = nullptr;
+
+	ID3D11VertexShader* mVS = nullptr;
+	ID3D11PixelShader* mPS = nullptr;
+
+	TextureManager* mTextureManager = nullptr;
+	MeshManager* mMeshManager = nullptr;
+	GlobalResources* mGlobalResources = nullptr;
+
+	std::unordered_map<std::wstring, VertexShader*> vertexShaderMap;
+	std::unordered_map<std::wstring, PixelShader*> pixelShaderMap;
+
+	friend class SwapChain;
+	friend class DeviceContext;
+	friend class VertexBuffer;
+	friend class IndexBuffer;
+	friend class ConstantBuffer;
+	friend class VertexShader;
+	friend class PixelShader;
+	friend class Texture;
+	friend class Mesh;
+};
+
+#include "GraphicsEngine.h"
+#include "SwapChain.h"
+#include "DeviceContext.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
+#include "ConstantBuffer.h"
+#include "VertexShader.h"
+#include "PixelShader.h"
+#include "TextureManager.h"
+#include "MeshManager.h"
+#include "GlobalResources.h"
+#include "EntityManager.h"
+#include "Material.h"
+#include "DirectXTex.h"
+#include <d3dcompiler.h>
+
+#include <iostream>
+
+GraphicsEngine::GraphicsEngine()
+{
+	try
+	{
+		mTextureManager = new TextureManager();
+		mMeshManager = new MeshManager();
+		mGlobalResources = new GlobalResources();
+	}
+	catch(...) {}
+}
+
+// Ініціалізує графічний рушій
+bool GraphicsEngine::init()
+{
+	D3D_DRIVER_TYPE driverTypes[] = {
+		D3D_DRIVER_TYPE_HARDWARE,
+		D3D_DRIVER_TYPE_WARP,
+		D3D_DRIVER_TYPE_REFERENCE
+	};
+
+	D3D_FEATURE_LEVEL featureLevels[] = {
+		D3D_FEATURE_LEVEL_11_0
+	};
+
+	ID3D11DeviceContext* mImmContext = NULL;
+	
+	// Обираємо підтримуваний драйвер та створюємо пристрій
+	HRESULT create = 0;
+	for (UINT index = 0; index < ARRAYSIZE(driverTypes);) {
+		create = D3D11CreateDevice(NULL, driverTypes[index], NULL, NULL, featureLevels,
+			ARRAYSIZE(featureLevels), D3D11_SDK_VERSION, &mD3dDevice, &mFeatureLevel, &mImmContext);
+		if (SUCCEEDED(create)) break;
+
+		++index;
+	}
+	if (FAILED(create))
+		return false;
+
+	mImmDeviceContext = new DeviceContext(mImmContext);
+
+	// Отримуємо DXGI Device, Adapter та Factory
+	mD3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**)&mDxgiDevice);
+	mDxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&mDxgiAdapter);
+	mDxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&mDxgiFactory);
+
+	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+
+	// Ініціалізація станів семплера та растеризатора
+	createSamplerStates();
+	createRasterizerStates();
+
+	// Ініціалізація менеджеру глобальних ресурсів
+	mGlobalResources->init();
+
+	return true;
+}
+
+// Звільняє ресурси графічного рушія
+bool GraphicsEngine::release()
+{
+	mDxgiDevice->Release();
+	mDxgiAdapter->Release();
+	mDxgiFactory->Release();
+
+	mImmDeviceContext->release();
+	mD3dDevice->Release();
+
+	mRasterStateCullFront->Release();
+	mRasterStateCullBack->Release();
+	mSamplerWrap->Release();
+	mSamplerClamp->Release();
+
+	return true;
+}
+
+GraphicsEngine::~GraphicsEngine()
+{
+	delete mTextureManager;
+	delete mMeshManager;
+	delete mGlobalResources;
+}
+
+// Повертає єдиний екземпляр GraphicsEngine (синглтон)
+GraphicsEngine* GraphicsEngine::get()
+{
+	static GraphicsEngine engine;
+	return &engine;
+}
+
+// Створює новий SwapChain
+SwapChain* GraphicsEngine::createSwapShain()
+{
+	return new SwapChain();
+}
+
+// Повертає основний DeviceContext
+DeviceContext* GraphicsEngine::getImmDeviceContext()
+{
+	return this->mImmDeviceContext;
+}
+
+// Створює новий VertexBuffer
+VertexBuffer* GraphicsEngine::createVertexBuffer()
+{
+	return new VertexBuffer();
+}
+
+// Створює новий IndexBuffer
+IndexBuffer* GraphicsEngine::createIndexBuffer()
+{
+	return new IndexBuffer();
+}
+
+// Створює новий ConstantBuffer
+ConstantBuffer* GraphicsEngine::createConstantBuffer()
+{
+	return new ConstantBuffer();
+}
+
+// Створює новий VertexShader з байткоду
+VertexShader* GraphicsEngine::createVertexShader(const void* shaderBytecode, SIZE_T bytecodeLength)
+{
+	VertexShader* vs = new VertexShader();
+	if (!vs->init(shaderBytecode, bytecodeLength)) {
+		vs->release();
+		return nullptr;
+	};
+
+	return vs;
+}
+
+// Створює новий PixelShader з байткоду
+PixelShader* GraphicsEngine::createPixelShader(const void* shaderBytecode, SIZE_T bytecodeLength)
+{
+	PixelShader* ps = new PixelShader();
+	if (!ps->init(shaderBytecode, bytecodeLength)) {
+		ps->release();
+		return nullptr;
+	};
+
+	return ps;
+}
+
+// Повертає VertexShader за ім'ям файлу та точкою входу
+VertexShader* GraphicsEngine::getVertexShader(const wchar_t* fileName, const char* entryPoint)
+{
+	auto it = vertexShaderMap.find(fileName);
+
+	if (it != vertexShaderMap.end())
+		return it->second;
+
+	void* shaderByteCode = nullptr;
+	SIZE_T shaderSize = 0;
+	VertexShader* shader;
+
+	GraphicsEngine::get()->compileVertexShader(fileName, entryPoint, &shaderByteCode, &shaderSize);
+	shader = GraphicsEngine::get()->createVertexShader(shaderByteCode, shaderSize);
+	GraphicsEngine::get()->releaseVertexShader();
+
+	if (shader)
+	{
+		vertexShaderMap[fileName] = shader;
+		return shader;
+	}
+
+	std::cout << "Failed to load vertex shader: " << fileName << std::endl;
+
+	return nullptr;
+}
+
+// Повертає PixelShader за ім'ям файлу та точкою входу
+PixelShader* GraphicsEngine::getPixelShader(const wchar_t* fileName, const char* entryPoint)
+{
+	auto it = pixelShaderMap.find(fileName);
+
+	if (it != pixelShaderMap.end())
+		return it->second;
+
+	void* shaderByteCode = nullptr;
+	SIZE_T shaderSize = 0;
+	PixelShader* shader;
+
+	GraphicsEngine::get()->compilePixelShader(fileName, entryPoint, &shaderByteCode, &shaderSize);
+	shader = GraphicsEngine::get()->createPixelShader(shaderByteCode, shaderSize);
+	GraphicsEngine::get()->releasePixelShader();
+
+	if (shader)
+	{
+		pixelShaderMap[fileName] = shader;
+		return shader;
+	}
+
+	std::cout << "Failed to load pixel shader: " << fileName << std::endl;
+
+	return nullptr;
+}
+
+// Повертає менеджер текстур
+TextureManager* GraphicsEngine::getTextureManager()
+{
+	return mTextureManager;
+}
+
+// Повертає менеджер мешів
+MeshManager* GraphicsEngine::getMeshManager()
+{
+	return mMeshManager;
+}
+
+// Повертає менеджер глобальних ресурсів
+GlobalResources* GraphicsEngine::getGlobalResources()
+{
+	return mGlobalResources;
+}
+
+// Компілює вершинний шейдер з файлу
+bool GraphicsEngine::compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength)
+{
+	ID3DBlob* errblob = nullptr;
+	if (FAILED(D3DCompileFromFile(fileName, nullptr, nullptr, entryPoint, "vs_5_0", 0, 0, &mVSBlob, &errblob))) {
+		if(errblob) errblob->Release();
+		return false;
+	};
+
+	*shaderBytecode = mVSBlob->GetBufferPointer();
+	*bytecodeLength = mVSBlob->GetBufferSize();
+
+	return true;
+}
+
+// Звільняє ресурси вершинного шейдера
+void GraphicsEngine::releaseVertexShader()
+{
+	if(mVSBlob) mVSBlob->Release();
+}
+
+// Компілює піксельний шейдер з файлу
+bool GraphicsEngine::compilePixelShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength)
+{
+	ID3DBlob* errblob = nullptr;
+	if (FAILED(D3DCompileFromFile(fileName, nullptr, nullptr, entryPoint, "ps_5_0", 0, 0, &mPSBlob, &errblob))) {
+		if (errblob) errblob->Release();
+		return false;
+	};
+
+	*shaderBytecode = mPSBlob->GetBufferPointer();
+	*bytecodeLength = mPSBlob->GetBufferSize();
+
+	return true;
+}
+
+// Звільняє ресурси піксельного шейдера
+void GraphicsEngine::releasePixelShader()
+{
+	if (mPSBlob) mPSBlob->Release();
+}
+
+// Встановлює матеріал в шейдерах
+void GraphicsEngine::setMaterial(Material* material)
+{
+	material->onMaterialSet();
+	mImmDeviceContext->setVertexShader(material->mVertexShader);
+	mImmDeviceContext->setPixelShader(material->mPixelShader);
+	mImmDeviceContext->setRasterizer(material->cullBack ? mRasterStateCullBack : mRasterStateCullFront);
+
+	if (material->mTextures.size() > 0)
+	{
+		mImmDeviceContext->setTexture(material->mPixelShader, material->mTextures[0]);
+
+		mImmDeviceContext->setSamplerState(material->clampTexture ? mSamplerClamp : mSamplerWrap);
+	}
+}
+
+// Створює стани растеризатора
+bool GraphicsEngine::createRasterizerStates()
+{
+	CD3D11_RASTERIZER_DESC rastDesc(D3D11_FILL_SOLID, D3D11_CULL_BACK, FALSE,
+		D3D11_DEFAULT_DEPTH_BIAS, D3D11_DEFAULT_DEPTH_BIAS_CLAMP,
+		D3D11_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, FALSE, FALSE, TRUE);
+
+	HRESULT hr = GraphicsEngine::get()->mD3dDevice->CreateRasterizerState(&rastDesc, &mRasterStateCullBack);
+
+	if (!SUCCEEDED(hr)) return false;
+
+	rastDesc.CullMode = D3D11_CULL_FRONT;
+
+	hr = GraphicsEngine::get()->mD3dDevice->CreateRasterizerState(&rastDesc, &mRasterStateCullFront);
+
+	if (!SUCCEEDED(hr)) return false;
+	return true;
+}
+
+// Створює стани семплера
+bool GraphicsEngine::createSamplerStates()
+{
+	D3D11_SAMPLER_DESC sampDesc = {};
+	sampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+	sampDesc.MaxAnisotropy = 16;
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampDesc.MinLOD = 0;
+	sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	HRESULT hr = GraphicsEngine::get()->mD3dDevice->CreateSamplerState(&sampDesc, &mSamplerWrap);
+
+	if (FAILED(hr)) return false;
+
+	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+
+	hr = GraphicsEngine::get()->mD3dDevice->CreateSamplerState(&sampDesc, &mSamplerClamp);
+
+	if (FAILED(hr)) return false;
+
+	return true;
+}
+
+#pragma once
+#include <d3d11.h>
+
+class DeviceContext;
+
+class IndexBuffer
+{
+public:
+	IndexBuffer();
+	// Створює та завантажує індексний буфер за списком індексів
+	bool load(void* indicesList, UINT listSize);
+	// Повертає кількість індексів у буфері
+	UINT getVertexListSize();
+	// Звільняє ресурси індексного буфера
+	bool release();
+	~IndexBuffer();
+private:
+	UINT mListSize = 0;
+
+	ID3D11Buffer* mBuffer = nullptr;
+
+	friend class DeviceContext;
+};
+
+#include "IndexBuffer.h"
+#include "GraphicsEngine.h"
+
+IndexBuffer::IndexBuffer()
+{
+}
+
+// Створює та завантажує індексний буфер за списком індексів
+bool IndexBuffer::load(void* indicesList, UINT listSize)
+{
+	if (mBuffer) mBuffer->Release();
+
+	D3D11_BUFFER_DESC bufferDesc = {};
+	bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	bufferDesc.ByteWidth = 4 * listSize;
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.CPUAccessFlags = 0;
+	bufferDesc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA subresData = {};
+	subresData.pSysMem = indicesList;
+
+	mListSize = listSize;
+
+	HRESULT hr;
+	hr = GraphicsEngine::get()->mD3dDevice->CreateBuffer(&bufferDesc, &subresData, &mBuffer);
+	if (FAILED(hr))
+		return false;
+
+	return true;
+}
+
+// Повертає кількість індексів у буфері
+UINT IndexBuffer::getVertexListSize()
+{
+	return this->mListSize;
+}
+
+// Звільняє ресурси індексного буфера
+bool IndexBuffer::release()
+{
+	mBuffer->Release();
+	delete this;
+	return true;
+}
+
+IndexBuffer::~IndexBuffer()
+{
+}
+
+#pragma once  
+#include "Vector2.h"  
+#include <Windows.h>
+
+enum MouseButton
+{
+    MB_Left = 0,
+    MB_Right = 1,
+    MB_Middle = 2,
+    MB_Count
+};
+
+static class Input  
+{  
+public:
+   // Перевіряє, чи натиснута клавіша з вказаним кодом
+   static bool getKey(int keycode);  
+   // Повертає true тільки в той кадр, коли клавішу було натиснуто
+   static bool getKeyDown(int keycode);  
+   // Повертає true тільки в той кадр, коли клавішу було відпущено
+   static bool getKeyUp(int keycode);  
+
+   // Перевіряє, чи натиснута кнопка миші
+   static bool getMouseButton(MouseButton button);
+   // Повертає true тільки в той кадр, коли кнопку миші було натиснуто
+   static bool getMouseButtonDown(MouseButton button);
+   // Повертає true тільки в той кадр, коли кнопку миші було відпущено
+   static bool getMouseButtonUp(MouseButton button);
+
+   // Повертає true, якщо колесико миші прокручується вгору
+   static bool getMouseWheelUp();
+   // Повертає true, якщо колесико миші прокручується вниз
+   static bool getMouseWheelDown();
+
+   // Повертає зміну позиції миші за кадр
+   static Vector2 getDeltaMousePos();  
+
+private:  
+   static unsigned char keys_state[256];  
+   static unsigned char old_keys_state[256];
+
+   static unsigned char mouse_state[MB_Count];
+   static unsigned char old_mouse_state[MB_Count];
+
+   static Vector2 lastTickMousePos;  
+   static Vector2 currentTickMousePos;  
+   static Vector2 deltaMousePos;  
+
+   static INT16 mouseWheelDelta;
+   static INT16 oldMouseWheelDelta;
+
+   // Оновлює стан клавіатури та кнопок миші
+   static void update();  
+   // Оновлює стан миші з урахуванням області вікна та фокусу
+   static void updateMouse(RECT windowRect, bool isFocused);
+   // Оновлює стан колесика миші
+   static void updateMouseWheel(INT16 delta);
+
+   friend class AppWindow;
+   friend class Window;
+};
+
+#include "Input.h"
+#include "Windows.h"
+
+unsigned char Input::keys_state[256] = {};
+unsigned char Input::old_keys_state[256] = {};
+
+unsigned char Input::mouse_state[MB_Count] = {};
+unsigned char Input::old_mouse_state[MB_Count] = {};
+
+Vector2 Input::lastTickMousePos = Vector2(0.0f, 0.0f);
+Vector2 Input::currentTickMousePos = Vector2(0.0f, 0.0f);
+Vector2 Input::deltaMousePos = Vector2(0.0f, 0.0f);
+
+INT16 Input::mouseWheelDelta = 0;
+INT16 Input::oldMouseWheelDelta = 0;
+
+// Перевіряє, чи натиснута клавіша з вказаним кодом
+bool Input::getKey(int keycode)
+{
+	return keys_state[keycode] & 0x80;
+}
+
+// Повертає true тільки в той кадр, коли клавішу було натиснуто
+bool Input::getKeyDown(int keycode)
+{
+	return keys_state[keycode] & 0x80 && !(old_keys_state[keycode] & 0x80);
+}
+
+// Повертає true тільки в той кадр, коли клавішу було відпущено
+bool Input::getKeyUp(int keycode)
+{
+	return old_keys_state[keycode] & 0x80 && !(keys_state[keycode] & 0x80);
+}
+
+// Перевіряє, чи натиснута кнопка миші
+bool Input::getMouseButton(MouseButton button)
+{
+	return mouse_state[button] & 0x80;
+}
+
+// Повертає true тільки в той кадр, коли кнопку миші було натиснуто
+bool Input::getMouseButtonDown(MouseButton button)
+{
+	return (mouse_state[button] & 0x80) && !(old_mouse_state[button] & 0x80);
+}
+
+// Повертає true тільки в той кадр, коли кнопку миші було відпущено
+bool Input::getMouseButtonUp(MouseButton button)
+{
+	return (old_mouse_state[button] & 0x80) && !(mouse_state[button] & 0x80);
+}
+
+bool Input::getMouseWheelUp()
+{
+	return oldMouseWheelDelta > 0;
+}
+
+bool Input::getMouseWheelDown()
+{
+	return oldMouseWheelDelta < 0;
+}
+
+// Повертає зміну позиції миші за кадр
+Vector2 Input::getDeltaMousePos()
+{
+	return deltaMousePos;
+}
+
+// Оновлює стан клавіатури та кнопок миші
+void Input::update()
+{
+	// Оновлюємо стан клавіатури
+	::memcpy(old_keys_state, keys_state, sizeof(unsigned char) * 256);
+	::GetKeyboardState(keys_state);
+
+	// Оновлюємо стан кнопок миші
+	::memcpy(old_mouse_state, mouse_state, sizeof(mouse_state));
+	mouse_state[MB_Left] = (::GetAsyncKeyState(VK_LBUTTON) & 0x8000) ? 0x80 : 0;
+	mouse_state[MB_Right] = (::GetAsyncKeyState(VK_RBUTTON) & 0x8000) ? 0x80 : 0;
+	mouse_state[MB_Middle] = (::GetAsyncKeyState(VK_MBUTTON) & 0x8000) ? 0x80 : 0;
+
+	// Оновлюємо стан колеса миші
+	oldMouseWheelDelta = mouseWheelDelta;
+	mouseWheelDelta = 0;
+}
+
+bool wasFocused = false;
+
+// Оновлює стан миші з урахуванням області вікна та фокусу
+void Input::updateMouse(RECT windowRect, bool isFocused)
+{
+	// Перевірка, чи вікно має фокус
+	if (isFocused)
+	{
+		POINT currentMousePos = {};
+		::GetCursorPos(&currentMousePos);
+
+		// Якщо фокус вікна змінився, оновлюємо позицію миші
+		if (wasFocused != isFocused)
+		{
+			lastTickMousePos = Vector2(currentMousePos.x, currentMousePos.y);
+		}
+
+		// Обмеження позиції миші в межах вікна
+		::SetCursorPos((windowRect.right - windowRect.left) / 2, (windowRect.bottom - windowRect.top) / 2);
+		deltaMousePos = Vector2(
+			currentMousePos.x - lastTickMousePos.x,
+			currentMousePos.y - lastTickMousePos.y
+		);
+
+		lastTickMousePos = Vector2((windowRect.right - windowRect.left) / 2, (windowRect.bottom - windowRect.top) / 2);
+	}
+	else deltaMousePos = Vector2(0.0f, 0.0f);
+
+	wasFocused = isFocused;
+}
+
+void Input::updateMouseWheel(INT16 delta)
+{
+	mouseWheelDelta += delta;
+}
+
+
+#include "AppWindow.h"
+
+
+// Точка входу в програму
+int main() {
+	AppWindow app;
+	if (app.init()) {
+		while (app.isRunning()) {
+			app.broadcast();
+		}
+	}
+
+	return 0;
+}
+
+#pragma once
+#include <vector>
+
+class PixelShader;
+class VertexShader;
+class Texture;
+class ConstantBuffer;
+
+class Material
+{
+public:
+	// Ініціалізує шейдери, константні буфери та реєструє матеріал
+	Material();
+	// Звільняє ресурси та знімає реєстрацію матеріалу
+	~Material();
+
+	// Встановлює вершинний шейдер для матеріалу
+	void setVertexShader(VertexShader* vertexShader);
+	// Встановлює піксельний шейдер для матеріалу
+	void setPixelShader(PixelShader* pixelShader);
+	// Додає текстуру до матеріалу
+	void addTexture(Texture* texture);
+	// Видаляє текстуру з матеріалу за індексом
+	void removeTexture(unsigned int id);
+
+	// Встановлює колір матеріалу
+	void setColor(float r, float g, float b, float a);
+
+	bool cullBack = true;
+	bool clampTexture = true;
+	float ambient = 0.4f;
+	float smoothness = 0.5f;
+	float shininess = 32.0f;
+	float textureScale = 1.0f;
+	float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+
+	bool dontDeleteOnLoad = false;
+	
+	// Встановлює константний буфер для матеріалу у відповідний слот
+	void setConstantBuffer(ConstantBuffer* constantBuffer, int slot = 0);
+
+private:
+	// Оновлює дані матеріалу та встановлює константні буфери для шейдерів
+	void onMaterialSet();
+
+	VertexShader* mVertexShader = nullptr;
+	PixelShader* mPixelShader = nullptr;
+	ConstantBuffer* mConstantBuffer = nullptr;
+
+	ConstantBuffer* mConstantBuffers[4] = {};
+
+	std::vector<Texture*> mTextures;
+
+	friend class GraphicsEngine;
+};
+
+
+#include "Material.h"
+#include "GraphicsEngine.h"
+#include "DeviceContext.h"
+#include "GlobalResources.h"
+#include "ConstantBuffer.h"
+#include "EntityManager.h"
+#include <iostream>
+
+__declspec(align(16))
+struct material {
+	float ambient;
+	float diffuse;
+	float specular;
+	float shininess;
+	float textureScale[4];
+	float color[4];
+	bool isTextured;
+};
+
+material materialData = {};
+
+// Ініціалізує шейдери, константні буфери та реєструє матеріал
+Material::Material()
+{
+	mVertexShader = GraphicsEngine::get()->getVertexShader(L"src\\Shaders\\VertexShader.hlsl", "main");
+	mPixelShader = GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\PixelShader.hlsl", "main");
+
+	mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
+	mConstantBuffer->load(&materialData, sizeof(materialData));
+
+	mConstantBuffers[0] = GraphicsEngine::get()->getGlobalResources()->getConstantBuffer();
+
+	EntityManager::get()->registerMaterial(this);
+}
+
+// Звільняє ресурси та знімає реєстрацію матеріалу
+Material::~Material()
+{
+	mConstantBuffer->release();
+
+	EntityManager::get()->unregisterMaterial(this);
+}
+
+// Встановлює вершинний шейдер для матеріалу
+void Material::setVertexShader(VertexShader* vertexShader)
+{
+	mVertexShader = vertexShader;
+}
+
+// Встановлює піксельний шейдер для матеріалу
+void Material::setPixelShader(PixelShader* pixelShader)
+{
+	mPixelShader = pixelShader;
+}
+
+// Додає текстуру до матеріалу
+void Material::addTexture(Texture* texture)
+{
+	if (texture == nullptr) return;
+	mTextures.push_back(texture);
+}
+
+// Видаляє текстуру з матеріалу за індексом
+void Material::removeTexture(unsigned int id)
+{
+	if (id >= mTextures.size()) return;
+
+	mTextures.erase(mTextures.begin() + id);
+}
+
+// Встановлює колір матеріалу
+void Material::setColor(float r, float g, float b, float a)
+{
+	color[0] = r;
+	color[1] = g;
+	color[2] = b;
+	color[3] = a;
+}
+
+// Встановлює константний буфер для матеріалу у відповідний слот
+void Material::setConstantBuffer(ConstantBuffer* constantBuffer, int slot)
+{
+	if (slot == 1) return;
+	mConstantBuffers[slot] = constantBuffer;
+}
+
+// Оновлює дані матеріалу та встановлює константні буфери для шейдерів
+void Material::onMaterialSet()
+{
+	materialData.ambient = ambient;
+	materialData.diffuse = 1.0f - smoothness;
+	materialData.specular = smoothness;
+	materialData.shininess = shininess;
+	materialData.textureScale[0] = textureScale;
+
+	materialData.color[0] = color[0];
+	materialData.color[1] = color[1];
+	materialData.color[2] = color[2];
+	materialData.color[3] = color[3];
+
+	materialData.isTextured = mTextures.size() > 0;
+
+	mConstantBuffer->update(GraphicsEngine::get()->getImmDeviceContext(), &materialData);
+	mConstantBuffers[1] = mConstantBuffer;
+
+	int count = sizeof(mConstantBuffers) / sizeof(mConstantBuffers[0]);
+
+	for (int i = 0; i < count; i++)
+	{
+		if (mConstantBuffers[i] == nullptr) continue;
+
+		GraphicsEngine::get()->getImmDeviceContext()->setConstantBuffer(mVertexShader, mConstantBuffers[i], i);
+		GraphicsEngine::get()->getImmDeviceContext()->setConstantBuffer(mPixelShader, mConstantBuffers[i], i);
+	}
+}
+
+#pragma once
+#include "Vector3.h"
+#include "Vector4.h"
+#include <memory>
+
+class Matrix {
+public:
+	Matrix() {
+
+	}
+
+	// Оператор множення матриці на матрицю (з присвоєнням)
+	void operator *=(const Matrix matrix) {
+		Matrix res;
+
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				res.mat[i][j] =
+					mat[i][0] * matrix.mat[0][j] + mat[i][1] * matrix.mat[1][j] +
+					mat[i][2] * matrix.mat[2][j] + mat[i][3] * matrix.mat[3][j];
+			}
+		}
+		::memcpy(mat, res.mat, sizeof(float) * 16);
+	}
+
+	// Дружній оператор множення двох матриць
+	friend Matrix operator*(Matrix lhs, const Matrix& rhs) {
+		lhs *= rhs;
+		return lhs;
+	}
+
+	// Обчислює визначник матриці
+	float getDeterminant() {
+		Vector4 minor, v1, v2, v3;
+		float det;
+
+		v1 = Vector4(this->mat[0][0], this->mat[1][0], this->mat[2][0], this->mat[3][0]);
+		v2 = Vector4(this->mat[0][1], this->mat[1][1], this->mat[2][1], this->mat[3][1]);
+		v3 = Vector4(this->mat[0][2], this->mat[1][2], this->mat[2][2], this->mat[3][2]);
+
+		minor.cross(v1, v2, v3);
+		det = -(this->mat[0][3] * minor.x + this->mat[1][3] * minor.y + this->mat[2][3] * minor.z +
+			this->mat[3][3] * minor.w);
+
+		return det;
+	}
+
+	// Інвертує матрицю
+	void inverse()
+	{
+		int a, i, j;
+		Matrix out;
+		Vector4 v, vec[3];
+		float det = 0.0f;
+
+		det = this->getDeterminant();
+		if (!det) return;
+		for (i = 0; i < 4; i++)
+		{
+			for (j = 0; j < 4; j++)
+			{
+				if (j != i)
+				{
+					a = j;
+					if (j > i) a = a - 1;
+					vec[a].x = (this->mat[j][0]);
+					vec[a].y = (this->mat[j][1]);
+					vec[a].z = (this->mat[j][2]);
+					vec[a].w = (this->mat[j][3]);
+				}
+			}
+			v.cross(vec[0], vec[1], vec[2]);
+
+			out.mat[0][i] = pow(-1.0f, i) * v.x / det;
+			out.mat[1][i] = pow(-1.0f, i) * v.y / det;
+			out.mat[2][i] = pow(-1.0f, i) * v.z / det;
+			out.mat[3][i] = pow(-1.0f, i) * v.w / det;
+		}
+
+		::memcpy(mat, out.mat, sizeof(float) * 16);
+	}
+
+	// Транспонує матрицю
+	void transpose() {
+		Matrix out;
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				out.mat[i][j] = mat[j][i];
+			}
+		}
+		::memcpy(mat, out.mat, sizeof(float) * 16);
+	}
+
+	// Встановлює одиничну матрицю
+	void setIdentity() {
+		::memset(mat, 0, sizeof(float) * 16);
+		mat[0][0] = 1;
+		mat[1][1] = 1;
+		mat[2][2] = 1;
+		mat[3][3] = 1;
+	}
+
+	// Встановлює трансляцію (позицію) для матриці
+	void setTranslation(const Vector3& vector) {
+		mat[3][0] = vector.x;
+		mat[3][1] = vector.y;
+		mat[3][2] = vector.z;
+	}
+
+	// Встановлює масштаб для матриці
+	void setScale(const Vector3& scale) {
+		Vector3 r(mat[0][0], mat[0][1], mat[0][2]);
+		Vector3 u(mat[1][0], mat[1][1], mat[1][2]);
+		Vector3 f(mat[2][0], mat[2][1], mat[2][2]);
+
+		r.normalize();
+		u.normalize();
+		f.normalize();
+
+		r *= scale.x;
+		u *= scale.y;
+		f *= scale.z;
+
+		mat[0][0] = r.x;  mat[0][1] = r.y;  mat[0][2] = r.z;
+		mat[1][0] = u.x;  mat[1][1] = u.y;  mat[1][2] = u.z;
+		mat[2][0] = f.x;  mat[2][1] = f.y;  mat[2][2] = f.z;
+	}
+
+	// Встановлює напрямок "вперед" (Z) для матриці
+	void setForward(const Vector3& forward)
+	{
+		Vector3 scale = getScale();
+
+		Vector3 f = forward.normalized();
+		Vector3 r = Vector3(0.0f, 1.0f, 0.0f).cross(f).normalized();
+		Vector3 u = f.cross(r);
+
+		r *= scale.x;
+		u *= scale.y;
+		f *= scale.z;
+
+		mat[0][0] = r.x;  mat[0][1] = r.y;  mat[0][2] = r.z;  mat[0][3] = 0;
+		mat[1][0] = u.x;  mat[1][1] = u.y;  mat[1][2] = u.z;  mat[1][3] = 0;
+		mat[2][0] = f.x;  mat[2][1] = f.y;  mat[2][2] = f.z;  mat[2][3] = 0;
+	}
+
+	// Встановлює обертання навколо осі X
+	void setRotationX(float x) {
+		mat[1][1] = cos(x);
+		mat[1][2] = sin(x);
+		mat[2][1] = -sin(x);
+		mat[2][2] = cos(x);
+	}
+
+	// Встановлює обертання навколо осі Y
+	void setRotationY(float y) {
+		mat[0][0] = cos(y);
+		mat[0][2] = -sin(y);
+		mat[2][0] = sin(y);
+		mat[2][2] = cos(y);
+	}
+
+	// Встановлює обертання навколо осі Z
+	void setRotationZ(float z) {
+		mat[0][0] = cos(z);
+		mat[0][1] = sin(z);
+		mat[1][0] = -sin(z);
+		mat[1][1] = cos(z);
+	}
+
+	// Встановлює обертання для матриці (Euler angles)
+	void setRotation(const Vector3& r)
+	{
+		Vector3 oldTrans = getTranslation();
+		Vector3 oldScale = getScale();
+
+		float cx = cosf(r.x), sx = sinf(r.x);
+		float cy = cosf(r.y), sy = sinf(r.y);
+		float cz = cosf(r.z), sz = sinf(r.z);
+
+		Matrix R;
+
+		R.setIdentity();
+
+		R.mat[0][0] = cy * cz;
+		R.mat[0][1] = cy * sz;
+		R.mat[0][2] = -sy;
+
+		R.mat[1][0] = sx * sy * cz - cx * sz;
+		R.mat[1][1] = sx * sy * sz + cx * cz;
+		R.mat[1][2] = sx * cy;
+
+		R.mat[2][0] = cx * sy * cz + sx * sz;
+		R.mat[2][1] = cx * sy * sz - sx * cz;
+		R.mat[2][2] = cx * cy;
+
+		Matrix res;
+		res.setIdentity();
+		res.setScale(oldScale);
+		res *= R;
+
+		res.setTranslation(oldTrans);
+
+		::memcpy(mat, res.mat, sizeof(float) * 16);
+	}
+
+	// Повертає обертання матриці у вигляді вектору (Euler angles)
+	Vector3 getRotation()
+	{
+		Vector3 r(mat[0][0], mat[0][1], mat[0][2]);
+		Vector3 u(mat[1][0], mat[1][1], mat[1][2]);
+		Vector3 f(mat[2][0], mat[2][1], mat[2][2]);
+
+		r = r.normalized();
+		u = u.normalized();
+		f = f.normalized();
+
+		Vector3 rotation;
+		rotation.x = atan2f(f.y, f.z);
+		rotation.y = atan2f(-f.x, sqrtf(f.y * f.y + f.z * f.z));
+		rotation.z = atan2f(u.x, r.x);
+
+		return rotation;
+	}
+
+	// Повертає напрямок "вправо" (X) у вигляді вектору
+	Vector3 getXDirection() {
+		return Vector3(mat[0][0], mat[0][1], mat[0][2]);
+	}
+
+	// Повертає напрямок "вгору" (Y) у вигляді вектору
+	Vector3 getYDirection() {
+		return Vector3(mat[1][0], mat[1][1], mat[1][2]);
+	}
+
+	// Повертає напрямок "вперед" (Z) у вигляді вектору
+	Vector3 getZDirection() {
+		return Vector3(mat[2][0], mat[2][1], mat[2][2]);
+	}
+
+	// Повертає вектор трансляції (позицію) з матриці
+	Vector3 getTranslation() {
+		return Vector3(mat[3][0], mat[3][1], mat[3][2]);
+	}
+
+	// Повертає масштаб по кожній осі
+	Vector3 getScale() {
+		return Vector3(
+			Vector3(mat[0][0], mat[0][1], mat[0][2]).length(),
+			Vector3(mat[1][0], mat[1][1], mat[1][2]).length(),
+			Vector3(mat[2][0], mat[2][1], mat[2][2]).length()
+		);
+	}
+
+	// Встановлює ортографічну проекцію
+	void setOrthoPM(float width, float height, float nearPlane, float farPlane) {
+		setIdentity();
+		mat[0][0] = 2.0f / width;
+		mat[1][1] = 2.0f / height;
+		mat[2][2] = 1.0f / (farPlane - nearPlane);
+		mat[3][2] = -(nearPlane / (farPlane - nearPlane));
+	}
+
+	// Встановлює перспективну проекцію
+	void setPerspectivePM(float fov, float aspectRatio, float nearPlane, float farPlane) {
+		float yScale = 1.0f / tan(fov / 2.0f);
+		float xScale = yScale / aspectRatio;
+		mat[0][0] = xScale;
+		mat[1][1] = yScale;
+		mat[2][2] = farPlane / (farPlane - nearPlane);
+		mat[2][3] = 1.0f;
+		mat[3][2] = (-nearPlane * farPlane) / (farPlane - nearPlane);
+	}
+
+	~Matrix() {
+
+	}
+
+	float mat[4][4] = {};
+};
+
+#pragma once
+#include "Resource.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
+
+class Mesh : public Resource
+{
+public:
+	// Завантажує модель з файлу, створює вершинний та індексний буфери
+	Mesh(const wchar_t* fullPath);
+	~Mesh();
+
+	// Повертає вказівник на вершинний буфер
+	VertexBuffer* getVertexBuffer();
+	// Повертає вказівник на індексний буфер
+	IndexBuffer* getIndexBuffer();
+
+private:
+	VertexBuffer* mVertexBuffer = nullptr;
+	IndexBuffer* mIndexBuffer = nullptr;
+};
+
+#include "Mesh.h"
+#include "GraphicsEngine.h"
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include "Vector3.h"
+#include "Vector2.h"
+#include <vector>
+#include <iostream>
+
+// Структура для зберігання вершинних даних
+struct vertex {
+    Vector3 pos;
+    Vector3 normal;
+    Vector2 texCoord;
+};
+
+// Завантажує модель з файлу, створює вершинний та індексний буфери
+Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
+{
+    std::wstring ws(fullPath);
+    std::string filePath(ws.begin(), ws.end());
+
+	// Використовує Assimp для імпорту моделі з файлу
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(
+        filePath,
+        aiProcess_Triangulate
+        | aiProcess_GenSmoothNormals
+        | aiProcess_FlipUVs
+        | aiProcess_JoinIdenticalVertices);
+
+	// Перевіряємо, чи вдалося завантажити сцену
+    if (!scene || !scene->HasMeshes())
+    {
+        std::cout << "Empty Scene" << std::endl;
+        return;
+    }
+
+    std::vector<vertex> outVertices;
+    std::vector<uint32_t> outIndices;
+
+	// Проходимо по всіх сітках сцени та збираємо вершини та індекси
+    for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
+        aiMesh* mesh = scene->mMeshes[m];
+
+        uint32_t baseVertex = static_cast<uint32_t>(outVertices.size());
+
+        for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
+            vertex v;
+
+            v.pos.x = mesh->mVertices[i].x;
+            v.pos.y = mesh->mVertices[i].y;
+            v.pos.z = mesh->mVertices[i].z;
+
+            v.normal.x = mesh->mNormals[i].x;
+            v.normal.y = mesh->mNormals[i].y;
+            v.normal.z = mesh->mNormals[i].z;
+
+            if (mesh->mTextureCoords[0]) {
+                v.texCoord.x = mesh->mTextureCoords[0][i].x;
+                v.texCoord.y = mesh->mTextureCoords[0][i].y;
+            }
+            else {
+                v.texCoord = Vector2(0, 0);
+            }
+
+            outVertices.push_back(v);
+        }
+
+        for (unsigned f = 0; f < mesh->mNumFaces; ++f) {
+            const aiFace& face = mesh->mFaces[f];
+            for (unsigned j = 0; j < face.mNumIndices; ++j) {
+                outIndices.push_back(baseVertex + face.mIndices[j]);
+            }
+        }
+    }
+
+	// Створюємо вершинний та індексний буфери в графічному рушії
+    mVertexBuffer = GraphicsEngine::get()->createVertexBuffer();
+    mIndexBuffer = GraphicsEngine::get()->createIndexBuffer();
+
+    void* shaderByteCode = nullptr;
+    SIZE_T shaderSize = 0;
+
+	// Компілюємо вершинний шейдер для лейауту вершинного буфера
+    GraphicsEngine::get()->compileVertexShader(L"src\\Shaders\\VertexLayoutShader.hlsl", "main", &shaderByteCode, &shaderSize);
+
+	// Завантажуємо вершинний та індексний буфери з даними
+    mVertexBuffer->load(outVertices.data(), sizeof(vertex), outVertices.size(), shaderByteCode, shaderSize);
+    mIndexBuffer->load(outIndices.data(), outIndices.size());
+
+	// Звільняємо ресурси вершинного шейдера
+    GraphicsEngine::get()->releaseVertexShader();
+}
+
+// Звільняє ресурси вершинного та індексного буферів
+Mesh::~Mesh()
+{
+	if (mVertexBuffer)
+	{
+		mVertexBuffer->release();
+		mVertexBuffer = nullptr;
+	}
+	if (mIndexBuffer)
+	{
+		mIndexBuffer->release();
+		mIndexBuffer = nullptr;
+	}
+}
+
+// Повертає вказівник на вершинний буфер
+VertexBuffer* Mesh::getVertexBuffer()
+{
+    return mVertexBuffer;
+}
+
+// Повертає вказівник на індексний буфер
+IndexBuffer* Mesh::getIndexBuffer()
+{
+    return mIndexBuffer;
+}
+
+#pragma once
+#include "Collider.h"
+
+class ConvexMesh;
+
+// Компонент, що представляє коллайдер з мешу в ігровому об'єкті
+class MeshCollider : public Collider
+{
+public:
+	MeshCollider();
+	~MeshCollider() override;
+
+	// Повертає вказівник на геометрію коллайдера
+	void* getGeometry(Vector3& scale, bool convex = true) override;
+
+	// Встановлює меш для коллайдера з файлу
+	void setConvexMesh(const wchar_t* fullPath);
+
+protected:
+	// Конструктор копіювання
+	MeshCollider* instantiate() const override {
+		return new MeshCollider(*this);
+	}
+
+private:
+	ConvexMesh* mConvexMesh = nullptr;
+};
+
+
+#include "MeshCollider.h"
+#include "PhysicsEngine.h"
+#include "ConvexMeshManager.h"
+#include "Entity.h"
+#include "MeshRenderer.h"
+#include <string>
+
+MeshCollider::MeshCollider()
+{
+}
+
+MeshCollider::~MeshCollider()
+{
+}
+
+// Повертає вказівник на геометрію коллайдера
+void* MeshCollider::getGeometry(Vector3& scale, bool convex)
+{
+	// Якщо геометрія вже існує і масштаб не змінився, повертаємо її
+	if (mGeometry) {
+		if (scale == mScale) {
+			return mGeometry;
+		}
+
+		delete mGeometry;
+		mGeometry = nullptr;
+	}
+
+	mScale = scale;
+
+	// Якщо меш не завантажено, намагаємося його взяти з MeshRenderer
+	if (!mConvexMesh) {
+		MeshRenderer* meshRenderer = mOwner->getComponent<MeshRenderer>();
+		if (meshRenderer) {
+			mConvexMesh = PhysicsEngine::get()->getConvexMeshManager()->createConvexMeshFromFile(meshRenderer->getMesh()->getFullPath().c_str());
+		}
+		else {
+			return nullptr;
+		}
+	}
+
+	PxMeshScale meshScale(PxVec3(scale.x, scale.y, scale.z), PxQuat(PxIdentity));
+
+	// Створюємо геометрію в залежності від типу меша
+	if (!convex)
+	{
+		mGeometry = new PxTriangleMeshGeometry(static_cast<PxTriangleMesh*>(mConvexMesh->getTriangleMesh()), meshScale);
+	}
+	else
+	{
+		mGeometry = new PxConvexMeshGeometry(static_cast<PxConvexMesh*>(mConvexMesh->getConvexMesh()), meshScale);
+	}
+
+	return mGeometry;
+}
+
+// Встановлює меш для коллайдера з файлу
+void MeshCollider::setConvexMesh(const wchar_t* fullPath)
+{
+	mConvexMesh = PhysicsEngine::get()->getConvexMeshManager()->createConvexMeshFromFile(fullPath);
+}
+
+#pragma once
+#include "ResourceManager.h"
+#include "Mesh.h"
+
+class MeshManager : public ResourceManager
+{
+public:
+	MeshManager();
+	~MeshManager();
+
+	// Створює або повертає опуклий меш з файлу, використовуючи кешування
+	Mesh* createMeshFromFile(const wchar_t* filePath);
+protected:
+	// Створює новий об'єкт Mesh з файлу (фабричний метод)
+	virtual Resource* createResourceFromFileConcrete(const wchar_t* filePath);
+};
+
+
+#include "MeshManager.h"
+
+MeshManager::MeshManager() : ResourceManager()
+{
+}
+
+MeshManager::~MeshManager()
+{
+}
+
+// Створює або повертає меш з файлу, використовуючи кешування
+Mesh* MeshManager::createMeshFromFile(const wchar_t* filePath)
+{
+	return static_cast<Mesh*>(ResourceManager::createResourceFromFile(filePath));
+}
+
+// Створює новий об'єкт Mesh з файлу (фабричний метод)
+Resource* MeshManager::createResourceFromFileConcrete(const wchar_t* filePath)
+{
+	Mesh* mesh = nullptr;
+
+	try
+	{
+		mesh = new Mesh(filePath);
+	}
+	catch (...) {}
+
+	return mesh;
+}
+
+#pragma once
+#include "Renderer.h"
+
+// Компонент для рендеру мешів
+class MeshRenderer : public Renderer
+{
+public:
+	MeshRenderer();
+	// Конструктор класу MeshRenderer з вказаним мешем
+	MeshRenderer(Mesh* mesh);
+	// Конструктор класу MeshRenderer з вказаними мешем та матеріалом
+	MeshRenderer(Mesh* mesh, Material* material);
+
+	~MeshRenderer() override;
+
+	// Викликається для рендеру об'єкта: встановлює буфери та викликає рендеринг
+	virtual void render() override;
+
+protected:
+	// Конструктор копіювання
+	MeshRenderer* instantiate() const override {
+		return new MeshRenderer(*this);
+	};
+
+private:
+	// Викликається при активації компонента
+	virtual void awake() override;
+};
+
+#include "MeshRenderer.h"
+
+MeshRenderer::MeshRenderer()
+{
+}
+
+// Конструктор класу MeshRenderer з вказаним мешем
+MeshRenderer::MeshRenderer(Mesh* mesh)
+{
+	this->mMesh = mesh;
+}
+
+// Конструктор класу MeshRenderer з вказаними мешем та матеріалом
+MeshRenderer::MeshRenderer(Mesh* mesh, Material* material)
+{
+	this->mMesh = mesh;
+	this->mMaterial = material;
+}
+
+MeshRenderer::~MeshRenderer()
+{
+}
+
+// Викликається при активації компонента
+void MeshRenderer::awake()
+{
+	Renderer::awake();
+}
+
+// Викликається для рендеру об'єкта: встановлює буфери та викликає рендеринг
+void MeshRenderer::render()
+{
+	Renderer::render();
+
+	if (mMesh == nullptr) return;
+
+	GraphicsEngine::get()->getImmDeviceContext()->setVertexBuffer(mMesh->getVertexBuffer());
+	GraphicsEngine::get()->getImmDeviceContext()->setIndexBuffer(mMesh->getIndexBuffer());
+	GraphicsEngine::get()->getImmDeviceContext()->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);
+}
+
+#pragma once
+#include "Vector3.h"
+#include <vector>
+
+class RigidBody;
+class Collider;
+
+// Структура для зберігання інформації про результати raycast
+struct RaycastHit
+{
+	float distance;
+	Vector3 point;
+	Vector3 normal;
+	RigidBody* rigidBody;
+	Collider* collider;
+};
+
+// Структура для зберігання інформації про результати sphere cast
+struct OverlapHit
+{
+	RigidBody* rigidBody;
+	Collider* collider;
+};
+
+class Physics
+{
+public:
+	// Виконує фізичний raycast у сцені, ігноруючи заданий RigidBody
+	static bool raycast(const Vector3& origin, const Vector3& direction, float maxDistance, RaycastHit& outHit, RigidBody* ignore = nullptr);
+	// Виконує фізичний sphere cast у сцені, ігноруючи заданий RigidBody
+	static bool sphereCast(const Vector3& origin, const Vector3& direction, float radius, float maxDistance, RaycastHit& outHit, RigidBody* ignore = nullptr);
+	// Перевіряє, які об'єкти знаходяться всередині сфери з заданим радіусом
+	static bool overlapSphere(const Vector3& origin, float radius, std::vector<OverlapHit>& outHits);
+};
+
+
+#include "Physics.h"
+#include "PhysicsEngine.h"
+#include "EntityManager.h"
+#include "RigidBody.h"
+
+using namespace physx;
+
+// Клас для фільтрації акторів, які потрібно ігнорувати при фізичних запитах
+struct IgnoreActorFilterCallback : PxQueryFilterCallback
+{
+    PxRigidActor* mIgnore;
+
+    // Конструктор з актором, якого потрібно ігнорувати
+    IgnoreActorFilterCallback(PxRigidActor* ignore) : mIgnore(ignore) {}
+
+    // Викликається перед додаванням попадання до результату запиту
+    PxQueryHitType::Enum preFilter(
+        PxFilterData const& filterData,
+        const PxShape* shape,
+        const PxRigidActor* actor,
+        PxHitFlags& queryFlags
+    ) override
+    {
+        if (actor == mIgnore)
+            return PxQueryHitType::eNONE;
+
+        return PxQueryHitType::eBLOCK;
+    }
+
+    // Викликається після обробки попадання
+    PxQueryHitType::Enum postFilter(
+        PxFilterData const& filterData,
+        const PxQueryHit& hit
+    ) override
+    {
+        return PxQueryHitType::eNONE;
+    }
+};
+
+// Виконує фізичний raycast у сцені, ігноруючи заданий RigidBody
+bool Physics::raycast(const Vector3& origin, const Vector3& direction, float maxDistance, RaycastHit& outHit, RigidBody* ignore)
+{
+    PxRaycastBuffer hitBuffer;
+
+    PxQueryFilterData filterData(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC);
+    filterData.flags |= PxQueryFlag::ePREFILTER;
+    IgnoreActorFilterCallback filterCB(ignore->mActor);
+
+    bool status = PhysicsEngine::get()->getScene()->raycast(
+        PxVec3(origin.x, origin.y, origin.z),
+        PxVec3(direction.x, direction.y, direction.z).getNormalized(),
+        maxDistance,
+        hitBuffer,
+        PxHitFlag::eDEFAULT,
+        filterData,
+        &filterCB
+    );
+
+	if (!status || !hitBuffer.hasBlock)
+		return false;
+
+    outHit.distance = hitBuffer.block.distance;
+    outHit.point = Vector3(hitBuffer.block.position.x, hitBuffer.block.position.y, hitBuffer.block.position.z);
+    outHit.normal = Vector3(hitBuffer.block.normal.x, hitBuffer.block.normal.y, hitBuffer.block.normal.z);
+	outHit.rigidBody = EntityManager::get()->getRigidBody(hitBuffer.block.actor);
+
+    return true;
+}
+
+// Виконує фізичний sphere cast у сцені, ігноруючи заданий RigidBody
+bool Physics::sphereCast(const Vector3& origin, const Vector3& direction, float radius, float maxDistance, RaycastHit& outHit, RigidBody* ignore)
+{
+	PxSphereGeometry sphere(radius);
+
+    PxTransform startPose(PxVec3(origin.x, origin.y, origin.z), PxQuat(PxIdentity));
+
+    PxSweepBuffer sweepBuffer;
+
+    PxQueryFilterData filterData(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC);
+
+	bool status = PhysicsEngine::get()->getScene()->sweep(
+		sphere,
+		startPose,
+		PxVec3(direction.x, direction.y, direction.z).getNormalized(),
+		maxDistance,
+		sweepBuffer,
+		PxHitFlag::eDEFAULT,
+		filterData
+	);
+
+    if (!status || !sweepBuffer.hasBlock)
+        return false;
+
+	outHit.distance = sweepBuffer.block.distance;
+	outHit.point = Vector3(sweepBuffer.block.position.x, sweepBuffer.block.position.y, sweepBuffer.block.position.z);
+	outHit.normal = Vector3(sweepBuffer.block.normal.x, sweepBuffer.block.normal.y, sweepBuffer.block.normal.z);
+	outHit.rigidBody = EntityManager::get()->getRigidBody(sweepBuffer.block.actor);
+
+	return true;
+}
+
+// Перевіряє, які об'єкти знаходяться всередині сфери з заданим радіусом
+bool Physics::overlapSphere(const Vector3& origin, float radius, std::vector<OverlapHit>& outHits)
+{
+    PxSphereGeometry sphere(radius);
+    PxTransform pose(PxVec3(origin.x, origin.y, origin.z));
+
+    PxOverlapBuffer overlapBuffer;
+
+    PxQueryFilterData filterData(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC);
+
+    bool status = PhysicsEngine::get()->getScene()->overlap(
+        sphere,
+        pose,
+        overlapBuffer,
+        filterData
+    );
+
+    if (!status || overlapBuffer.nbTouches == 0)
+        return false;
+
+    outHits.clear();
+    outHits.reserve(overlapBuffer.nbTouches);
+    for (PxU32 i = 0; i < overlapBuffer.nbTouches; ++i)
+    {
+        outHits.push_back({
+            EntityManager::get()->getRigidBody(overlapBuffer.touches[i].actor),
+            nullptr
+        });
+    }
+
+    return true;
+}
+
+#pragma once
+#include <PxPhysicsAPI.h>
+#include <vector>
+
+using namespace physx;
+
+class ConvexMeshManager;
+
+class PhysicsEngine
+{
+public:
+	// Ініціалізує PhysX, створює сцену, матеріали, диспатчер та інші ресурси
+	void init();
+	// Оновлює фізичну сцену (симуляція) на заданий крок часу
+	void update(float deltaTime);
+	// Завершує роботу PhysX, звільняє всі ресурси
+	void shutdown();
+
+	// Повертає вказівник на об'єкт PxPhysics
+	PxPhysics* getPhysics();
+	// Повертає вказівник на об'єкт PxScene
+	PxScene* getScene();
+	// Повертає вказівник на фізичний матеріал за замовчуванням
+	PxMaterial* getMaterial();
+
+	// Повертає менеджер опуклих мешів
+	ConvexMeshManager* getConvexMeshManager();
+
+	// Створює (готує) опуклий меш з набору точок і повертає його
+	PxConvexMesh* cookConvexMesh(const std::vector<PxVec3>& points);
+	// Створює (готує) трикутний меш з набору точок та індексів і повертає його
+	PxTriangleMesh* cookTriangleMesh(const std::vector<PxVec3>& points, const std::vector<PxU32>& indices);
+
+	// Повертає єдиний екземпляр PhysicsEngine (синглтон)
+	static PhysicsEngine* get();
+
+private:
+	PhysicsEngine();
+	~PhysicsEngine();
+
+	ConvexMeshManager* mConvexMeshManager = nullptr;
+
+	PxDefaultAllocator gAllocator;
+	PxDefaultErrorCallback gErrorCallback;
+	PxFoundation* gFoundation = NULL;
+	PxPhysics* gPhysics = NULL;
+	PxDefaultCpuDispatcher* gDispatcher = NULL;
+	PxScene* gScene = NULL;
+	PxPvd* gPvd = NULL;
+
+	PxMaterial* gMaterial = NULL;
+
+	PxCooking* gCooking = NULL;
+};
+
+
+#include "PhysicsEngine.h"
+#include <ctype.h>
+#include "ConvexMeshManager.h"
+#include <stdexcept>
+#include <thread>
+#include <iostream>
+
+using namespace physx;
+
+PhysicsEngine::PhysicsEngine()
+{
+	mConvexMeshManager = new ConvexMeshManager();
+}
+
+PhysicsEngine::~PhysicsEngine()
+{
+    delete mConvexMeshManager;
+}
+
+// Ініціалізує PhysX, створює сцену, матеріали, диспатчер та інші ресурси
+void PhysicsEngine::init()
+{
+	// Створення аллокатора та обробника помилок
+    gFoundation = PxCreateFoundation(
+        PX_PHYSICS_VERSION,
+        gAllocator,
+        gErrorCallback
+    );
+
+	// Створення PVD (Physics Visual Debugger) для відладки
+    gPvd = PxCreatePvd(*gFoundation);
+    PxPvdTransport* transport =
+        PxDefaultPvdSocketTransportCreate("127.0.0.1", 5425, 10);
+    gPvd->connect(
+        *transport,
+        PxPvdInstrumentationFlag::eALL
+    );
+
+	// Створення інстансу PhysX Physics API
+    gPhysics = PxCreatePhysics(
+        PX_PHYSICS_VERSION,
+        *gFoundation,
+        PxTolerancesScale(),
+        true,
+        gPvd
+    );
+
+	// Створення матеріалу за замовчуванням
+    gMaterial = gPhysics->createMaterial(0.5f, 0.5f, 0.6f);
+
+	// Створення сцени
+    PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
+    sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f);
+	sceneDesc.flags |= PxSceneFlag::eENABLE_CCD;
+    sceneDesc.ccdThreshold = 0.001f;
+    sceneDesc.ccdMaxPasses = 4;
+    gDispatcher = PxDefaultCpuDispatcherCreate(std::thread::hardware_concurrency());
+    sceneDesc.cpuDispatcher = gDispatcher;
+    sceneDesc.filterShader = PxDefaultSimulationFilterShader;
+    gScene = gPhysics->createScene(sceneDesc);
+
+	// Ініціалізація PVD (Physics Visual Debugger) для сцени
+    if (auto* client = gScene->getScenePvdClient())
+    {
+        client->setScenePvdFlag(
+            PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS, true);
+        client->setScenePvdFlag(
+            PxPvdSceneFlag::eTRANSMIT_CONTACTS, true);
+        client->setScenePvdFlag(
+            PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
+    }
+
+	// Створення інтерфейсу для роботи з мешами
+    PxCookingParams params(gPhysics->getTolerancesScale());
+    gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, params);
+}
+
+// Оновлює фізичну сцену (симуляція) на заданий крок часу
+void PhysicsEngine::update(float deltaTime)
+{
+	if (deltaTime <= 0.0f)
+		return;
+
+	gScene->simulate(deltaTime);
+	gScene->fetchResults(true);
+}
+
+// Завершує роботу PhysX, звільняє всі ресурси
+void PhysicsEngine::shutdown()
+{
+    if (gScene) {
+        gScene->release();
+        gScene = nullptr;
+    }
+    if (gDispatcher) {
+        gDispatcher->release();
+        gDispatcher = nullptr;
+    }
+    if (gPhysics) {
+        gPhysics->release();
+        gPhysics = nullptr;
+    }
+
+    if (gPvd) {
+        auto* transport = gPvd->getTransport();
+        gPvd->release();
+        gPvd = nullptr;
+        if (transport) {
+            transport->release();
+            transport = nullptr;
+        }
+    }
+
+    if (gFoundation) {
+        gFoundation->release();
+        gFoundation = nullptr;
+    }
+}
+
+// Повертає вказівник на об'єкт PxPhysics
+PxPhysics* PhysicsEngine::getPhysics()
+{
+    return gPhysics;
+}
+
+// Повертає вказівник на об'єкт PxScene
+PxScene* PhysicsEngine::getScene()
+{
+    return gScene;
+}
+
+// Повертає вказівник на фізичний матеріал за замовчуванням
+PxMaterial* PhysicsEngine::getMaterial()
+{
+    return gMaterial;
+}
+
+// Повертає менеджер опуклих мешів
+ConvexMeshManager* PhysicsEngine::getConvexMeshManager()
+{
+    return mConvexMeshManager;
+}
+
+// Створює (готує) опуклий меш з набору точок і повертає його
+PxConvexMesh* PhysicsEngine::cookConvexMesh(const std::vector<PxVec3>& points)
+{
+    PxConvexMeshDesc desc;
+    desc.points.count = static_cast<PxU32>(points.size());
+    desc.points.stride = sizeof(PxVec3);
+    desc.points.data = points.data();
+    desc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+
+    PxDefaultMemoryOutputStream buf;
+    if (!gCooking->cookConvexMesh(desc, buf)) {
+        throw std::runtime_error("Convex cooking failed");
+    }
+
+    PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
+    PxConvexMesh* convexMesh = gPhysics->createConvexMesh(input);
+
+    return convexMesh;
+}
+
+// Створює (готує) трикутний меш з набору точок та індексів і повертає його
+PxTriangleMesh* PhysicsEngine::cookTriangleMesh(const std::vector<PxVec3>& points, const std::vector<PxU32>& indices)
+{
+    PxTriangleMeshDesc meshDesc;
+    meshDesc.points.count = PxU32(points.size());
+    meshDesc.points.stride = sizeof(PxVec3);
+    meshDesc.points.data = points.data();
+    meshDesc.triangles.count = PxU32(indices.size() / 3);
+    meshDesc.triangles.stride = 3 * sizeof(uint32_t);
+    meshDesc.triangles.data = indices.data();
+
+    PxDefaultMemoryOutputStream buf;
+    if (!gCooking->cookTriangleMesh(meshDesc, buf))
+        throw std::runtime_error("Failed to cook triangle mesh");
+
+    PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
+    PxTriangleMesh* triangleMesh = gPhysics->createTriangleMesh(input);
+
+    return triangleMesh;
+}
+
+// Повертає єдиний екземпляр PhysicsEngine (синглтон)
+PhysicsEngine* PhysicsEngine::get()
+{
+	static PhysicsEngine instance;
+	return &instance;
+}
+
+#pragma once
+#include <d3d11.h>
+
+class GraphicsEngine;
+class DeviceContext;
+
+class PixelShader
+{
+public:
+	PixelShader();
+	// Звільняє ресурси піксельного шейдера
+	bool release();
+	~PixelShader();
+private:
+	// Ініціалізує піксельний шейдер з байткоду
+	bool init(const void* shaderBytecode, SIZE_T bytecodeLength);
+
+	ID3D11PixelShader* mPixelShader = nullptr;
+
+	friend class GraphicsEngine;
+	friend class DeviceContext;
+};
+
+#include "PixelShader.h"
+#include "GraphicsEngine.h"
+
+PixelShader::PixelShader()
+{
+}
+
+// Звільняє ресурси піксельного шейдера
+bool PixelShader::release()
+{
+	mPixelShader->Release();
+
+	return true;
+}
+
+PixelShader::~PixelShader()
+{
+}
+
+// Ініціалізує піксельний шейдер з байткоду
+bool PixelShader::init(const void* shaderBytecode, SIZE_T bytecodeLength)
+{
+	if (FAILED(GraphicsEngine::get()->mD3dDevice->CreatePixelShader(shaderBytecode, bytecodeLength, NULL, &mPixelShader)))
+		return false;
+
+	return true;
+}
+
+#pragma once
+#include "Collider.h"
+
+// Компонент, що представляє коллайдер площини в ігровому об'єкті
+class PlaneCollider : public Collider
+{
+public:
+	PlaneCollider();
+	~PlaneCollider() override;
+
+	// Повертає вказівник на геометрію коллайдера
+	void* getGeometry(Vector3& scale, bool convex = true) override;
+
+protected:
+	// Конструктор копіювання
+	PlaneCollider* instantiate() const override
+	{
+		return new PlaneCollider(*this);
+	}
+};
+
+
+#include "PlaneCollider.h"
+#include <PxPhysicsAPI.h>
+
+PlaneCollider::PlaneCollider()
+{
+}
+
+PlaneCollider::~PlaneCollider()
+{
+}
+
+// Повертає вказівник на геометрію коллайдера
+void* PlaneCollider::getGeometry(Vector3& scale, bool convex)
+{
+	if (mGeometry) {
+		return mGeometry;
+	}
+
+	mGeometry = new physx::PxPlaneGeometry();
+
+	return mGeometry;
+}
+
+#pragma once
+#include "Entity.h"
+
+// Образ об'єкта сцени, який можна використовувати для створення нових об'єктів
+class Prefab : public Entity
+{
+public:
+	// Задання статусу активності об'єкта як неактивного
+	Prefab();
+	// Задання статусу активності об'єкта як неактивного з позицією
+	Prefab(Vector3 position);
+	~Prefab() override;
+
+protected:
+	// Образ не повинен прокидати компоненти при створенні
+	bool shouldAwakeComponents() const override {
+		return false;
+	}
+};
+
+
+#include "Prefab.h"
+#include "EntityManager.h"
+
+// Задання статусу активності об'єкта як неактивного
+Prefab::Prefab()
+{
+	isActive = false;
+}
+
+// Задання статусу активності об'єкта як неактивного з позицією
+Prefab::Prefab(Vector3 position)
+{
+	isActive = false;
+	mTransform.setPosition(position);
+	mTransform.setScale(Vector3(1.0f, 1.0f, 1.0f));
+	mTransform.setRotation(Vector3(0.0f, 0.0f, 0.0f));
+}
+
+Prefab::~Prefab()
+{
+}
+
+#pragma once
+
+#include <cmath>
+#include "Matrix.h"
+
+class Quaternion {
+public:
+    float x, y, z, w;
+
+    // Конструктор за замовчуванням (одиничний кватерніон)
+    Quaternion() noexcept : x(0), y(0), z(0), w(1) {}
+
+    // Конструктор кватерніона з заданими компонентами
+    Quaternion(float _x, float _y, float _z, float _w) noexcept
+        : x(_x), y(_y), z(_z), w(_w) {
+    }
+
+    // Створює кватерніон з осі обертання та кута (у радіанах)
+    static Quaternion fromAxisAngle(const Vector3& axis, float angle) noexcept {
+        float half = angle * 0.5f;
+        float s = std::sin(half);
+        Vector3 a = axis.normalized();
+        return Quaternion(a.x * s, a.y * s, a.z * s, std::cos(half));
+    }
+
+    // Створює кватерніон з Ейлерових кутів (у радіанах)
+    static Quaternion fromEuler(const Vector3& euler) noexcept {
+        float cx = std::cos(euler.x * 0.5f);
+        float sx = std::sin(euler.x * 0.5f);
+        float cy = std::cos(euler.y * 0.5f);
+        float sy = std::sin(euler.y * 0.5f);
+        float cz = std::cos(euler.z * 0.5f);
+        float sz = std::sin(euler.z * 0.5f);
+
+        // Z * Y * X
+        return Quaternion(
+            cx * sy * sz + sx * cy * cz,
+            cx * cy * sz - sx * sy * cz,
+            sx * cy * sz + cx * sy * cz,
+            cx * cy * cz - sx * sy * sz
+        );
+    }
+
+    // Перетворює кватерніон у вектор Ейлерових кутів (у радіанах)
+    Vector3 toEuler() const noexcept {
+        Vector3 e;
+
+        float sinY = -2.0f * (x * z - w * y);
+        sinY = (sinY > 1.0f) ? 1.0f : (sinY < -1.0f) ? -1.0f : sinY;
+        e.y = std::asin(sinY);
+
+        e.x = std::atan2(2.0f * (y * z + w * x), w * w - x * x - y * y + z * z);
+
+        e.z = std::atan2(2.0f * (x * y + w * z), w * w + x * x - y * y - z * z);
+        return e;
+    }
+
+    // Нормалізує кватерніон
+    Quaternion& normalize() noexcept {
+        float len = std::sqrt(x * x + y * y + z * z + w * w);
+        if (len > 0.0f) {
+            float inv = 1.0f / len;
+            x *= inv; y *= inv; z *= inv; w *= inv;
+        }
+        return *this;
+    }
+
+    // Оператор множення кватерніонів
+    Quaternion operator*(const Quaternion& r) const noexcept {
+        return Quaternion(
+            w * r.x + x * r.w + y * r.z - z * r.y,
+            w * r.y - x * r.z + y * r.w + z * r.x,
+            w * r.z + x * r.y - y * r.x + z * r.w,
+            w * r.w - x * r.x - y * r.y - z * r.z
+        );
+    }
+
+    // Перетворює кватерніон у матрицю 4x4
+    Matrix toMatrix() const noexcept {
+        Matrix m;
+        float xx = x * x, yy = y * y, zz = z * z;
+        float xy = x * y, xz = x * z, yz = y * z;
+        float wx = w * x, wy = w * y, wz = w * z;
+
+        m.mat[0][0] = 1 - 2 * (yy + zz);
+        m.mat[0][1] = 2 * (xy + wz);
+        m.mat[0][2] = 2 * (xz - wy);
+        m.mat[0][3] = 0;
+
+        m.mat[1][0] = 2 * (xy - wz);
+        m.mat[1][1] = 1 - 2 * (xx + zz);
+        m.mat[1][2] = 2 * (yz + wx);
+        m.mat[1][3] = 0;
+
+        m.mat[2][0] = 2 * (xz + wy);
+        m.mat[2][1] = 2 * (yz - wx);
+        m.mat[2][2] = 1 - 2 * (xx + yy);
+        m.mat[2][3] = 0;
+
+        m.mat[3][0] = 0;
+        m.mat[3][1] = 0;
+        m.mat[3][2] = 0;
+        m.mat[3][3] = 1;
+        return m;
+    }
+};
+
+#pragma once
+#include "GraphicsEngine.h"
+#include "DeviceContext.h"
+#include "Mesh.h"
+#include "Component.h"
+
+class ConstantBuffer;
+class Material;
+class Matrix;
+
+// Базовий клас для всіх компонентів, які рендерять об'єкти
+class Renderer : public Component
+{
+public:
+	Renderer();
+	// Знімає реєстрацію рендер-компонента в EntityManager
+	~Renderer() override;
+
+	// Викликається для рендеру об'єкта: встановлює матеріал, оновлює матриці та константний буфер
+	virtual void render() = 0;
+	// Встановлює матеріал для рендер-компонента
+	void setMaterial(Material* material);
+	// Встановлює меш для рендер-компонента
+	void setMesh(Mesh* mesh);
+	// Повертає вказівник на меш, який використовується рендер-компонентом
+	Mesh* getMesh();
+	// Повертає вказівник на матеріал, який використовується рендер-компонентом
+	Material* getMaterial();
+
+protected:
+	// Реєструє компонент як звичайний компонент і як рендер-компонент в EntityManager
+	void registerComponent() override;
+
+	// Викликається при активації компонента, встановлює матеріал за замовчуванням, якщо він не заданий
+	virtual void awake() override;
+
+	Material* mMaterial = nullptr;
+
+	Mesh* mMesh = nullptr;
+
+	bool isInitialized = false;
+};
+
+
+#include "Renderer.h"
+#include "Material.h"
+#include "GlobalResources.h"
+#include "GraphicsEngine.h"
+#include "EntityManager.h"
+#include "Entity.h"
+
+Renderer::Renderer()
+{
+}
+
+// Знімає реєстрацію рендер-компонента в EntityManager
+Renderer::~Renderer()
+{
+	EntityManager::get()->unregisterRenderer(this);
+}
+
+// Реєструє компонент як звичайний компонент і як рендер-компонент в EntityManager
+void Renderer::registerComponent()
+{
+	Component::registerComponent();
+	EntityManager::get()->registerRenderer(this);
+}
+
+// Викликається при активації компонента, встановлює матеріал за замовчуванням, якщо він не заданий
+void Renderer::awake()
+{
+	if (mMaterial == nullptr) mMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+}
+
+// Викликається для рендеру об'єкта: встановлює матеріал, оновлює матриці та константний буфер
+void Renderer::render()
+{
+	GraphicsEngine::get()->setMaterial(mMaterial);
+	
+	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
+	constantData->model = *mOwner->getTransform()->getMatrix();
+
+	Matrix invTransModel = *mOwner->getTransform()->getMatrix();
+	invTransModel.inverse();
+	invTransModel.transpose();
+	constantData->invTransModel = invTransModel;
+
+	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
+}
+
+// Встановлює матеріал для рендер-компонента
+void Renderer::setMaterial(Material* material)
+{
+	this->mMaterial = material;
+}
+
+// Встановлює меш для рендер-компонента
+void Renderer::setMesh(Mesh* mesh)
+{
+	this->mMesh = mesh;
+}
+
+// Повертає вказівник на меш, який використовується рендер-компонентом
+Mesh* Renderer::getMesh()
+{
+	return mMesh;
+}
+
+Material* Renderer::getMaterial()
+{
+	return mMaterial;
+}
+
+#pragma once
+#include <string>
+
+// Клас для створення ресурсу
+class Resource
+{
+public:
+	Resource(const wchar_t* fullPath);
+	virtual ~Resource();
+
+	// Повертає повний шлях до ресурсу
+	std::wstring getFullPath();
+
+private:
+	std::wstring fullPath;
+
+	bool isUsed = false;
+
+	friend class ResourceManager;
+};
+
+#include "Resource.h"
+
+Resource::Resource(const wchar_t* fullPath) : fullPath(fullPath)
+{
+}
+
+Resource::~Resource()
+{
+}
+
+// Повертає повний шлях до ресурсу
+std::wstring Resource::getFullPath()
+{
+	return fullPath;
+}
+
+#pragma once
+#include <unordered_map>
+#include <string>
+#include <filesystem>
+#include "Resource.h"
+
+class ResourceManager
+{
+public:
+	ResourceManager();
+	virtual ~ResourceManager();
+
+	// Створює або повертає ресурс з файлу, використовуючи кешування
+	Resource* createResourceFromFile(const wchar_t* path);
+
+	// Віртуальний метод для створення ресурсу з файлу (реалізується у спадкоємцях)
+	void markResourcesAsUnused();
+	// Позначає всі ресурси як невикористані
+	void unloadUnusedResources();
+
+protected:
+	// Видаляє всі невикористані ресурси з пам'яті та кешу
+	virtual Resource* createResourceFromFileConcrete(const wchar_t* filePath) = 0;
+
+private:
+	std::unordered_map<std::wstring, Resource*> resourceMap;
+};
+
+
+#include "ResourceManager.h"
+#include <string>
+#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#include <experimental\filesystem>
+#include "DirectXTex.h"
+
+#include <iostream>
+
+ResourceManager::ResourceManager()
+{
+}
+
+ResourceManager::~ResourceManager()
+{
+}
+
+// Створює або повертає ресурс з файлу, використовуючи кешування
+Resource* ResourceManager::createResourceFromFile(const wchar_t* path)
+{
+	std::wstring fullPath = std::experimental::filesystem::absolute(path);
+
+	// Перевіряємо, чи ресурс вже є в кеші
+	auto it = resourceMap.find(fullPath);
+
+	Resource* rawRes = nullptr;
+
+	// Якщо ресурс знайдено в кеші, повертаємо його
+	if (it != resourceMap.end())
+	{
+		rawRes = it->second;
+		rawRes->isUsed = true;
+		std::wcout << L"Resource found in cache: " << fullPath << std::endl;
+		return rawRes;
+	}
+
+	// Якщо ресурс не знайдено в кеші, створюємо його з файлу
+	rawRes = this->createResourceFromFileConcrete(fullPath.c_str());
+
+	// Якщо ресурс успішно створено, додаємо його до кешу
+	if (rawRes)
+	{
+		resourceMap[fullPath] = rawRes;
+		rawRes->isUsed = true;
+		std::wcout << L"Resource created and added to cache: " << fullPath << std::endl;
+		return rawRes;
+	}
+
+	return nullptr;
+}
+
+// Віртуальний метод для створення ресурсу з файлу (реалізується у спадкоємцях)
+Resource* ResourceManager::createResourceFromFileConcrete(const wchar_t* filePath)
+{
+	return nullptr;
+}
+
+// Позначає всі ресурси як невикористані
+void ResourceManager::markResourcesAsUnused()
+{
+	for (auto& it : resourceMap)
+	{
+		Resource* res = it.second;
+		if (res)
+		{
+			res->isUsed = false;
+		}
+	}
+}
+
+// Видаляє всі невикористані ресурси з пам'яті та кешу
+void ResourceManager::unloadUnusedResources()
+{
+	int count = 0;
+
+	for (auto it = resourceMap.begin(); it != resourceMap.end();)
+	{
+		Resource* res = it->second;
+		if (res && !res->isUsed)
+		{
+			count++;
+			delete res;
+			it = resourceMap.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+	}
+
+	std::wcout << L"Unloaded " << count << L" resources." << std::endl;
+}
+
+#pragma once
+#include "Component.h"
+#include <PxPhysicsAPI.h>
+#include "Vector3.h"
+#include <list>
+
+class Collider;
+
+// Компонент, що представляє фізичний об'єкт у сцені
+class RigidBody : public Component
+{
+public:
+	// Конструктор класу RigidBody для статичного або динамічного тіла
+	RigidBody(bool isStatic = false);
+	// Конструктор класу RigidBody з масою та типом (статичний/динамічний)
+    RigidBody(float mass, bool isStatic = false);
+	// Деструктор класу RigidBody, звільняє ресурси PhysX та знімає реєстрацію в EntityManager
+    ~RigidBody() override;
+
+	// Повертає лінійну швидкість тіла
+	Vector3 getVelocity();
+	// Повертає швидкість тіла у заданій точці
+	Vector3 getVelocityAtPoint(const Vector3& point);
+	// Повертає кутову швидкість тіла
+	Vector3 getAngularVelocity();
+
+	// Додає силу до тіла
+	void addForce(const Vector3& force);
+	// Додає силу до тіла в певній точці
+	void addForce(const Vector3& force, const Vector3& position);
+	// Додає кутову силу до тіла
+	void addTorque(const Vector3& torque);
+	// Вмикає або вимикає режим безперервного виявлення зіткнень (CCD)
+	void setContinousCollisionDetection(bool ccd);
+	// Встановлює масу тіла
+	void setMass(float mass);
+	// Встановлює центр мас тіла
+	void setCenterOfMass(const Vector3& com);
+
+protected:
+	// Конструктор копіювання
+	RigidBody* instantiate() const override {
+		return new RigidBody(*this);
+	};
+
+private:
+	// Ініціалізує фізичне тіло, створює фізичного актора, додає коллайдери, реєструє в EntityManager
+	void awake() override;
+	void update() override;
+	// Фіксоване оновлення компонента: синхронізує позицію та обертання з PhysX
+	void fixedUpdate() override;
+
+	// Оновлює коллайдери фізичного тіла відповідно до поточного масштабу
+	void updateShape();
+	// Звільняє всі форми з фізичного тіла
+	void releaseShapes();
+
+	// Оновлює глобальну позицію та обертання фізичного тіла згідно з Transform
+	void updateGlobalPose();
+
+	// Додає коллайдер до списку коллайдерів цього фізичного тіла
+	void addCollider(Collider* collider);
+
+	std::list<Collider*> mColliders = {};
+
+    physx::PxRigidActor* mActor = nullptr;
+	physx::PxMaterial* mMaterial = nullptr;
+
+	Vector3 mScale;
+
+	float mMass = 1.0f;
+	bool mIsStatic = false;
+	bool mCcd = false;
+
+	friend class Transform;
+	friend class Collider;
+	friend class EntityManager;
+	friend class Physics;
+};
+
+
+#include "RigidBody.h"
+#include "PhysicsEngine.h"
+#include "ConvexMeshManager.h"
+#include "Entity.h"
+#include "Quaternion.h"
+#include "Collider.h"
+#include "EntityManager.h"
+
+using namespace physx;
+
+// Конструктор класу RigidBody для статичного або динамічного тіла
+RigidBody::RigidBody(bool isStatic)
+{
+	mIsStatic = isStatic;
+}
+
+// Конструктор класу RigidBody з масою та типом (статичний/динамічний)
+RigidBody::RigidBody(float mass, bool isStatic)
+{
+	mMass = mass;
+	mIsStatic = isStatic;
+}
+
+// Деструктор класу RigidBody, звільняє ресурси PhysX та знімає реєстрацію в EntityManager
+RigidBody::~RigidBody()
+{
+	if (mActor)
+	{
+		EntityManager::get()->unregisterRigidBody(this);	
+		releaseShapes();
+		mActor->release();
+		mActor = nullptr;
+	}
+}
+
+// Повертає лінійну швидкість тіла
+Vector3 RigidBody::getVelocity()
+{
+	if (!mActor) return Vector3();
+	if (mIsStatic) return Vector3();
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	PxVec3 velocity = dynamicActor->getLinearVelocity();
+	return Vector3(velocity.x, velocity.y, velocity.z);
+}
+
+// Повертає швидкість тіла у заданій точці
+Vector3 RigidBody::getVelocityAtPoint(const Vector3& point)
+{
+	if (!mActor) return Vector3();
+	if (mIsStatic) return Vector3();
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	PxVec3 res = PxRigidBodyExt::getVelocityAtPos(*dynamicActor, PxVec3(point.x, point.y, point.z));
+
+	return Vector3(res.x, res.y, res.z);
+}
+
+// Повертає кутову швидкість тіла
+Vector3 RigidBody::getAngularVelocity()
+{
+	if (!mActor) return Vector3();
+	if (mIsStatic) return Vector3();
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	PxVec3 angularVelocity = dynamicActor->getAngularVelocity();
+	return Vector3(angularVelocity.x, angularVelocity.y, angularVelocity.z);
+}
+
+// Застосовує силу до тіла
+void RigidBody::addForce(const Vector3& force)
+{
+	if (!mActor) return;
+	if (mIsStatic) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	dynamicActor->addForce(PxVec3(force.x, force.y, force.z), PxForceMode::eFORCE, true);
+}
+
+// Застосовує силу до тіла в певній точці
+void RigidBody::addForce(const Vector3& force, const Vector3& position)
+{
+	if (!mActor) return;
+	if (mIsStatic) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	PxRigidBodyExt::addForceAtPos(*dynamicActor, PxVec3(force.x, force.y, force.z), PxVec3(position.x, position.y, position.z), PxForceMode::eFORCE, true);
+}
+
+// Застосовує кутову силу до тіла
+void RigidBody::addTorque(const Vector3& torque)
+{
+	if (!mActor) return;
+	if (mIsStatic) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	dynamicActor->addTorque(PxVec3(torque.x, torque.y, torque.z), PxForceMode::eFORCE, true);
+}
+
+// Вмикає або вимикає режим безперервного виявлення зіткнень (CCD)
+void RigidBody::setContinousCollisionDetection(bool ccd)
+{
+	mCcd = ccd;
+
+	if (!mActor) return;
+	if (mIsStatic) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, ccd);
+}
+
+void RigidBody::setMass(float mass)
+{
+	if (mIsStatic) return;
+
+	mMass = mass;
+
+	if (!mActor) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	dynamicActor->setMass(mass);
+	PxRigidBodyExt::updateMassAndInertia(*dynamicActor, mass);
+}
+
+void RigidBody::setCenterOfMass(const Vector3& com)
+{
+	if (mIsStatic) return;
+	if (!mActor) return;
+
+	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+	dynamicActor->setCMassLocalPose(PxTransform(PxVec3(com.x, com.y, com.z)));
+}
+
+// Ініціалізує фізичне тіло, створює фізичного актора, додає коллайдери, реєструє в EntityManager
+void RigidBody::awake()
+{
+	// Беремо Transform з власника
+    Transform* t = mOwner->getTransform();
+    Vector3 pos = t->getPosition();
+    Vector3 euler = t->getRotation();
+	mScale = t->getScale();
+
+    PxQuat q = PxQuat(euler.x, PxVec3(1, 0, 0))
+        * PxQuat(euler.y, PxVec3(0, 1, 0))
+        * PxQuat(euler.z, PxVec3(0, 0, 1));
+    PxTransform pose(PxVec3(pos.x, pos.y, pos.z), q);
+
+    PhysicsEngine* physics = PhysicsEngine::get();
+
+	// Створюємо фізичного актора в залежності від типу (статичний чи динамічний)
+	if (mIsStatic)
+	{
+		mActor = physics->getPhysics()->createRigidStatic(pose);
+	}
+	else
+	{
+		mActor = physics->getPhysics()->createRigidDynamic(pose);
+	}
+
+	mMaterial = physics->getMaterial();
+
+	// Беремо всі коллайдери з власника
+	std::list<Collider*> colliders = mOwner->getComponents<Collider>();
+
+	// Додаємо коллайдери до фізичного тіла
+	for (Collider* c : colliders) {
+		mColliders.push_back(c);
+	}
+
+	updateShape();
+
+	// Якщо це динамічне тіло, встановлюємо масу та інерцію
+	if (!mIsStatic)
+	{
+		PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+		PxRigidBodyExt::updateMassAndInertia(*dynamicActor, mMass);
+		dynamicActor->setMass(mMass);
+		dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, mCcd);
+	}
+
+	// Реєструємо фізичне тіло в PhysX сцені та в EntityManager
+    physics->getScene()->addActor(*mActor);
+	EntityManager::get()->registerRigidBody(this);
+}
+
+void RigidBody::update()
+{
+}
+
+// Фіксоване оновлення компонента: синхронізує позицію та обертання з PhysX
+void RigidBody::fixedUpdate()
+{
+	if (!mActor) return;
+
+	PxTransform p = mActor->getGlobalPose();
+
+	Transform* t = getOwner()->getTransform();
+	t->setPosition({ p.p.x, p.p.y, p.p.z }, false);
+
+	Quaternion quat{ p.q.x, p.q.y, p.q.z, p.q.w };
+	Vector3 euler = quat.toEuler();
+	t->setRotation(euler, false);
+}
+
+// Оновлює коллайдери фізичного тіла відповідно до поточного масштабу
+void RigidBody::updateShape()
+{
+	releaseShapes();
+
+	for (Collider* c : mColliders) {
+		PxShape* s = PhysicsEngine::get()->getPhysics()->createShape(*static_cast<PxGeometry*>(c->getGeometry(mScale, !mIsStatic)), *mMaterial);
+		mActor->attachShape(*s);
+	}
+}
+
+// Звільняє всі форми з фізичного тіла
+void RigidBody::releaseShapes()
+{
+	PxU32 shapesN = mActor->getNbShapes();
+	std::vector<PxShape*> shapes(shapesN);
+
+	mActor->getShapes(shapes.data(), shapesN);
+
+	for (PxShape* shape : shapes) {
+		mActor->detachShape(*shape);
+		shape->release();
+	}
+}
+
+// Оновлює глобальну позицію та обертання фізичного тіла згідно з Transform
+void RigidBody::updateGlobalPose()
+{
+	if (!mActor) return;
+
+	Transform* t = mOwner->getTransform();
+	Vector3 pos = t->getPosition();
+	Vector3 euler = t->getRotation();
+
+	if (!(mScale == t->getScale()))
+	{
+		mScale = t->getScale();
+		updateShape();
+	}
+
+	PxQuat q = PxQuat(euler.x, PxVec3(1, 0, 0))
+		* PxQuat(euler.y, PxVec3(0, 1, 0))
+		* PxQuat(euler.z, PxVec3(0, 0, 1));
+	PxTransform pose(PxVec3(pos.x, pos.y, pos.z), q);
+
+	mActor->setGlobalPose(pose, true);
+}
+
+// Додає коллайдер до списку коллайдерів цього фізичного тіла
+void RigidBody::addCollider(Collider* collider)
+{
+	mColliders.push_back(collider);
+}
+
+#pragma once
+
+// Базовий клас для всіх сцен в грі
+class Scene
+{
+public:
+	Scene();
+	virtual ~Scene();
+	
+	// Ініціалізація сцени
+	virtual void init() = 0;
+};
+
+
+#include "Scene.h"
+
+Scene::Scene()
+{
+}
+
+Scene::~Scene()
+{
+}
+
+void Scene::init()
+{
+}
+
+#pragma once
+
+class Scene;
+
+class SceneManager
+{
+public:
+	SceneManager();
+	~SceneManager();
+
+	// Повертає єдиний екземпляр менеджера сцен (синглтон)
+	static SceneManager* get();
+
+	// Встановлює сцену для завантаження
+	void loadScene(Scene* scene);
+
+private:
+	Scene* mRequestedScene = nullptr;
+
+	// Оновлює менеджер сцен, викликаючи завантаження нової сцени
+	void update();
+
+	friend class AppWindow;
+};
+
+
+#include "SceneManager.h"
+#include "EntityManager.h"
+#include "Scene.h"
+
+#include <iostream>
+
+SceneManager::SceneManager()
+{
+}
+
+SceneManager::~SceneManager()
+{
+}
+
+// Повертає єдиний екземпляр менеджера сцен (синглтон)
+SceneManager* SceneManager::get()
+{
+	static SceneManager instance;
+	return &instance;
+}
+
+// Встановлює сцену для завантаження
+void SceneManager::loadScene(Scene* scene)
+{
+	if (mRequestedScene != nullptr)
+		return;
+
+	mRequestedScene = scene;
+}
+
+// Оновлює менеджер сцен, викликаючи завантаження нової сцени
+void SceneManager::update()
+{
+	if (mRequestedScene == nullptr)
+		return;
+
+	std::wcout << L"Loading scene!" << std::endl;
+
+	// Очищаємо менеджер сутностей перед завантаженням нової сцени
+	EntityManager::get()->onSceneLoadStart();
+	mRequestedScene->init();
+	EntityManager::get()->onSceneLoadFinished();
+
+	std::wcout << L"Loaded scene!" << std::endl;
+
+	// Видаляємо запитану сцену
+	delete mRequestedScene;
+	mRequestedScene = nullptr;
+}
+
+#pragma once
+#include "Renderer.h"
+
+// Компонент для рендеру неба
+class SkySphere : public Renderer
+{
+public:
+	SkySphere();
+	~SkySphere() override;
+
+	// Викликається для рендеру: тимчасово зміщує камеру в центр, рендерить небо, повертає камеру назад
+	virtual void render() override;
+
+protected:
+	// Конструктор копіювання
+	SkySphere* instantiate() const override {
+		return new SkySphere(*this);
+	};
+
+private:
+	// Викликається при активації компонента: створює матеріал, завантажує текстуру та меш, масштабує об'єкт
+	void awake() override;
+};
+
+#include "SkySphere.h"
+#include "GraphicsEngine.h"
+#include "MeshManager.h"
+#include "TextureManager.h"
+#include "GlobalResources.h"
+#include "Material.h"
+#include "Entity.h"
+
+SkySphere::SkySphere()
+{
+}
+
+SkySphere::~SkySphere()
+{
+}
+
+// Викликається при активації компонента: створює матеріал, завантажує текстуру та меш, масштабує об'єкт
+void SkySphere::awake()
+{
+	mMaterial = new Material();
+	mMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\UnlitPixelShader.hlsl", "main"));
+	mMaterial->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\HDR_029_Sky_Cloudy_Bg.jpg"));
+	mMaterial->cullBack = false;
+
+	mMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
+
+	Renderer::awake();
+
+	mOwner->getTransform()->setScale(Vector3(200.0f, 200.0f, 200.0f));
+}
+
+// Викликається для рендеру: тимчасово зміщує камеру в центр, рендерить небо, повертає камеру назад
+void SkySphere::render()
+{
+	Vector3 cameraTranslation = GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.getTranslation();
+	GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.setTranslation(Vector3());
+
+	Renderer::render();
+
+	GraphicsEngine::get()->getImmDeviceContext()->setVertexBuffer(mMesh->getVertexBuffer());
+	GraphicsEngine::get()->getImmDeviceContext()->setIndexBuffer(mMesh->getIndexBuffer());
+	GraphicsEngine::get()->getImmDeviceContext()->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);
+
+	GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.setTranslation(cameraTranslation);
+}
+
+#pragma once
+#include "Collider.h"
+
+// Компонент, що представляє сферичний коллайдер
+class SphereCollider : public Collider
+{
+public:
+	SphereCollider();
+	SphereCollider(float radius);
+	~SphereCollider() override;
+
+	float radius = 1.0f;
+
+	// Повертає вказівник на геометрію коллайдера
+	void* getGeometry(Vector3& scale, bool convex = true) override;
+
+protected:
+	// Конструктор копіювання
+	SphereCollider* instantiate() const override
+	{
+		return new SphereCollider(*this);
+	}
+};
+
+
+#include "SphereCollider.h"
+#include <PxPhysicsAPI.h>
+
+SphereCollider::SphereCollider()
+{
+}
+
+SphereCollider::SphereCollider(float radius)
+{
+	this->radius = radius;
+}
+
+SphereCollider::~SphereCollider()
+{
+}
+
+// Повертає вказівник на геометрію коллайдера
+void* SphereCollider::getGeometry(Vector3& scale, bool convex)
+{
+	// Якщо геометрія вже існує і масштаб не змінився, повертаємо її
+	if (mGeometry) {
+		if (scale == mScale) {
+			return mGeometry;
+		}
+
+		delete mGeometry;
+		mGeometry = nullptr;
+	}
+
+	mScale = scale;
+
+	// Створюємо сферичну геометрію з урахуванням масштабу
+	float scaledRadius = radius * scale.x;
+
+	mGeometry = new physx::PxSphereGeometry(scaledRadius);
+
+    return mGeometry;
+}
+
+#pragma once
+#include <d3d11.h>
+
+class DeviceContext;
+
+class SwapChain
+{
+public:
+	SwapChain();
+	// Ініціалізує SwapChain для заданого вікна з вказаною шириною та висотою
+	bool init(HWND hwnd, UINT width, UINT height);
+	// Відображає (презентує) зображення на екран, з можливістю вертикальної синхронізації
+	bool present(bool vSync);
+	// Звільняє ресурси SwapChain
+	bool release();
+	~SwapChain();
+private:
+	IDXGISwapChain* mSwapChain = nullptr;
+	ID3D11RenderTargetView* mRenderTargetView = nullptr;
+	ID3D11DepthStencilView* mDepthStencilView = nullptr;
+
+	friend class DeviceContext;
+};
+
+#include "SwapChain.h"
+#include "GraphicsEngine.h"
+
+SwapChain::SwapChain()
+{
+}
+
+// Ініціалізує SwapChain для заданого вікна з вказаною шириною та висотою
+bool SwapChain::init(HWND hwnd, UINT width, UINT height)
+{
+	if (mSwapChain != nullptr) mSwapChain->Release();
+	if (mRenderTargetView != nullptr) mRenderTargetView->Release();
+	if (mDepthStencilView != nullptr) mDepthStencilView->Release();
+
+	ID3D11Device* device = GraphicsEngine::get()->mD3dDevice;
+
+	// Створення дескриптора для SwapChain
+	DXGI_SWAP_CHAIN_DESC desc;
+	ZeroMemory(&desc, sizeof(DXGI_SWAP_CHAIN_DESC));
+	desc.BufferCount = 1;
+	desc.BufferDesc.Width = width;
+	desc.BufferDesc.Height = height;
+	desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	desc.BufferDesc.RefreshRate.Numerator = 60;
+	desc.BufferDesc.RefreshRate.Denominator = 1;
+	desc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+	desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+	desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	desc.OutputWindow = hwnd;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Windowed = TRUE;
+	desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+	desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+	
+
+	HRESULT hr = GraphicsEngine::get()->mDxgiFactory->CreateSwapChain(device, &desc, &mSwapChain);
+	if (FAILED(hr))
+		return false;
+
+	// Створення цілі рендеру
+	ID3D11Texture2D* buffer;
+	hr = mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&buffer);
+	if (FAILED(hr))
+		return false;
+
+	hr = device->CreateRenderTargetView(buffer, NULL, &mRenderTargetView);
+	buffer->Release();
+	if (FAILED(hr))
+		return false;
+
+	// Створення текстури для глибини
+	D3D11_TEXTURE2D_DESC texDesc = {};
+	texDesc.Width = width;
+	texDesc.Height = height;
+	texDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	texDesc.Usage = D3D11_USAGE_DEFAULT;
+	texDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	texDesc.MipLevels = 1;
+	texDesc.SampleDesc.Count = 1;
+	texDesc.SampleDesc.Quality = 0;
+	texDesc.MiscFlags = 0;
+	texDesc.ArraySize = 1;
+	texDesc.CPUAccessFlags = 0;
+
+	hr = device->CreateTexture2D(&texDesc, nullptr, &buffer);
+
+	if (FAILED(hr))
+		return false;
+
+	hr = device->CreateDepthStencilView(buffer, nullptr, &mDepthStencilView);
+	buffer->Release();
+
+	if (FAILED(hr))
+		return false;
+
+	return true;
+}
+
+// Відображає (презентує) зображення на екран, з можливістю вертикальної синхронізації
+bool SwapChain::present(bool vSync)
+{
+	mSwapChain->Present(vSync, NULL);
+	return true;
+}
+
+// Звільняє ресурси SwapChain
+bool SwapChain::release()
+{
+	mSwapChain->Release();
+	delete this;
+	return true;
+}
+
+SwapChain::~SwapChain()
+{
+}
+
+#pragma once
+#include <d3d11.h>
+#include "Resource.h"
+
+class Texture : public Resource
+{
+public:
+	// Створює текстуру з файлу
+	Texture(const wchar_t* fullPath);
+	~Texture();
+private:
+	ID3D11Resource* mTexture = nullptr;
+	ID3D11ShaderResourceView* mShaderResourceView = nullptr;
+
+	friend class DeviceContext;
+};
+
+
+#include "Texture.h"
+#include "GraphicsEngine.h"
+#include <DirectXTex.h>
+
+// Створює текстуру з файлу
+Texture::Texture(const wchar_t* fullPath): Resource(fullPath)
+{
+	DirectX::ScratchImage imageData;
+	HRESULT res = DirectX::LoadFromWICFile(fullPath, DirectX::WIC_FLAGS_NONE, nullptr, imageData);
+
+	if (SUCCEEDED(res))
+	{
+		res = DirectX::CreateTexture(GraphicsEngine::get()->mD3dDevice, imageData.GetImages(),
+			imageData.GetImageCount(), imageData.GetMetadata(), &mTexture);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
+		desc.Format = imageData.GetMetadata().format;
+		desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		desc.Texture2D.MipLevels = (UINT)imageData.GetMetadata().mipLevels;
+		desc.Texture2D.MostDetailedMip = 0;
+
+		GraphicsEngine::get()->mD3dDevice->CreateShaderResourceView(mTexture, &desc,
+			&mShaderResourceView);
+	}
+	else
+	{
+		throw std::exception("Texture creation failed");
+	}
+}
+
+Texture::~Texture()
+{
+	mTexture->Release();
+	mShaderResourceView->Release();
+}
+
+#pragma once
+#include "ResourceManager.h"
+#include "Texture.h"
+
+class TextureManager : public ResourceManager
+{
+public:
+	TextureManager();
+	~TextureManager();
+
+	// Створює або повертає текстуру з файлу, використовуючи кешування
+	Texture* createTextureFromFile(const wchar_t* filePath);
+protected:
+	// Створює новий об'єкт Texture з файлу (фабричний метод)
+	virtual Resource* createResourceFromFileConcrete(const wchar_t* filePath);
+};
+
+
+#include "TextureManager.h"
+#include <iostream>
+
+TextureManager::TextureManager(): ResourceManager()
+{
+}
+
+TextureManager::~TextureManager()
+{
+}
+
+// Створює або повертає текстуру з файлу, використовуючи кешування
+Texture* TextureManager::createTextureFromFile(const wchar_t* filePath)
+{
+	return static_cast<Texture*>(ResourceManager::createResourceFromFile(filePath));
+}
+
+// Створює новий об'єкт Texture з файлу (фабричний метод)
+Resource* TextureManager::createResourceFromFileConcrete(const wchar_t* filePath)
+{
+	Texture* tex = nullptr;
+
+	try
+	{
+		tex = new Texture(filePath);
+	}
+	catch (...) 
+	{
+		std::wcout << L"Texture creation error: " << filePath << std::endl;
+	}
+
+	return tex;
+}
+
+#pragma once
+#include "Component.h"
+#include "Matrix.h"
+
+// Компонент, відповідальний за трансформацію об'єкта в просторі
+class Transform : public Component
+{
+public:
+	// Ініціалізує модельну матрицю як одиничну
+	Transform();
+	~Transform() override;
+
+	// Повертає вказівник на матрицю трансформації
+	Matrix* getMatrix();
+	// Повертає позицію об'єкта
+	Vector3 getPosition();
+	// Повертає масштаб об'єкта
+	Vector3 getScale();
+	// Повертає обертання об'єкта
+	Vector3 getRotation();
+	// Повертає напрямок "вперед" (Z) у світових координатах
+	Vector3 getForward();
+	// Повертає напрямок "вправо" (X) у світових координатах
+	Vector3 getRight();
+	// Повертає напрямок "вгору" (Y) у світових координатах
+	Vector3 getUp();
+	
+	// Встановлює матрицю трансформації, за потреби оновлює фізичне тіло
+	void setMatrix(const Matrix& matrix, bool updateRb = true);
+	// Встановлює позицію об'єкта, за потреби оновлює фізичне тіло
+	void setPosition(Vector3 position, bool updateRb = true);
+	// Встановлює масштаб об'єкта
+	void setScale(Vector3 scale);
+	// Встановлює обертання об'єкта, за потреби оновлює фізичне тіло
+	void setRotation(Vector3 rotation, bool updateRb = true);
+	// Встановлює напрямок "вперед" (Z) для об'єкта, за потреби оновлює фізичне тіло
+	void setForward(Vector3 forward, bool updateRb = true);
+
+protected:
+	// Конструктор копіювання
+	Transform* instantiate() const override
+	{
+		return new Transform(*this);
+	}
+
+private:
+	Matrix mMatrix = {};
+
+	Vector3 mPosition = {};
+	Vector3 mScale = { 1.0f, 1.0f, 1.0f };
+	Vector3 mRotation = { 0.0f, 0.0f, 0.0f };
+};
+
+
+#include "Transform.h"
+#include "RigidBody.h"
+#include "Entity.h"
+
+// Ініціалізує модельну матрицю як одиничну
+Transform::Transform()
+{
+	mMatrix.setIdentity();
+}
+
+Transform::~Transform()
+{
+}
+
+// Повертає вказівник на матрицю трансформації
+Matrix* Transform::getMatrix()
+{
+	return &mMatrix;
+}
+
+// Повертає позицію об'єкта
+Vector3 Transform::getPosition()
+{
+	return mPosition;
+}
+
+// Повертає масштаб об'єкта
+Vector3 Transform::getScale()
+{
+	return mScale;
+}
+
+// Повертає обертання об'єкта
+Vector3 Transform::getRotation()
+{
+	return mRotation;
+}
+
+// Повертає напрямок "вперед" (Z) у світових координатах
+Vector3 Transform::getForward()
+{
+	return mMatrix.getZDirection().normalized();
+}
+
+// Повертає напрямок "вправо" (X) у світових координатах
+Vector3 Transform::getRight()
+{
+	return mMatrix.getXDirection().normalized();
+}
+
+// Повертає напрямок "вгору" (Y) у світових координатах
+Vector3 Transform::getUp()
+{
+	return mMatrix.getYDirection().normalized();
+}
+
+void Transform::setMatrix(const Matrix& matrix, bool updateRb)
+{
+	mMatrix = matrix;
+	mPosition = mMatrix.getTranslation();
+	mScale = mMatrix.getScale();
+	mRotation = mMatrix.getRotation();
+
+	if (!updateRb) return;
+
+	if (RigidBody* rb = getOwner()->mRigidBody) {
+		rb->updateGlobalPose();
+	}
+}
+
+// Встановлює позицію об'єкта, за потреби оновлює фізичне тіло
+void Transform::setPosition(Vector3 position, bool updateRb)
+{
+	mMatrix.setTranslation(position);
+	mPosition = position;
+
+	if (!updateRb) return;
+
+	if (RigidBody* rb = getOwner()->mRigidBody) {
+		rb->updateGlobalPose();
+	}
+}
+
+// Встановлює масштаб об'єкта
+void Transform::setScale(Vector3 scale)
+{
+	mMatrix.setScale(scale);
+	mScale = scale;
+
+	if (RigidBody* rb = getOwner()->mRigidBody) {
+		rb->updateGlobalPose();
+	}
+}
+
+// Встановлює обертання об'єкта, за потреби оновлює фізичне тіло
+void Transform::setRotation(Vector3 rotation, bool updateRb)
+{
+	mMatrix.setRotation(rotation);
+	mRotation = rotation;
+
+	if (!updateRb) return;
+
+	if (RigidBody* rb = getOwner()->mRigidBody) {
+		rb->updateGlobalPose();
+	}
+}
+
+// Встановлює напрямок "вперед" (Z) для об'єкта, за потреби оновлює фізичне тіло
+void Transform::setForward(Vector3 forward, bool updateRb)
+{
+	mMatrix.setForward(forward);
+	mRotation = mMatrix.getRotation();
+
+	if (!updateRb) return;
+
+	if (RigidBody* rb = getOwner()->mRigidBody) {
+		rb->updateGlobalPose();
+	}
+}
+
+#pragma once
+
+class Vector2
+{
+public:
+	Vector2(): x(0), y(0)
+	{
+
+	}
+
+	Vector2(float coordX, float coordY): x(coordX), y(coordY)
+	{
+	
+	}
+
+	// Конструктор копіювання
+	Vector2(const Vector2& vector) : x(vector.x), y(vector.y)
+	{
+
+	}
+
+	// Оператор порівняння векторів
+	bool operator==(const Vector2& vector) const
+	{
+		return (x == vector.x && y == vector.y);
+	}
+
+	float x, y;
+};
+
+#pragma once
+#include "cmath"
+
+class Vector3 
+{
+public:
+	Vector3(): x(0), y(0), z(0)
+	{
+
+	}
+
+	Vector3(float coordX, float coordY, float coordZ) : x(coordX), y(coordY), z(coordZ) {
+
+	}
+
+	// Конструктор копіювання
+	Vector3(const Vector3& vector) : x(vector.x), y(vector.y), z(vector.z) {
+
+	}
+
+	// Оператор порівняння векторів
+	bool operator ==(const Vector3& vector) const {
+		return (x == vector.x && y == vector.y && z == vector.z);
+	}
+
+	// Оператор множення вектора на скаляр
+	Vector3 operator *(float num) {
+		return Vector3(x * num, y * num, z * num);
+	}
+
+	// Оператор множення з присвоєнням на скаляр
+	void operator *=(float num) {
+		x *= num;
+		y *= num;
+		z *= num;
+	}
+
+	// Оператор додавання векторів
+	Vector3 operator +(Vector3 vector) {
+		return Vector3(x + vector.x, y + vector.y, z + vector.z);
+	}
+
+	// Оператор віднімання векторів
+	Vector3 operator -(Vector3 vector) {
+		return Vector3(x - vector.x, y - vector.y, z - vector.z);
+	}
+
+	// Оператор зміни знаку вектора
+	Vector3 operator -() const {
+		return Vector3(-x, -y, -z);
+	}
+
+	// Обчислює векторний добуток з іншим вектором
+	Vector3 cross(const Vector3& vector) {
+		return Vector3(
+			y * vector.z - z * vector.y,
+			z * vector.x - x * vector.z,
+			x * vector.y - y * vector.x);
+	}
+
+	// Оператор скалярного добутку з іншим вектором
+	float operator *(const Vector3& vector) const {
+		return x * vector.x + y * vector.y + z * vector.z;
+	}
+
+	// Нормалізує вектор
+	void normalize() {
+		float length = (float)sqrt(x * x + y * y + z * z);
+		if (length != 0) {
+			x /= length;
+			y /= length;
+			z /= length;
+		}
+	}
+
+	// Повертає нормалізовану копію вектора
+	Vector3 normalized() const {
+		Vector3 res = Vector3(*this);
+		res.normalize();
+		return res;
+	}
+
+	// Повертає довжину (модуль) вектора
+	float length() const {
+		return (float)sqrt(x * x + y * y + z * z);
+	}
+
+	// Лінійна інтерполяція між двома векторами
+	static Vector3 lerp(const Vector3& startPos, const Vector3& endPos, float delta) {
+		Vector3 res;
+		res.x = startPos.x * (1.0f - delta) + endPos.x * delta;
+		res.y = startPos.y * (1.0f - delta) + endPos.y * delta;
+		res.z = startPos.z * (1.0f - delta) + endPos.z * delta;
+		return res;
+	}
+
+	// Повертає вектор, який є результатом обертання навколо вектора "вгору" на заданий кут
+	static Vector3 rotateAroundUp(const Vector3& forward, const Vector3& up, float angleRadians) {
+		Vector3 f = forward.normalized();
+		Vector3 k = up.normalized();
+		float c = cos(angleRadians);
+		float s = sin(angleRadians);
+
+		return f * c
+			+ (k.cross(f)) * s
+			+ k * ((k * f) * (1.0f - c));
+	}
+
+	~Vector3() 
+	{
+	
+	}
+
+	float x, y, z;
+};
+
+#pragma once
+
+class Vector4
+{
+public:
+	Vector4() : x(0), y(0), z(0), w(0)
+	{
+
+	}
+
+	Vector4(float coordX, float coordY, float coordZ, float coordW) : x(coordX), y(coordY), z(coordZ), w(coordW) 
+	{
+
+	}
+
+	// Конструктор копіювання
+	Vector4(const Vector4& vector) : x(vector.x), y(vector.y), z(vector.z), w(vector.w) 
+	{
+
+	}
+
+	// Обчислює векторний добуток з іншим вектором
+	void cross(Vector4& v1, Vector4& v2, Vector4& v3)
+	{
+		this->x = v1.y * (v2.z * v3.w - v3.z * v2.w) - v1.z * (v2.y * v3.w - v3.y * v2.w) + v1.w * (v2.y * v3.z - v2.z * v3.y);
+		this->y = -(v1.x * (v2.z * v3.w - v3.z * v2.w) - v1.z * (v2.x * v3.w - v3.x * v2.w) + v1.w * (v2.x * v3.z - v3.x * v2.z));
+		this->z = v1.x * (v2.y * v3.w - v3.y * v2.w) - v1.y * (v2.x * v3.w - v3.x * v2.w) + v1.w * (v2.x * v3.y - v3.x * v2.y);
+		this->w = -(v1.x * (v2.y * v3.z - v3.y * v2.z) - v1.y * (v2.x * v3.z - v3.x * v2.z) + v1.z * (v2.x * v3.y - v3.x * v2.y));
+	}
+
+	~Vector4()
+	{
+
+	}
+
+	float x, y, z, w;
+};
+
+#pragma once
+#include <d3d11.h>
+
+class DeviceContext;
+
+class VertexBuffer
+{
+public:
+	VertexBuffer();
+	// Створює та завантажує вершинний буфер і з переданими даними з лейаутом шейдера
+	bool load(void* vertList, UINT vertSize, UINT listSize, void* shaderByteCode, SIZE_T byteShaderSize);
+	// Повертає кількість вершин у буфері
+	UINT getVertexListSize();
+	// Звільняє ресурси вершинного буфера
+	bool release();
+	~VertexBuffer();
+private:
+	UINT mVertSize = 0;
+	UINT mListSize = 0;
+
+	ID3D11Buffer* mBuffer = nullptr;
+	ID3D11InputLayout* mInputLayout = nullptr;
+
+	friend class DeviceContext;
+};
+
+#include "VertexBuffer.h"
+#include "GraphicsEngine.h"
+
+VertexBuffer::VertexBuffer()
+{
+}
+
+// Створює та завантажує вершинний буфер і з переданими даними з лейаутом шейдера
+bool VertexBuffer::load(void* vertList, UINT vertSize, UINT listSize, void* shaderByteCode, SIZE_T byteShaderSize)
+{
+	if (mBuffer) mBuffer->Release();
+	if (mInputLayout) mInputLayout->Release();
+
+	D3D11_BUFFER_DESC bufferDesc = {};
+	bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	bufferDesc.ByteWidth = vertSize * listSize;
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.CPUAccessFlags = 0;
+	bufferDesc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA subresData = {};
+	subresData.pSysMem = vertList;
+
+	mVertSize = vertSize;
+	mListSize = listSize;
+
+	HRESULT hr;
+	hr = GraphicsEngine::get()->mD3dDevice->CreateBuffer(&bufferDesc, &subresData, &mBuffer);
+	if (FAILED(hr))
+		return false;
+
+	// Створення лейауту шейдера
+	D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = {
+		//SEMANTIC NAME - SEMANTIC INDEX - FORMAT - INPUT SLOT - ALIGNED BYTE OFFSET - INPUT SLOT CLASS - INSTANCE DATA STEP RATE
+		{"POSITION"	, 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"NORMAL"	, 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,  12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+		{"TEXCOORD"	, 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0}
+	};
+	UINT inputElementDescSize = ARRAYSIZE(inputElementDesc);
+
+	hr = GraphicsEngine::get()->mD3dDevice->CreateInputLayout(inputElementDesc, inputElementDescSize, shaderByteCode, byteShaderSize, &mInputLayout);
+	if (FAILED(hr))
+		return false;
+
+	return true;
+}
+
+// Повертає кількість вершин у буфері
+UINT VertexBuffer::getVertexListSize()
+{
+	return this->mListSize;
+}
+
+// Звільняє ресурси вершинного буфера
+bool VertexBuffer::release()
+{
+	mBuffer->Release();
+	mInputLayout->Release();
+	delete this;
+	return true;
+}
+
+VertexBuffer::~VertexBuffer()
+{
+}
+
+#pragma once
+#include <d3d11.h>
+
+class GraphicsEngine;
+class DeviceContext;
+
+class VertexShader
+{
+public:
+	VertexShader();
+	// Звільняє ресурси вершинного шейдера
+	bool release();
+	~VertexShader();
+private:
+	// Ініціалізує вершинний шейдер з байткоду
+	bool init(const void* shaderBytecode, SIZE_T bytecodeLength);
+
+	ID3D11VertexShader* mVertexShader = nullptr;
+
+	friend class GraphicsEngine;
+	friend class DeviceContext;
+};
+
+#include "VertexShader.h"
+#include "GraphicsEngine.h"
+
+VertexShader::VertexShader()
+{
+}
+
+// Звільняє ресурси вершинного шейдера
+bool VertexShader::release()
+{
+	mVertexShader->Release();
+
+	return true;
+}
+
+VertexShader::~VertexShader()
+{
+}
+
+// Ініціалізує вершинний шейдер з байткоду
+bool VertexShader::init(const void* shaderBytecode, SIZE_T bytecodeLength)
+{
+	if(FAILED(GraphicsEngine::get()->mD3dDevice->CreateVertexShader(shaderBytecode, bytecodeLength, NULL, &mVertexShader)))
+		return false;
+
+	return true;
+}
+
+#pragma once
+#include <Windows.h>
+
+class Window
+{
+public:
+	Window();
+	// Ініціалізує вікно
+	bool init();
+	// Основний цикл обробки повідомлень та оновлення вікна
+	bool broadcast();
+	// Звільняє ресурси вікна
+	bool release();
+	// Перевіряє, чи працює додаток (чи відкрите вікно)
+	bool isRunning();
+
+	// Повертає прямокутник клієнтської області вікна
+	RECT getClientWindowRect();
+	// Встановлює дескриптор вікна
+	void setHWND(HWND hwnd);
+
+	// Викликається при створенні вікна (абстрактний метод)
+	virtual void onCreate() = 0;
+	// Викликається при оновленні вікна (абстрактний метод)
+	virtual void onUpdate() = 0;
+	// Викликається при зміні розміру вікна (абстрактний метод)
+	virtual void onWindowResized() = 0;
+	// Викликається при прокрутці колеса миші
+	virtual void onMouseWheel(INT16 delta) = 0;
+	// Викликається при отриманні фокусу вікном
+	virtual void onFocus();
+	// Викликається при втраті фокусу вікном
+	virtual void onKillFocus();
+	// Викликається при знищенні вікна
+	virtual void onDestroy();
+
+	~Window();
+protected:
+	HWND mHwnd = NULL;
+	bool appIsRunning = false;
+};
+
+#include "Window.h"
+
+Window* window = nullptr;
+
+Window::Window()
+{
+}
+
+bool windowIsResizing = false;
+
+// Головна процедура обробки повідомлень Windows
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+	switch (msg) 
+	{
+	case WM_CREATE: 
+	{
+		// Обробка створення вікна
+		window->setHWND(hwnd);
+		window->onCreate();
+		break;
+	}
+	case WM_SETFOCUS:
+	{
+		// Обробка отримання фокусу вікном
+		window->onFocus();
+		break;
+	}
+	case WM_KILLFOCUS:
+	{
+		// Обробка втрати фокусу вікном
+		window->onKillFocus();
+		break;
+	}
+	case WM_DESTROY:
+	{
+		// Обробка знищення вікна
+		window->onDestroy();
+		::PostQuitMessage(0);
+		break;
+	}
+	case WM_SIZE:
+	{
+		// Обробка зміни розміру вікна
+		if (!windowIsResizing)
+		{
+			window->onWindowResized();
+		}
+		break;
+	}
+	case WM_ENTERSIZEMOVE:
+	{
+		// Початок зміни розміру або переміщення вікна
+		windowIsResizing = true;
+		break;
+	}
+	case WM_EXITSIZEMOVE:
+	{
+		// Кінець зміни розміру або переміщення вікна
+		windowIsResizing = false;
+		window->onWindowResized();
+		break;
+	}
+	case WM_MOUSEWHEEL:
+	{
+		short delta = GET_WHEEL_DELTA_WPARAM(wparam);
+
+		window->onMouseWheel(delta / WHEEL_DELTA);
+		break;
+	}
+	default:
+		return ::DefWindowProc(hwnd, msg, wparam, lparam);
+	}
+
+	return NULL;
+}
+
+// Ініціалізує вікно
+bool Window::init()
+{
+	WNDCLASSEX wc;
+	wc.cbClsExtra = NULL;
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.cbWndExtra = NULL;
+	wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+	wc.hInstance = NULL;
+	wc.lpszClassName = L"WindowClass";
+	wc.lpszMenuName = L"";
+	wc.style = NULL;
+	wc.lpfnWndProc = &WndProc;
+
+	if (!window)
+		window = this;
+
+	if (!::RegisterClassEx(&wc))
+		return false;
+
+	mHwnd = ::CreateWindowEx(WS_EX_OVERLAPPEDWINDOW, L"WindowClass", L"3D Engine", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1920, 1080, NULL, NULL, NULL, NULL);
+	if (!mHwnd)
+		return false;
+	::ShowWindow(mHwnd, SW_SHOW);
+	::UpdateWindow(mHwnd);
+
+	appIsRunning = true;
+
+	return true;
+}
+
+// Основний цикл обробки повідомлень та оновлення вікна
+bool Window::broadcast()
+{
+	MSG msg;
+
+	this->onUpdate();
+
+	while (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) > 0) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	Sleep(0);
+
+	return true;
+}
+
+// Звільняє ресурси вікна
+bool Window::release()
+{
+	if (!::DestroyWindow(mHwnd))
+		return false;
+
+	return true;
+}
+
+// Перевіряє, чи працює додаток (чи відкрите вікно)
+bool Window::isRunning()
+{
+	return appIsRunning;
+}
+
+// Повертає прямокутник клієнтської області вікна
+RECT Window::getClientWindowRect()
+{
+	RECT rect;
+	::GetClientRect(this->mHwnd, &rect);
+	return rect;
+}
+
+// Встановлює дескриптор вікна
+void Window::setHWND(HWND hwnd)
+{
+	this->mHwnd = hwnd;
+}
+
+// Викликається при отриманні фокусу вікном
+void Window::onFocus()
+{
+}
+
+// Викликається при втраті фокусу вікном
+void Window::onKillFocus()
+{
+}
+
+// Викликається при знищенні вікна
+void Window::onDestroy()
+{
+	appIsRunning = false;
+}
+
+Window::~Window()
+{
+}

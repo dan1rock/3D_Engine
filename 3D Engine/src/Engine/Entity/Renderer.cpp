@@ -44,6 +44,21 @@ void Renderer::render()
 	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
 }
 
+// Викликається під час проходу карти тіней: рендерить лише глибину меша
+void Renderer::renderDepth()
+{
+	if (!castShadows || mMesh == nullptr) return;
+
+	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
+	constantData->model = *mOwner->getTransform()->getMatrix();
+
+	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
+
+	GraphicsEngine::get()->getImmDeviceContext()->setVertexBuffer(mMesh->getVertexBuffer());
+	GraphicsEngine::get()->getImmDeviceContext()->setIndexBuffer(mMesh->getIndexBuffer());
+	GraphicsEngine::get()->getImmDeviceContext()->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);
+}
+
 // Встановлює матеріал для рендер-компонента
 void Renderer::setMaterial(Material* material)
 {

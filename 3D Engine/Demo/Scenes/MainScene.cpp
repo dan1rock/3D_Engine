@@ -9,6 +9,7 @@
 #include "DemoPlayer.h"
 #include "InstantiationTest.h"
 #include "Camera.h"
+#include "DirectionalLight.h"
 #include "RigidBody.h"
 #include "SceneChanger.h"
 #include "MeshCollider.h"
@@ -77,6 +78,10 @@ void MainScene::init()
 
 	Entity* skyDome = new Entity();
 	skyDome->addComponent<SkySphere>();
+
+	Entity* sun = new Entity();
+	sun->getTransform()->setForward(Vector3(-0.55f, -1.0f, -0.35f));
+	sun->addComponent<DirectionalLight>();
 
 	Mesh* mesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
 

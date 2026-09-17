@@ -24,11 +24,33 @@ void DeviceContext::clearRenderTarget(SwapChain* swapChain, float r, float g, fl
 	ImGui_ImplDX11_NewFrame();
 }
 
-// Встановлює стан семплера для піксельного та вершинного шейдерів
-void DeviceContext::setSamplerState(ID3D11SamplerState* samplerState)
+// Повертає ціль рендеру вказаного SwapChain без очищення його буферів
+void DeviceContext::setRenderTarget(SwapChain* swapChain)
 {
-	mDeviceContext->PSSetSamplers(0, 1, &samplerState);
-	mDeviceContext->VSSetSamplers(0, 1, &samplerState);
+	mDeviceContext->OMSetRenderTargets(1, &swapChain->mRenderTargetView, swapChain->mDepthStencilView);
+}
+
+// Очищає вказаний буфер глибини та встановлює його єдиною ціллю рендеру
+void DeviceContext::clearDepthTarget(ID3D11DepthStencilView* depthStencilView)
+{
+	mDeviceContext->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH, 1, 0);
+
+	ID3D11RenderTargetView* nullRenderTarget = nullptr;
+	mDeviceContext->OMSetRenderTargets(1, &nullRenderTarget, depthStencilView);
+}
+
+// Знімає всі цілі рендеру, щоб їхні буфери можна було читати в шейдерах
+void DeviceContext::unsetRenderTargets()
+{
+	ID3D11RenderTargetView* nullRenderTarget = nullptr;
+	mDeviceContext->OMSetRenderTargets(1, &nullRenderTarget, nullptr);
+}
+
+// Встановлює стан семплера для піксельного та вершинного шейдерів у вказаний слот
+void DeviceContext::setSamplerState(ID3D11SamplerState* samplerState, UINT slot)
+{
+	mDeviceContext->PSSetSamplers(slot, 1, &samplerState);
+	mDeviceContext->VSSetSamplers(slot, 1, &samplerState);
 }
 
 // Встановлює стан растеризатора
@@ -89,13 +111,13 @@ void DeviceContext::setViewportSize(UINT width, UINT height)
 // Встановлює вершинний шейдер
 void DeviceContext::setVertexShader(VertexShader* vertexShader)
 {
-	mDeviceContext->VSSetShader(vertexShader->mVertexShader, nullptr, 0);
+	mDeviceContext->VSSetShader(vertexShader ? vertexShader->mVertexShader : nullptr, nullptr, 0);
 }
 
 // Встановлює піксельний шейдер
 void DeviceContext::setPixelShader(PixelShader* pixelShader)
 {
-	mDeviceContext->PSSetShader(pixelShader->mPixelShader, nullptr, 0);
+	mDeviceContext->PSSetShader(pixelShader ? pixelShader->mPixelShader : nullptr, nullptr, 0);
 }
 
 // Встановлює текстуру для вершинного шейдера
@@ -108,6 +130,12 @@ void DeviceContext::setTexture(VertexShader* vertexShader, Texture* texture)
 void DeviceContext::setTexture(PixelShader* pixelShader, Texture* texture)
 {
 	mDeviceContext->PSSetShaderResources(0, 1, &texture->mShaderResourceView);
+}
+
+// Встановлює ресурс шейдера для піксельного шейдера у вказаний слот
+void DeviceContext::setShaderResource(ID3D11ShaderResourceView* shaderResourceView, UINT slot)
+{
+	mDeviceContext->PSSetShaderResources(slot, 1, &shaderResourceView);
 }
 
 // Встановлює константний буфер для вершинного шейдера

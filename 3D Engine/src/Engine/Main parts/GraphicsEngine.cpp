@@ -9,6 +9,7 @@
 #include "TextureManager.h"
 #include "MeshManager.h"
 #include "GlobalResources.h"
+#include "ShadowMap.h"
 #include "EntityManager.h"
 #include "Material.h"
 #include "DirectXTex.h"
@@ -71,6 +72,14 @@ bool GraphicsEngine::init()
 	// Ініціалізація менеджеру глобальних ресурсів
 	mGlobalResources->init();
 
+	// Ініціалізація карти тіней напрямленого світла
+	mShadowMap = new ShadowMap();
+	if (!mShadowMap->init(2048))
+	{
+		std::cout << "Failed to initialize shadow map" << std::endl;
+		mShadowMap->setEnabled(false);
+	}
+
 	// Ініціалізація imgui
 	ImGui_ImplDX11_Init(mD3dDevice, mImmContext);
 
@@ -80,6 +89,11 @@ bool GraphicsEngine::init()
 // Звільняє ресурси графічного рушія
 bool GraphicsEngine::release()
 {
+	if (mShadowMap) {
+		mShadowMap->release();
+		mShadowMap = nullptr;
+	}
+
 	mDxgiDevice->Release();
 	mDxgiAdapter->Release();
 	mDxgiFactory->Release();
@@ -235,6 +249,12 @@ GlobalResources* GraphicsEngine::getGlobalResources()
 	return mGlobalResources;
 }
 
+// Повертає карту тіней напрямленого світла
+ShadowMap* GraphicsEngine::getShadowMap()
+{
+	return mShadowMap;
+}
+
 // Компілює вершинний шейдер з файлу
 bool GraphicsEngine::compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength)
 {
@@ -291,6 +311,21 @@ void GraphicsEngine::setMaterial(Material* material)
 
 		mImmDeviceContext->setSamplerState(material->clampTexture ? mSamplerClamp : mSamplerWrap);
 	}
+}
+
+// Рендерить сцену в карту тіней з точки зору напрямленого світла
+void GraphicsEngine::renderShadowPass()
+{
+	if (mShadowMap == nullptr) return;
+
+	// Параметри тіней оновлюються навіть для вимкненої карти, щоб шейдери знали про це
+	mShadowMap->update();
+
+	if (!mShadowMap->isEnabled()) return;
+
+	mShadowMap->begin();
+	EntityManager::get()->renderShadowCasters();
+	mShadowMap->end();
 }
 
 void GraphicsEngine::renderUI()

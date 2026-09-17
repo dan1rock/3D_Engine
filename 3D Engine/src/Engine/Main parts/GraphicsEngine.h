@@ -17,6 +17,7 @@ class Mesh;
 class MeshManager;
 class Material;
 class GlobalResources;
+class ShadowMap;
 
 class GraphicsEngine
 {
@@ -54,6 +55,8 @@ public:
 	MeshManager* getMeshManager();
 	// Повертає менеджер глобальних ресурсів
 	GlobalResources* getGlobalResources();
+	// Повертає карту тіней напрямленого світла
+	ShadowMap* getShadowMap();
 
 	// Компілює вершинний шейдер з файлу
 	bool compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
@@ -66,6 +69,9 @@ public:
 
 	// Встановлює матеріал в шейдерах
 	void setMaterial(Material* material);
+
+	// Рендерить сцену в карту тіней з точки зору напрямленого світла
+	void renderShadowPass();
 
 	// Виконує рендеринг інтерфейсу користувача
 	void renderUI();
@@ -102,6 +108,7 @@ private:
 	TextureManager* mTextureManager = nullptr;
 	MeshManager* mMeshManager = nullptr;
 	GlobalResources* mGlobalResources = nullptr;
+	ShadowMap* mShadowMap = nullptr;
 
 	std::unordered_map<std::wstring, VertexShader*> vertexShaderMap;
 	std::unordered_map<std::wstring, PixelShader*> pixelShaderMap;
@@ -115,4 +122,5 @@ private:
 	friend class PixelShader;
 	friend class Texture;
 	friend class Mesh;
+	friend class ShadowMap;
 };

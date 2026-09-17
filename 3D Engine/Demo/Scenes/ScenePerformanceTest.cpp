@@ -6,6 +6,7 @@
 #include "Material.h"
 #include "MeshRenderer.h"
 #include "SkySphere.h"
+#include "DirectionalLight.h"
 #include "Camera.h"
 #include "RigidBody.h"
 #include "MeshCollider.h"
@@ -47,6 +48,10 @@ void ScenePerformanceTest::init()
 
 	Entity* skyDome = new Entity();
 	skyDome->addComponent<SkySphere>();
+
+	Entity* sun = new Entity();
+	sun->getTransform()->setForward(Vector3(-0.55f, -1.0f, -0.35f));
+	sun->addComponent<DirectionalLight>();
 
 	Material* testMaterial = new Material(*prototypeMaterial);
 	testMaterial->setColor(0.5f, 0.5f, 0.5f, 1.0f);

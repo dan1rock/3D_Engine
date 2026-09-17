@@ -78,6 +78,12 @@
     <ClCompile Include="src\Engine\Main parts\SwapChain.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
+    <ClCompile Include="src\Engine\Main parts\ShadowMap.cpp">
+      <Filter>Engine\Main parts</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\Entity\DirectionalLight.cpp">
+      <Filter>Engine\Component</Filter>
+    </ClCompile>
     <ClCompile Include="src\Engine\Resource managers\ResourceManager.cpp">
       <Filter>Engine\Resource managers</Filter>
     </ClCompile>
@@ -238,6 +244,9 @@
     <ClInclude Include="src\Engine\Main parts\SwapChain.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
+    <ClInclude Include="src\Engine\Main parts\ShadowMap.h">
+      <Filter>Engine\Main parts</Filter>
+    </ClInclude>
     <ClInclude Include="src\Engine\Main parts\GraphicsEngine.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
@@ -281,6 +290,9 @@
       <Filter>Engine\Resource managers</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Entity\Camera.h">
+      <Filter>Engine\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\Entity\DirectionalLight.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Main parts\EngineTime.h">
@@ -385,6 +397,9 @@
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\Shaders\PrototypePixelShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\ShadowVertexShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
   </ItemGroup>

@@ -3,6 +3,7 @@
 #include "Entity.h"
 #include "Renderer.h"
 #include "Camera.h"
+#include "DirectionalLight.h"
 #include "GraphicsEngine.h"
 #include "PhysicsEngine.h"
 #include "TextureManager.h"
@@ -59,6 +60,18 @@ void EntityManager::registerCamera(Camera* camera)
 void EntityManager::unregisterCamera(Camera* camera)
 {
 	mCameras.remove(camera);
+}
+
+// Реєструє напрямлене світло у менеджері
+void EntityManager::registerLight(DirectionalLight* light)
+{
+	mLights.push_back(light);
+}
+
+// Видаляє напрямлене світло з менеджера
+void EntityManager::unregisterLight(DirectionalLight* light)
+{
+	mLights.remove(light);
 }
 
 // Реєструє матеріал у менеджері
@@ -127,12 +140,30 @@ void EntityManager::updateRenderers()
 	}
 }
 
+// Рендерить глибину всіх рендер-компонентів, які кидають тінь
+void EntityManager::renderShadowCasters()
+{
+	for (auto* r : mRenderers) {
+		if (!r->getOwner()->isActive()) continue;
+		r->renderDepth();
+	}
+}
+
 // Оновлює всі камери
 void EntityManager::updateCameras()
 {
 	for (auto* c : mCameras) {
 		if (!c->getOwner()->isActive()) continue;
 		c->updateCamera();
+	}
+}
+
+// Оновлює всі джерела напрямленого світла
+void EntityManager::updateLights()
+{
+	for (auto* l : mLights) {
+		if (!l->getOwner()->isActive()) continue;
+		l->updateLight();
 	}
 }
 

@@ -6,6 +6,7 @@
 #include "Material.h"
 #include "MeshRenderer.h"
 #include "SkySphere.h"
+#include "DirectionalLight.h"
 #include "DemoPlayer.h"
 #include "InstantiationTest.h"
 #include "Camera.h"
@@ -43,6 +44,10 @@ void Scene1::init()
 	// Створюємо небесну сферу
 	Entity* skyDome = new Entity();
 	skyDome->addComponent<SkySphere>();
+
+	Entity* sun = new Entity();
+	sun->getTransform()->setForward(Vector3(-0.55f, -1.0f, -0.35f));
+	sun->addComponent<DirectionalLight>();
 
 	Prefab* testPrefab = new Prefab();
 	testPrefab->getTransform()->setScale(Vector3(1, 1, 1) * 0.5f);

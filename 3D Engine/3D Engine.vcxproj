@@ -160,6 +160,7 @@
     <ClCompile Include="src\Engine\Entity\Camera.cpp" />
     <ClCompile Include="src\Engine\Entity\Collider.cpp" />
     <ClCompile Include="src\Engine\Entity\Component.cpp" />
+    <ClCompile Include="src\Engine\Entity\DirectionalLight.cpp" />
     <ClCompile Include="src\Engine\Main parts\EntityManager.cpp" />
     <ClCompile Include="src\Engine\Buffer managers\ConstantBuffer.cpp" />
     <ClCompile Include="src\Engine\Resource managers\ConvexMesh.cpp" />
@@ -194,6 +195,7 @@
     <ClCompile Include="Demo\Scenes\Scene1.cpp" />
     <ClCompile Include="Demo\Components\SceneChanger.cpp" />
     <ClCompile Include="src\Engine\Scene\SceneManager.cpp" />
+    <ClCompile Include="src\Engine\Main parts\ShadowMap.cpp" />
     <ClCompile Include="src\Engine\Entity\SkySphere.cpp" />
     <ClCompile Include="src\Engine\Entity\SphereCollider.cpp" />
     <ClCompile Include="src\Engine\Main parts\SwapChain.cpp" />
@@ -222,6 +224,7 @@
     <ClInclude Include="src\Engine\Entity\Camera.h" />
     <ClInclude Include="src\Engine\Entity\Collider.h" />
     <ClInclude Include="src\Engine\Entity\Component.h" />
+    <ClInclude Include="src\Engine\Entity\DirectionalLight.h" />
     <ClInclude Include="src\Engine\Main parts\EntityManager.h" />
     <ClInclude Include="src\Engine\Buffer managers\ConstantBuffer.h" />
     <ClInclude Include="src\Engine\Resource managers\ConvexMesh.h" />
@@ -257,6 +260,7 @@
     <ClInclude Include="Demo\Scenes\Scene1.h" />
     <ClInclude Include="Demo\Components\SceneChanger.h" />
     <ClInclude Include="src\Engine\Scene\SceneManager.h" />
+    <ClInclude Include="src\Engine\Main parts\ShadowMap.h" />
     <ClInclude Include="src\Engine\Entity\SkySphere.h" />
     <ClInclude Include="src\Engine\Entity\SphereCollider.h" />
     <ClInclude Include="src\Engine\Main parts\SwapChain.h" />
@@ -273,19 +277,30 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\Shaders\PixelShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="src\Shaders\PrototypePixelShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="src\Shaders\UnlitPixelShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\ShadowVertexShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="src\Shaders\VertexLayoutShader.hlsl" />
     <FxCompile Include="src\Shaders\VertexShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
