@@ -20,14 +20,27 @@ void DeviceContext::clearRenderTarget(SwapChain* swapChain, float r, float g, fl
 	mDeviceContext->ClearRenderTargetView(swapChain->mRenderTargetView, color);
 	mDeviceContext->ClearDepthStencilView(swapChain->mDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1, 0);
 	mDeviceContext->OMSetRenderTargets(1, &swapChain->mRenderTargetView, swapChain->mDepthStencilView);
+}
 
-	ImGui_ImplDX11_NewFrame();
+// Очищає вказану ціль рендеру разом з буфером глибини SwapChain та робить їх активними
+void DeviceContext::clearRenderTarget(ID3D11RenderTargetView* renderTargetView, SwapChain* swapChain, float r, float g, float b, float a)
+{
+	FLOAT color[] = { r,g,b,a };
+	mDeviceContext->ClearRenderTargetView(renderTargetView, color);
+	mDeviceContext->ClearDepthStencilView(swapChain->mDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1, 0);
+	mDeviceContext->OMSetRenderTargets(1, &renderTargetView, swapChain->mDepthStencilView);
 }
 
 // Повертає ціль рендеру вказаного SwapChain без очищення його буферів
 void DeviceContext::setRenderTarget(SwapChain* swapChain)
 {
 	mDeviceContext->OMSetRenderTargets(1, &swapChain->mRenderTargetView, swapChain->mDepthStencilView);
+}
+
+// Встановлює вказану ціль рендеру без буфера глибини
+void DeviceContext::setRenderTarget(ID3D11RenderTargetView* renderTargetView)
+{
+	mDeviceContext->OMSetRenderTargets(1, &renderTargetView, nullptr);
 }
 
 // Очищає вказаний буфер глибини та встановлює його єдиною ціллю рендеру
@@ -73,6 +86,17 @@ void DeviceContext::setVertexBuffer(VertexBuffer* vertexBuffer)
 void DeviceContext::setIndexBuffer(IndexBuffer* indexBuffer)
 {
 	mDeviceContext->IASetIndexBuffer(indexBuffer->mBuffer, DXGI_FORMAT_R32_UINT, 0);
+}
+
+// Готує конвеєр до рендеру повноекранного трикутника, який будується без вершинного буфера
+void DeviceContext::setFullscreenTriangle()
+{
+	ID3D11Buffer* nullBuffer = nullptr;
+	UINT stride = 0;
+	UINT offset = 0;
+
+	mDeviceContext->IASetVertexBuffers(0, 1, &nullBuffer, &stride, &offset);
+	mDeviceContext->IASetInputLayout(nullptr);
 }
 
 // Рендерить трикутники без індексів, по списку вершин

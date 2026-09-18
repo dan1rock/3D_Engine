@@ -196,6 +196,7 @@
     <ClCompile Include="Demo\Components\SceneChanger.cpp" />
     <ClCompile Include="src\Engine\Scene\SceneManager.cpp" />
     <ClCompile Include="src\Engine\Main parts\ShadowMap.cpp" />
+    <ClCompile Include="src\Engine\Main parts\PostProcessing.cpp" />
     <ClCompile Include="src\Engine\Entity\SkySphere.cpp" />
     <ClCompile Include="src\Engine\Entity\SphereCollider.cpp" />
     <ClCompile Include="src\Engine\Main parts\SwapChain.cpp" />
@@ -261,6 +262,7 @@
     <ClInclude Include="Demo\Components\SceneChanger.h" />
     <ClInclude Include="src\Engine\Scene\SceneManager.h" />
     <ClInclude Include="src\Engine\Main parts\ShadowMap.h" />
+    <ClInclude Include="src\Engine\Main parts\PostProcessing.h" />
     <ClInclude Include="src\Engine\Entity\SkySphere.h" />
     <ClInclude Include="src\Engine\Entity\SphereCollider.h" />
     <ClInclude Include="src\Engine\Main parts\SwapChain.h" />
@@ -290,6 +292,34 @@
     <FxCompile Include="src\Shaders\UnlitPixelShader.hlsl">
       <ShaderModel>5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\PostProcessVertexShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\BloomExtractPixelShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\BloomBlurPixelShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\PostProcessPixelShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="src\Shaders\ShadowVertexShader.hlsl">
       <ShaderModel>5.0</ShaderModel>

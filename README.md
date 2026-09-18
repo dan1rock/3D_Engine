@@ -13,8 +13,9 @@ A custom **3D game engine prototype** written in **C++** with **DirectX** and **
 - Camera system (FPS + orbital) with smooth input.
 - Material system (albedo/normal/roughness/metalness).
 - Mipmapped textures with configurable anisotropic filtering (up to 16x).
+- Post-processing pipeline (HDR offscreen target) with Bloom and Vignette.
 - Input handling (keyboard & mouse).
-> *Planned:* Visual scene editor and Object manager, Cascaded shadow maps, Post-processing.
+> *Planned:* Visual scene editor and Object manager, Cascaded shadow maps, more post-processing effects.
 ---
 
 ## 📂 Project Structure

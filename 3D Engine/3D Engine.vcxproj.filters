@@ -81,6 +81,9 @@
     <ClCompile Include="src\Engine\Main parts\ShadowMap.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
+    <ClCompile Include="src\Engine\Main parts\PostProcessing.cpp">
+      <Filter>Engine\Main parts</Filter>
+    </ClCompile>
     <ClCompile Include="src\Engine\Entity\DirectionalLight.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
@@ -247,6 +250,9 @@
     <ClInclude Include="src\Engine\Main parts\ShadowMap.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
+    <ClInclude Include="src\Engine\Main parts\PostProcessing.h">
+      <Filter>Engine\Main parts</Filter>
+    </ClInclude>
     <ClInclude Include="src\Engine\Main parts\GraphicsEngine.h">
       <Filter>Engine\Main parts</Filter>
     </ClInclude>
@@ -397,6 +403,18 @@
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\Shaders\PrototypePixelShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\PostProcessVertexShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\BloomExtractPixelShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\BloomBlurPixelShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\PostProcessPixelShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="src\Shaders\ShadowVertexShader.hlsl">

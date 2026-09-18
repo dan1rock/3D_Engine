@@ -2,11 +2,13 @@
 #include <Windows.h>
 #include "imgui.h"
 #include "imgui_impl_win32.h"
+#include "imgui_impl_dx11.h"
 #include "GlobalResources.h"
 #include "EntityManager.h"
 #include "EngineTime.h"
 #include "SceneManager.h"
 #include "MainScene.h"
+#include "PostProcessing.h"
 
 #include <iostream>
 
@@ -69,11 +71,9 @@ void AppWindow::onUpdate()
 		return;
 	}
 
-	// Очищає буфер кадру та встановлює розмір вьюпорту
-	GraphicsEngine::get()->getImmDeviceContext()->clearRenderTarget(mSwapChain, 0.1f, 0.1f, 0.1f, 1);
 	RECT windowSize = this->getClientWindowRect();
-	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
 
+	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
@@ -106,14 +106,17 @@ void AppWindow::onUpdate()
 	// Рендерить сцену в карту тіней з точки зору світла
 	GraphicsEngine::get()->renderShadowPass();
 
-	// Повертає ціль рендеру та вьюпорт вікна після проходу карти тіней
-	GraphicsEngine::get()->getImmDeviceContext()->setRenderTarget(mSwapChain);
+	// Очищає буфер кадру та встановлює розмір вьюпорту
+	GraphicsEngine::get()->getPostProcessing()->begin(mSwapChain);
 	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
 
 	// Оновлює рендер-компоненти
 	EntityManager::get()->updateRenderers();
 
-	// Виконує рендеринг інтерфейсу користувача
+	// Застосовує ефекти постобробки та виводить результат у вікно
+	GraphicsEngine::get()->getPostProcessing()->apply(mSwapChain);
+
+	// Інтерфейс користувача малюється поверх ефектів, тому не потрапляє під них
 	GraphicsEngine::get()->renderUI();
 
 	// Оновлює стан менеджера сцен
@@ -135,6 +138,11 @@ void AppWindow::onWindowResized()
 	RECT rc = this->getClientWindowRect();
 
 	mSwapChain->resize(rc.right - rc.left, rc.bottom - rc.top);
+
+	if (PostProcessing* postProcessing = GraphicsEngine::get()->getPostProcessing())
+	{
+		postProcessing->resize(rc.right - rc.left, rc.bottom - rc.top);
+	}
 
 	float aspectRatio = (float)(rc.right - rc.left) / (float)(rc.bottom - rc.top);
 	constantData->projection.setPerspectivePM(

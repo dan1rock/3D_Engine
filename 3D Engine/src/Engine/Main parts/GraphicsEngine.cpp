@@ -10,6 +10,7 @@
 #include "MeshManager.h"
 #include "GlobalResources.h"
 #include "ShadowMap.h"
+#include "PostProcessing.h"
 #include "EntityManager.h"
 #include "Material.h"
 #include "DirectXTex.h"
@@ -80,6 +81,14 @@ bool GraphicsEngine::init()
 		mShadowMap->setEnabled(false);
 	}
 
+	// Ініціалізація постобробки кадру
+	mPostProcessing = new PostProcessing();
+	if (!mPostProcessing->init())
+	{
+		std::cout << "Failed to initialize post processing" << std::endl;
+		mPostProcessing->setEnabled(false);
+	}
+
 	// Ініціалізація imgui
 	ImGui_ImplDX11_Init(mD3dDevice, mImmContext);
 
@@ -92,6 +101,11 @@ bool GraphicsEngine::release()
 	if (mShadowMap) {
 		mShadowMap->release();
 		mShadowMap = nullptr;
+	}
+
+	if (mPostProcessing) {
+		mPostProcessing->release();
+		mPostProcessing = nullptr;
 	}
 
 	mDxgiDevice->Release();
@@ -253,6 +267,12 @@ GlobalResources* GraphicsEngine::getGlobalResources()
 ShadowMap* GraphicsEngine::getShadowMap()
 {
 	return mShadowMap;
+}
+
+// Повертає менеджер постобробки кадру
+PostProcessing* GraphicsEngine::getPostProcessing()
+{
+	return mPostProcessing;
 }
 
 // Компілює вершинний шейдер з файлу

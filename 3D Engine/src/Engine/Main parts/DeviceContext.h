@@ -17,8 +17,12 @@ public:
 
 	// Очищає ціль рендеру та буфер глибини для вказаного SwapChain
 	void clearRenderTarget(SwapChain* swapChain, float r, float g, float b, float a);
+	// Очищає вказану ціль рендеру разом з буфером глибини SwapChain та робить їх активними
+	void clearRenderTarget(ID3D11RenderTargetView* renderTargetView, SwapChain* swapChain, float r, float g, float b, float a);
 	// Повертає ціль рендеру вказаного SwapChain без очищення його буферів
 	void setRenderTarget(SwapChain* swapChain);
+	// Встановлює вказану ціль рендеру без буфера глибини
+	void setRenderTarget(ID3D11RenderTargetView* renderTargetView);
 	// Очищає вказаний буфер глибини та встановлює його єдиною ціллю рендеру
 	void clearDepthTarget(ID3D11DepthStencilView* depthStencilView);
 	// Знімає всі цілі рендеру, щоб їхні буфери можна було читати в шейдерах
@@ -32,6 +36,9 @@ public:
 	void setVertexBuffer(VertexBuffer* vertexBuffer);
 	// Встановлює індексний буфер
 	void setIndexBuffer(IndexBuffer* indexBuffer);
+
+	// Готує конвеєр до рендеру повноекранного трикутника, який будується без вершинного буфера
+	void setFullscreenTriangle();
 
 	// Рендерить трикутники без індексів, по списку вершин
 	void drawTriangleList(UINT vertexCount, UINT startIndex);

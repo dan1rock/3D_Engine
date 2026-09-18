@@ -18,6 +18,7 @@ class MeshManager;
 class Material;
 class GlobalResources;
 class ShadowMap;
+class PostProcessing;
 
 class GraphicsEngine
 {
@@ -57,6 +58,8 @@ public:
 	GlobalResources* getGlobalResources();
 	// Повертає карту тіней напрямленого світла
 	ShadowMap* getShadowMap();
+	// Повертає менеджер постобробки кадру
+	PostProcessing* getPostProcessing();
 
 	// Компілює вершинний шейдер з файлу
 	bool compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength);
@@ -116,6 +119,7 @@ private:
 	MeshManager* mMeshManager = nullptr;
 	GlobalResources* mGlobalResources = nullptr;
 	ShadowMap* mShadowMap = nullptr;
+	PostProcessing* mPostProcessing = nullptr;
 
 	std::unordered_map<std::wstring, VertexShader*> vertexShaderMap;
 	std::unordered_map<std::wstring, PixelShader*> pixelShaderMap;
@@ -130,4 +134,5 @@ private:
 	friend class Texture;
 	friend class Mesh;
 	friend class ShadowMap;
+	friend class PostProcessing;
 };
