@@ -70,6 +70,11 @@ public:
 	// Встановлює матеріал в шейдерах
 	void setMaterial(Material* material);
 
+	// Встановлює рівень анізотропної фільтрації текстур (1 - фільтрація вимкнена)
+	void setAnisotropy(UINT level);
+	// Повертає поточний рівень анізотропної фільтрації текстур
+	UINT getAnisotropy();
+
 	// Рендерить сцену в карту тіней з точки зору напрямленого світла
 	void renderShadowPass();
 
@@ -94,6 +99,8 @@ private:
 
 	ID3D11SamplerState* mSamplerWrap = nullptr;
 	ID3D11SamplerState* mSamplerClamp = nullptr;
+
+	UINT mAnisotropy = D3D11_REQ_MAXANISOTROPY;
 
 	IDXGIDevice* mDxgiDevice = nullptr;
 	IDXGIAdapter* mDxgiAdapter = nullptr;

@@ -313,6 +313,26 @@ void GraphicsEngine::setMaterial(Material* material)
 	}
 }
 
+// Встановлює рівень анізотропної фільтрації текстур (1 - фільтрація вимкнена)
+void GraphicsEngine::setAnisotropy(UINT level)
+{
+	// Direct3D 11 підтримує щонайбільше шістнадцятикратну анізотропію
+	if (level < 1) level = 1;
+	if (level > D3D11_REQ_MAXANISOTROPY) level = D3D11_REQ_MAXANISOTROPY;
+
+	if (level == mAnisotropy) return;
+
+	mAnisotropy = level;
+
+	createSamplerStates();
+}
+
+// Повертає поточний рівень анізотропної фільтрації текстур
+UINT GraphicsEngine::getAnisotropy()
+{
+	return mAnisotropy;
+}
+
 // Рендерить сцену в карту тіней з точки зору напрямленого світла
 void GraphicsEngine::renderShadowPass()
 {
@@ -356,9 +376,23 @@ bool GraphicsEngine::createRasterizerStates()
 // Створює стани семплера
 bool GraphicsEngine::createSamplerStates()
 {
+	// Стани перестворюються при зміні рівня фільтрації, тому спершу звільняємо попередні
+	if (mSamplerWrap)
+	{
+		mSamplerWrap->Release();
+		mSamplerWrap = nullptr;
+	}
+	if (mSamplerClamp)
+	{
+		mSamplerClamp->Release();
+		mSamplerClamp = nullptr;
+	}
+
 	D3D11_SAMPLER_DESC sampDesc = {};
-	sampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	sampDesc.MaxAnisotropy = 16;
+
+	// Без анізотропії залишається звичайна трилінійна фільтрація
+	sampDesc.Filter = mAnisotropy > 1 ? D3D11_FILTER_ANISOTROPIC : D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampDesc.MaxAnisotropy = mAnisotropy;
 	sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;

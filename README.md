@@ -12,6 +12,7 @@ A custom **3D game engine prototype** written in **C++** with **DirectX** and **
 - Real-time shadows (directional shadow map, camera-following, PCF filtered).
 - Camera system (FPS + orbital) with smooth input.
 - Material system (albedo/normal/roughness/metalness).
+- Mipmapped textures with configurable anisotropic filtering (up to 16x).
 - Input handling (keyboard & mouse).
 > *Planned:* Visual scene editor and Object manager, Cascaded shadow maps, Post-processing.
 ---

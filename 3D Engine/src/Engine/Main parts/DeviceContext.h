@@ -55,6 +55,11 @@ public:
 	// Встановлює ресурс шейдера для піксельного шейдера у вказаний слот
 	void setShaderResource(ID3D11ShaderResourceView* shaderResourceView, UINT slot);
 
+	// Завантажує зображення в найдетальніший рівень текстури
+	void updateTexture(ID3D11Resource* texture, const void* data, UINT rowPitch);
+	// Будує ланцюжок mip-рівнів текстури засобами відеокарти
+	void generateMips(ID3D11ShaderResourceView* shaderResourceView);
+
 	// Встановлює константний буфер для вершинного шейдера
 	void setConstantBuffer(VertexShader* vertexShader, ConstantBuffer* buffer, UINT slot = 0);
 	// Встановлює константний буфер для піксельного шейдера

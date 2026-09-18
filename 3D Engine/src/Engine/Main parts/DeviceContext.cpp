@@ -138,6 +138,18 @@ void DeviceContext::setShaderResource(ID3D11ShaderResourceView* shaderResourceVi
 	mDeviceContext->PSSetShaderResources(slot, 1, &shaderResourceView);
 }
 
+// Завантажує зображення в найдетальніший рівень текстури
+void DeviceContext::updateTexture(ID3D11Resource* texture, const void* data, UINT rowPitch)
+{
+	mDeviceContext->UpdateSubresource(texture, 0, nullptr, data, rowPitch, 0);
+}
+
+// Будує ланцюжок mip-рівнів текстури засобами відеокарти
+void DeviceContext::generateMips(ID3D11ShaderResourceView* shaderResourceView)
+{
+	mDeviceContext->GenerateMips(shaderResourceView);
+}
+
 // Встановлює константний буфер для вершинного шейдера
 void DeviceContext::setConstantBuffer(VertexShader* vertexShader, ConstantBuffer* buffer, UINT slot)
 {
