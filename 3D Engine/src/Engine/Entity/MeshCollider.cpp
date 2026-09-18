@@ -3,6 +3,7 @@
 #include "ConvexMeshManager.h"
 #include "Entity.h"
 #include "MeshRenderer.h"
+#include "Mesh.h"
 #include <string>
 
 MeshCollider::MeshCollider()
@@ -28,11 +29,19 @@ void* MeshCollider::getGeometry(Vector3& scale, bool convex)
 
 	mScale = scale;
 
+	// Меш рендерера віддає свою геометрію фізиці, щоб не читати той самий файл вдруге
+	Mesh* sourceMesh = nullptr;
+
 	// Якщо меш не завантажено, намагаємося його взяти з MeshRenderer
+	MeshRenderer* meshRenderer = mOwner->getComponent<MeshRenderer>();
+
+	if (meshRenderer) {
+		sourceMesh = meshRenderer->getMesh();
+	}
+
 	if (!mConvexMesh) {
-		MeshRenderer* meshRenderer = mOwner->getComponent<MeshRenderer>();
-		if (meshRenderer) {
-			mConvexMesh = PhysicsEngine::get()->getConvexMeshManager()->createConvexMeshFromFile(meshRenderer->getMesh()->getFullPath().c_str());
+		if (sourceMesh) {
+			mConvexMesh = PhysicsEngine::get()->getConvexMeshManager()->createConvexMeshFromFile(sourceMesh->getFullPath().c_str());
 		}
 		else {
 			return nullptr;
@@ -44,11 +53,11 @@ void* MeshCollider::getGeometry(Vector3& scale, bool convex)
 	// Створюємо геометрію в залежності від типу меша
 	if (!convex)
 	{
-		mGeometry = new PxTriangleMeshGeometry(static_cast<PxTriangleMesh*>(mConvexMesh->getTriangleMesh()), meshScale);
+		mGeometry = new PxTriangleMeshGeometry(static_cast<PxTriangleMesh*>(mConvexMesh->getTriangleMesh(sourceMesh)), meshScale);
 	}
 	else
 	{
-		mGeometry = new PxConvexMeshGeometry(static_cast<PxConvexMesh*>(mConvexMesh->getConvexMesh()), meshScale);
+		mGeometry = new PxConvexMeshGeometry(static_cast<PxConvexMesh*>(mConvexMesh->getConvexMesh(sourceMesh)), meshScale);
 	}
 
 	return mGeometry;

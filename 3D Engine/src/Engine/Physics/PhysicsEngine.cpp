@@ -72,6 +72,13 @@ void PhysicsEngine::init()
 
 	// Створення інтерфейсу для роботи з мешами
     PxCookingParams params(gPhysics->getTolerancesScale());
+
+	// BVH34 будується на порядок швидше за типовий BVH33 і не поступається йому у швидкості запитів
+    params.midphaseDesc.setToDefault(PxMeshMidPhase::eBVH34);
+
+	// Таблиця відповідності трикутників потрібна лише для матеріалів на кожен трикутник, які рушій не використовує
+    params.suppressTriangleMeshRemapTable = true;
+
     gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, params);
 }
 

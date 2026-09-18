@@ -40,6 +40,20 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
     std::vector<vertex> outVertices;
     std::vector<uint32_t> outIndices;
 
+	// Рахуємо підсумковий розмір заздалегідь, щоб уникнути перевиділень пам'яті на великих моделях
+    size_t totalVertices = 0;
+    size_t totalIndices = 0;
+
+    for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
+        totalVertices += scene->mMeshes[m]->mNumVertices;
+        totalIndices += scene->mMeshes[m]->mNumFaces * 3;
+    }
+
+    outVertices.reserve(totalVertices);
+    outIndices.reserve(totalIndices);
+    mPositions.reserve(totalVertices);
+    mIndices.reserve(totalIndices);
+
 	// Проходимо по всіх сітках сцени та збираємо вершини та індекси
     for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
         aiMesh* mesh = scene->mMeshes[m];
@@ -66,12 +80,14 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
             }
 
             outVertices.push_back(v);
+            mPositions.push_back(v.pos);
         }
 
         for (unsigned f = 0; f < mesh->mNumFaces; ++f) {
             const aiFace& face = mesh->mFaces[f];
             for (unsigned j = 0; j < face.mNumIndices; ++j) {
                 outIndices.push_back(baseVertex + face.mIndices[j]);
+                mIndices.push_back(baseVertex + face.mIndices[j]);
             }
         }
     }
@@ -119,4 +135,16 @@ VertexBuffer* Mesh::getVertexBuffer()
 IndexBuffer* Mesh::getIndexBuffer()
 {
     return mIndexBuffer;
+}
+
+// Повертає позиції вершин, збережені для побудови фізичних мешів
+const std::vector<Vector3>& Mesh::getPositions() const
+{
+    return mPositions;
+}
+
+// Повертає індекси вершин, збережені для побудови фізичних мешів
+const std::vector<unsigned int>& Mesh::getIndices() const
+{
+    return mIndices;
 }
