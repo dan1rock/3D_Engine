@@ -4,6 +4,16 @@
 #include "IndexBuffer.h"
 #include "Vector3.h"
 #include <vector>
+#include <string>
+
+// Частина меша з власним матеріалом: неперервний діапазон індексів у спільному буфері
+struct SubMesh
+{
+	unsigned int indexStart = 0;
+	unsigned int indexCount = 0;
+	// Номер слота матеріалу, який належить цій частині
+	unsigned int materialSlot = 0;
+};
 
 class Mesh : public Resource
 {
@@ -22,6 +32,15 @@ public:
 	// Повертає індекси вершин, збережені для побудови фізичних мешів
 	const std::vector<unsigned int>& getIndices() const;
 
+	// Повертає частини меша, кожна з яких малюється своїм матеріалом
+	const std::vector<SubMesh>& getSubMeshes() const;
+	// Повертає кількість слотів матеріалів, які використовує меш
+	unsigned int getMaterialCount() const;
+	// Повертає ім'я матеріалу з файлу моделі, щоб слот можна було знайти не за номером
+	const std::string& getMaterialName(unsigned int slot) const;
+	// Повертає номер слота за іменем матеріалу з файлу моделі
+	unsigned int getMaterialSlot(const std::string& name) const;
+
 	// Повертає центр сфери, що охоплює меш, у локальних координатах
 	const Vector3& getBoundsCenter() const;
 	// Повертає радіус сфери, що охоплює меш, у локальних координатах
@@ -30,6 +49,12 @@ public:
 private:
 	VertexBuffer* mVertexBuffer = nullptr;
 	IndexBuffer* mIndexBuffer = nullptr;
+
+	// Частини меша та кількість слотів матеріалів, знайдених у файлі
+	std::vector<SubMesh> mSubMeshes;
+	unsigned int mMaterialCount = 1;
+	// Імена матеріалів у тому ж порядку, що й слоти
+	std::vector<std::string> mMaterialNames;
 
 	// Сфера, що охоплює меш; за нею виконується відсікання за пірамідою видимості
 	Vector3 mBoundsCenter = {};

@@ -60,10 +60,30 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
     Vector3 maxPoint(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
 	// Проходимо по всіх сітках сцени та збираємо вершини та індекси
+	// Імена матеріалів з файлу дозволяють звертатися до слотів за назвою, а не за номером
+    mMaterialNames.resize(scene->mNumMaterials);
+
+    for (unsigned i = 0; i < scene->mNumMaterials; ++i)
+    {
+        aiString materialName;
+
+        if (scene->mMaterials[i]->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS)
+        {
+            mMaterialNames[i] = materialName.C_Str();
+        }
+    }
+
+    mSubMeshes.reserve(scene->mNumMeshes);
+
     for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
         aiMesh* mesh = scene->mMeshes[m];
 
         uint32_t baseVertex = static_cast<uint32_t>(outVertices.size());
+
+		// Assimp розбиває модель на окремі сітки за матеріалами, тому кожна стає частиною меша
+        SubMesh subMesh;
+        subMesh.indexStart = static_cast<unsigned int>(outIndices.size());
+        subMesh.materialSlot = mesh->mMaterialIndex;
 
         for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
             vertex v;
@@ -102,6 +122,16 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
                 mIndices.push_back(baseVertex + face.mIndices[j]);
             }
         }
+
+        subMesh.indexCount = static_cast<unsigned int>(outIndices.size()) - subMesh.indexStart;
+
+		// Порожні частини не створюють викликів малювання
+        if (subMesh.indexCount > 0)
+        {
+            mSubMeshes.push_back(subMesh);
+
+            if (subMesh.materialSlot + 1 > mMaterialCount) mMaterialCount = subMesh.materialSlot + 1;
+        }
     }
 
 	// Сфера навколо прямокутника меж гарантовано охоплює меш, тому відсікання нічого не втрачає
@@ -110,6 +140,31 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
         mBoundsCenter = (minPoint + maxPoint) * 0.5f;
         mBoundsRadius = (maxPoint - minPoint).length() * 0.5f;
     }
+
+	// Якщо бібліотеки матеріалів немає поруч з моделлю, Assimp зводить усі частини до одного
+	// матеріалу. Тоді роздаємо кожній частині власний слот, щоб їх можна було задавати окремо
+    bool hasDistinctSlots = false;
+
+    for (const SubMesh& subMesh : mSubMeshes)
+    {
+        if (subMesh.materialSlot != mSubMeshes[0].materialSlot)
+        {
+            hasDistinctSlots = true;
+            break;
+        }
+    }
+
+    if (!hasDistinctSlots && mSubMeshes.size() > 1)
+    {
+        for (unsigned int i = 0; i < (unsigned int)mSubMeshes.size(); ++i)
+        {
+            mSubMeshes[i].materialSlot = i;
+        }
+
+        mMaterialCount = (unsigned int)mSubMeshes.size();
+        mMaterialNames.assign(mMaterialCount, std::string());
+    }
+
 
 	// Створюємо вершинний та індексний буфери в графічному рушії
     mVertexBuffer = GraphicsEngine::get()->createVertexBuffer();
@@ -166,6 +221,39 @@ const std::vector<Vector3>& Mesh::getPositions() const
 const std::vector<unsigned int>& Mesh::getIndices() const
 {
     return mIndices;
+}
+
+// Повертає частини меша, кожна з яких малюється своїм матеріалом
+const std::vector<SubMesh>& Mesh::getSubMeshes() const
+{
+    return mSubMeshes;
+}
+
+// Повертає кількість слотів матеріалів, які використовує меш
+unsigned int Mesh::getMaterialCount() const
+{
+    return mMaterialCount;
+}
+
+// Повертає ім'я матеріалу з файлу моделі, щоб слот можна було знайти не за номером
+const std::string& Mesh::getMaterialName(unsigned int slot) const
+{
+    static const std::string empty;
+
+    if (slot >= mMaterialNames.size()) return empty;
+
+    return mMaterialNames[slot];
+}
+
+// Повертає номер слота за іменем матеріалу з файлу моделі
+unsigned int Mesh::getMaterialSlot(const std::string& name) const
+{
+    for (unsigned int i = 0; i < (unsigned int)mMaterialNames.size(); ++i)
+    {
+        if (mMaterialNames[i] == name) return i;
+    }
+
+    return 0;
 }
 
 // Повертає центр сфери, що охоплює меш, у локальних координатах

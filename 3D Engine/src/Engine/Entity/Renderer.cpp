@@ -26,14 +26,12 @@ void Renderer::registerComponent()
 // Викликається при активації компонента, встановлює матеріал за замовчуванням, якщо він не заданий
 void Renderer::awake()
 {
-	if (mMaterial == nullptr) mMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+	if (mSharedMaterial == nullptr) mSharedMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
 }
 
-// Викликається для рендеру об'єкта: встановлює матеріал, оновлює матриці та константний буфер
+// Викликається для рендеру об'єкта: оновлює матриці та константний буфер
 void Renderer::render()
 {
-	GraphicsEngine::get()->setMaterial(mMaterial);
-	
 	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
 	constantData->model = *mOwner->getTransform()->getMatrix();
 
@@ -86,10 +84,35 @@ void Renderer::renderDepth()
 	GraphicsEngine::get()->getImmDeviceContext()->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);
 }
 
-// Встановлює матеріал для рендер-компонента
+// Встановлює матеріал одразу для всіх частин меша
 void Renderer::setMaterial(Material* material)
 {
-	this->mMaterial = material;
+	mSharedMaterial = material;
+}
+
+// Встановлює матеріал для вказаного слота, тобто для частин меша з цим номером матеріалу
+void Renderer::setMaterial(unsigned int slot, Material* material)
+{
+	if (mMaterials.size() <= slot) mMaterials.resize(slot + 1, nullptr);
+
+	mMaterials[slot] = material;
+}
+
+// Повертає матеріал, яким слід малювати вказаний слот, з підстановкою запасних варіантів
+Material* Renderer::resolveMaterial(unsigned int slot)
+{
+	if (slot < mMaterials.size() && mMaterials[slot]) return mMaterials[slot];
+
+	// Частини без власного матеріалу малюються спільним матеріалом
+	if (mSharedMaterial) return mSharedMaterial;
+
+	return GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+}
+
+// Встановлює у конвеєр матеріал вказаного слота
+void Renderer::applyMaterial(unsigned int slot)
+{
+	GraphicsEngine::get()->setMaterial(resolveMaterial(slot));
 }
 
 // Встановлює меш для рендер-компонента
@@ -104,7 +127,14 @@ Mesh* Renderer::getMesh()
 	return mMesh;
 }
 
-Material* Renderer::getMaterial()
+// Повертає вказівник на матеріал вказаного слота
+Material* Renderer::getMaterial(unsigned int slot)
 {
-	return mMaterial;
+	return resolveMaterial(slot);
+}
+
+// Повертає кількість слотів матеріалів, які має меш рендер-компонента
+unsigned int Renderer::getMaterialCount()
+{
+	return mMesh ? mMesh->getMaterialCount() : 1;
 }

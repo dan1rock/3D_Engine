@@ -17,10 +17,12 @@ SkySphere::~SkySphere()
 // Викликається при активації компонента: створює матеріал, завантажує текстуру та меш, масштабує об'єкт
 void SkySphere::awake()
 {
-	mMaterial = new Material();
-	mMaterial->setPixelShader(GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\UnlitPixelShader.hlsl", "main"));
-	mMaterial->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\HDR_029_Sky_Cloudy_Bg.jpg"));
-	mMaterial->cullBack = false;
+	Material* material = new Material();
+	material->setPixelShader(GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\UnlitPixelShader.hlsl", "main"));
+	material->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\HDR_029_Sky_Cloudy_Bg.jpg"));
+	material->cullBack = false;
+
+	setMaterial(material);
 
 	mMesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(L"Assets\\Meshes\\sphere.obj");
 
@@ -42,6 +44,8 @@ void SkySphere::render()
 	GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.setTranslation(Vector3());
 
 	Renderer::render();
+
+	applyMaterial(0);
 
 	GraphicsEngine::get()->getImmDeviceContext()->setVertexBuffer(mMesh->getVertexBuffer());
 	GraphicsEngine::get()->getImmDeviceContext()->setIndexBuffer(mMesh->getIndexBuffer());

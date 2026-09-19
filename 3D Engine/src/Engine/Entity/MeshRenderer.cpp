@@ -14,7 +14,7 @@ MeshRenderer::MeshRenderer(Mesh* mesh)
 MeshRenderer::MeshRenderer(Mesh* mesh, Material* material)
 {
 	this->mMesh = mesh;
-	this->mMaterial = material;
+	setMaterial(material);
 }
 
 MeshRenderer::~MeshRenderer()
@@ -27,14 +27,41 @@ void MeshRenderer::awake()
 	Renderer::awake();
 }
 
-// Викликається для рендеру об'єкта: встановлює буфери та викликає рендеринг
+// Викликається для рендеру об'єкта: встановлює буфери та малює кожну частину меша її матеріалом
 void MeshRenderer::render()
 {
 	Renderer::render();
 
 	if (mMesh == nullptr) return;
 
-	GraphicsEngine::get()->getImmDeviceContext()->setVertexBuffer(mMesh->getVertexBuffer());
-	GraphicsEngine::get()->getImmDeviceContext()->setIndexBuffer(mMesh->getIndexBuffer());
-	GraphicsEngine::get()->getImmDeviceContext()->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);
+	DeviceContext* deviceContext = GraphicsEngine::get()->getImmDeviceContext();
+
+	deviceContext->setVertexBuffer(mMesh->getVertexBuffer());
+	deviceContext->setIndexBuffer(mMesh->getIndexBuffer());
+
+	const std::vector<SubMesh>& subMeshes = mMesh->getSubMeshes();
+
+	// Меш без явного поділу малюється одним викликом, як і раніше
+	if (subMeshes.empty())
+	{
+		applyMaterial(0);
+		deviceContext->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);
+		return;
+	}
+
+	Material* lastMaterial = nullptr;
+
+	for (const SubMesh& subMesh : subMeshes)
+	{
+		Material* material = resolveMaterial(subMesh.materialSlot);
+
+		// Сусідні частини часто мають спільний матеріал, тому не перевстановлюємо його марно
+		if (material != lastMaterial)
+		{
+			GraphicsEngine::get()->setMaterial(material);
+			lastMaterial = material;
+		}
+
+		deviceContext->drawIndexedTriangleList(subMesh.indexCount, subMesh.indexStart, 0);
+	}
 }
