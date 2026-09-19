@@ -220,6 +220,9 @@
     <ClInclude Include="src\Math\Matrix.h">
       <Filter>Math</Filter>
     </ClInclude>
+    <ClInclude Include="src\Math\Frustum.h">
+      <Filter>Math</Filter>
+    </ClInclude>
     <ClInclude Include="src\Math\Vector2.h">
       <Filter>Math</Filter>
     </ClInclude>

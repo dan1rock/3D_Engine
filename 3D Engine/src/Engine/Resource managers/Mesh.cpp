@@ -7,6 +7,7 @@
 #include "Vector2.h"
 #include <vector>
 #include <iostream>
+#include <cfloat>
 
 // Структура для зберігання вершинних даних
 struct vertex {
@@ -54,6 +55,10 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
     mPositions.reserve(totalVertices);
     mIndices.reserve(totalIndices);
 
+	// Межі меша рахуємо тут же, щоб не проходити по вершинах удруге
+    Vector3 minPoint(FLT_MAX, FLT_MAX, FLT_MAX);
+    Vector3 maxPoint(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
 	// Проходимо по всіх сітках сцени та збираємо вершини та індекси
     for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
         aiMesh* mesh = scene->mMeshes[m];
@@ -79,6 +84,13 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
                 v.texCoord = Vector2(0, 0);
             }
 
+            if (v.pos.x < minPoint.x) minPoint.x = v.pos.x;
+            if (v.pos.y < minPoint.y) minPoint.y = v.pos.y;
+            if (v.pos.z < minPoint.z) minPoint.z = v.pos.z;
+            if (v.pos.x > maxPoint.x) maxPoint.x = v.pos.x;
+            if (v.pos.y > maxPoint.y) maxPoint.y = v.pos.y;
+            if (v.pos.z > maxPoint.z) maxPoint.z = v.pos.z;
+
             outVertices.push_back(v);
             mPositions.push_back(v.pos);
         }
@@ -90,6 +102,13 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
                 mIndices.push_back(baseVertex + face.mIndices[j]);
             }
         }
+    }
+
+	// Сфера навколо прямокутника меж гарантовано охоплює меш, тому відсікання нічого не втрачає
+    if (!mPositions.empty())
+    {
+        mBoundsCenter = (minPoint + maxPoint) * 0.5f;
+        mBoundsRadius = (maxPoint - minPoint).length() * 0.5f;
     }
 
 	// Створюємо вершинний та індексний буфери в графічному рушії
@@ -147,4 +166,16 @@ const std::vector<Vector3>& Mesh::getPositions() const
 const std::vector<unsigned int>& Mesh::getIndices() const
 {
     return mIndices;
+}
+
+// Повертає центр сфери, що охоплює меш, у локальних координатах
+const Vector3& Mesh::getBoundsCenter() const
+{
+    return mBoundsCenter;
+}
+
+// Повертає радіус сфери, що охоплює меш, у локальних координатах
+float Mesh::getBoundsRadius() const
+{
+    return mBoundsRadius;
 }

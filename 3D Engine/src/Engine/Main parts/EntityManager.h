@@ -9,6 +9,7 @@ class DirectionalLight;
 class Entity;
 class Material;
 class RigidBody;
+class Frustum;
 
 class EntityManager
 {
@@ -51,12 +52,22 @@ public:
 	void fixedUpdateComponents();
 	// Оновлює всі рендер-компоненти
 	void updateRenderers();
-	// Рендерить глибину всіх рендер-компонентів, які кидають тінь
-	void renderShadowCasters();
+	// Рендерить глибину рендер-компонентів, які кидають тінь у вказану піраміду видимості
+	void renderShadowCasters(const Frustum& frustum);
 	// Оновлює всі камери
 	void updateCameras();
 	// Оновлює всі джерела напрямленого світла
 	void updateLights();
+
+	// Вмикає або вимикає відсікання об'єктів за пірамідою видимості
+	void setFrustumCullingEnabled(bool enabled);
+	// Перевіряє, чи увімкнено відсікання за пірамідою видимості
+	bool isFrustumCullingEnabled();
+
+	// Повертає кількість рендер-компонентів, намальованих в останньому кадрі
+	int getVisibleRendererCount();
+	// Повертає загальну кількість активних рендер-компонентів
+	int getActiveRendererCount();
 
 	// Викликається на початку завантаження сцени
 	void onSceneLoadStart();
@@ -74,4 +85,9 @@ private:
 	std::list<DirectionalLight*> mLights = {};
 	std::list<Material*> mMaterials = {};
 	std::unordered_map<void*, RigidBody*> mRigidBodies = {};
+
+	bool mFrustumCullingEnabled = true;
+
+	int mVisibleRenderers = 0;
+	int mActiveRenderers = 0;
 };

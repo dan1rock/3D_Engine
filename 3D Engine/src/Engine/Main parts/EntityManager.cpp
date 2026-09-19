@@ -11,6 +11,8 @@
 #include "ConvexMeshManager.h"
 #include "Material.h"
 #include "RigidBody.h"
+#include "GlobalResources.h"
+#include "Frustum.h"
 
 #include <iostream>
 
@@ -134,19 +136,63 @@ void EntityManager::fixedUpdateComponents()
 // Оновлює всі рендер-компоненти
 void EntityManager::updateRenderers()
 {
+	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
+
+	// Піраміда видимості камери відкидає все, що не потрапляє в кадр
+	Frustum frustum(constantData->view * constantData->projection);
+
+	mVisibleRenderers = 0;
+	mActiveRenderers = 0;
+
 	for (auto* r : mRenderers) {
 		if (!r->getOwner()->isActive()) continue;
+
+		mActiveRenderers++;
+
+		if (mFrustumCullingEnabled && !r->isInsideFrustum(frustum)) continue;
+
+		mVisibleRenderers++;
+
 		r->render();
 	}
 }
 
-// Рендерить глибину всіх рендер-компонентів, які кидають тінь
-void EntityManager::renderShadowCasters()
+// Рендерить глибину рендер-компонентів, які кидають тінь у вказану піраміду видимості
+void EntityManager::renderShadowCasters(const Frustum& frustum)
 {
 	for (auto* r : mRenderers) {
 		if (!r->getOwner()->isActive()) continue;
+
+		// Перевіряються лише бічні площини: об'єкт перед каскадом уздовж напрямку
+		// світла лишається за межами його глибини, але тінь у каскад усе одно кидає
+		if (mFrustumCullingEnabled && !r->isInsideFrustum(frustum, true)) continue;
+
 		r->renderDepth();
 	}
+}
+
+// Вмикає або вимикає відсікання об'єктів за пірамідою видимості
+void EntityManager::setFrustumCullingEnabled(bool enabled)
+{
+	mFrustumCullingEnabled = enabled;
+}
+
+// Перевіряє, чи увімкнено відсікання за пірамідою видимості
+bool EntityManager::isFrustumCullingEnabled()
+{
+	return mFrustumCullingEnabled;
+}
+
+// Повертає кількість рендер-компонентів, намальованих в останньому кадрі
+int EntityManager::getVisibleRendererCount()
+{
+	return mVisibleRenderers;
+}
+
+// Повертає загальну кількість активних рендер-компонентів
+int EntityManager::getActiveRendererCount()
+{
+	return mActiveRenderers;
 }
 
 // Оновлює всі камери

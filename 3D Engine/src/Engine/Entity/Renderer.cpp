@@ -4,6 +4,7 @@
 #include "GraphicsEngine.h"
 #include "EntityManager.h"
 #include "Entity.h"
+#include "Frustum.h"
 
 Renderer::Renderer()
 {
@@ -42,6 +43,32 @@ void Renderer::render()
 	constantData->invTransModel = invTransModel;
 
 	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
+}
+
+// Перевіряє, чи потрапляє об'єкт у піраміду видимості
+bool Renderer::isInsideFrustum(const Frustum& frustum, bool sidesOnly)
+{
+	// Меші без меж та позначені об'єкти рендеряться завжди
+	if (alwaysVisible || mMesh == nullptr || mMesh->getBoundsRadius() <= 0.0f) return true;
+
+	Matrix* matrix = mOwner->getTransform()->getMatrix();
+
+	Vector3 localCenter = mMesh->getBoundsCenter();
+
+	// Переводить центр сфери у світові координати
+	Vector3 center(
+		localCenter.x * matrix->mat[0][0] + localCenter.y * matrix->mat[1][0] + localCenter.z * matrix->mat[2][0] + matrix->mat[3][0],
+		localCenter.x * matrix->mat[0][1] + localCenter.y * matrix->mat[1][1] + localCenter.z * matrix->mat[2][1] + matrix->mat[3][1],
+		localCenter.x * matrix->mat[0][2] + localCenter.y * matrix->mat[1][2] + localCenter.z * matrix->mat[2][2] + matrix->mat[3][2]);
+
+	// Радіус зростає разом з найбільшим з масштабів об'єкта
+	Vector3 scale = mOwner->getTransform()->getScale();
+
+	float maxScale = fabsf(scale.x);
+	if (fabsf(scale.y) > maxScale) maxScale = fabsf(scale.y);
+	if (fabsf(scale.z) > maxScale) maxScale = fabsf(scale.z);
+
+	return frustum.intersects(center, mMesh->getBoundsRadius() * maxScale, sidesOnly);
 }
 
 // Викликається під час проходу карти тіней: рендерить лише глибину меша

@@ -3,6 +3,7 @@
 #include "GlobalResources.h"
 
 class VertexShader;
+class Frustum;
 
 // Керує каскадною картою тіней: сцена рендериться з точки зору світла окремо для кожного каскаду,
 // від найближчого та найдетальнішого до найдальшого
@@ -46,6 +47,8 @@ public:
 	UINT getResolution();
 	// Повертає кількість каскадів
 	int getCascadeCount();
+	// Повертає піраміду видимості вказаного каскаду для відсікання об'єктів
+	Frustum getCascadeFrustum(int cascade);
 
 private:
 	// Обчислює межі каскадів уздовж осі камери

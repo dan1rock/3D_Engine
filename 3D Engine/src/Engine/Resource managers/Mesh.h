@@ -22,9 +22,18 @@ public:
 	// Повертає індекси вершин, збережені для побудови фізичних мешів
 	const std::vector<unsigned int>& getIndices() const;
 
+	// Повертає центр сфери, що охоплює меш, у локальних координатах
+	const Vector3& getBoundsCenter() const;
+	// Повертає радіус сфери, що охоплює меш, у локальних координатах
+	float getBoundsRadius() const;
+
 private:
 	VertexBuffer* mVertexBuffer = nullptr;
 	IndexBuffer* mIndexBuffer = nullptr;
+
+	// Сфера, що охоплює меш; за нею виконується відсікання за пірамідою видимості
+	Vector3 mBoundsCenter = {};
+	float mBoundsRadius = 0.0f;
 
 	// Копія геометрії в оперативній пам'яті, щоб фізика не читала той самий файл вдруге
 	std::vector<Vector3> mPositions;

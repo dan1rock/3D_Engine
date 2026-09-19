@@ -10,12 +10,13 @@ A custom **3D game engine prototype** written in **C++** with **DirectX** and **
 - Basic scene management / entity–component system.
 - Basic lighting (ambient, diffuse, specular) with a directional light component.
 - Real-time shadows (4 cascaded shadow maps, stable fitting, PCF filtered with cascade blending).
+- Frustum culling for the camera and for each shadow cascade separately.
 - Camera system (FPS + orbital) with smooth input.
 - Material system (albedo/normal/roughness/metalness).
 - Mipmapped textures with configurable anisotropic filtering (up to 16x).
 - Post-processing pipeline (HDR offscreen target) with Bloom and Vignette.
 - Input handling (keyboard & mouse).
-> *Planned:* Visual scene editor and Object manager, frustum culling, more post-processing effects.
+> *Planned:* Visual scene editor and Object manager, more post-processing effects.
 ---
 
 ## 📂 Project Structure

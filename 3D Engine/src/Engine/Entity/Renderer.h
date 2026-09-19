@@ -5,6 +5,7 @@
 #include "Component.h"
 
 class ConstantBuffer;
+class Frustum;
 class Material;
 class Matrix;
 
@@ -29,8 +30,13 @@ public:
 	// Повертає вказівник на матеріал, який використовується рендер-компонентом
 	Material* getMaterial();
 
+	// Перевіряє, чи потрапляє об'єкт у піраміду видимості
+	bool isInsideFrustum(const Frustum& frustum, bool sidesOnly = false);
+
 	// Чи повинен об'єкт кидати тінь
 	bool castShadows = true;
+	// Об'єкт, який ніколи не відсікається за пірамідою видимості
+	bool alwaysVisible = false;
 
 protected:
 	// Реєструє компонент як звичайний компонент і як рендер-компонент в EntityManager

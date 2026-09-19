@@ -27,6 +27,9 @@ void SkySphere::awake()
 	// Небо оточує всю сцену, тому не повинно потрапляти в карту тіней
 	castShadows = false;
 
+	// Небо малюється зміщеним у центр камери, тому його світові межі не описують того, що видно
+	alwaysVisible = true;
+
 	Renderer::awake();
 
 	mOwner->getTransform()->setScale(Vector3(200.0f, 200.0f, 200.0f));

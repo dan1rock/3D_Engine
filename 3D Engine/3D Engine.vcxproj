@@ -242,6 +242,7 @@
     <ClInclude Include="Demo\Scenes\MainScene.h" />
     <ClInclude Include="src\Engine\Resource managers\Material.h" />
     <ClInclude Include="src\Math\Matrix.h" />
+    <ClInclude Include="src\Math\Frustum.h" />
     <ClInclude Include="src\Engine\Resource managers\Mesh.h" />
     <ClInclude Include="src\Engine\Entity\MeshCollider.h" />
     <ClInclude Include="src\Engine\Resource managers\MeshManager.h" />

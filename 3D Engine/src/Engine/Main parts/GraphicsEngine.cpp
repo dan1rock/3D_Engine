@@ -10,6 +10,7 @@
 #include "MeshManager.h"
 #include "GlobalResources.h"
 #include "ShadowMap.h"
+#include "Frustum.h"
 #include "PostProcessing.h"
 #include "EntityManager.h"
 #include "Material.h"
@@ -369,7 +370,10 @@ void GraphicsEngine::renderShadowPass()
 	for (int cascade = 0; cascade < mShadowMap->getCascadeCount(); cascade++)
 	{
 		mShadowMap->beginCascade(cascade);
-		EntityManager::get()->renderShadowCasters();
+
+		// Кожен каскад відсікає об'єкти за власною пірамідою, тому далекі меші
+		// не потрапляють у проходи ближніх каскадів
+		EntityManager::get()->renderShadowCasters(mShadowMap->getCascadeFrustum(cascade));
 	}
 
 	mShadowMap->end();

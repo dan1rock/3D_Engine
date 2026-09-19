@@ -4,6 +4,7 @@
 #include "GlobalResources.h"
 #include "VertexShader.h"
 #include "Matrix.h"
+#include "Frustum.h"
 
 #include <iostream>
 
@@ -387,4 +388,12 @@ UINT ShadowMap::getResolution()
 int ShadowMap::getCascadeCount()
 {
 	return SHADOW_CASCADE_COUNT;
+}
+
+// Повертає піраміду видимості вказаного каскаду для відсікання об'єктів
+Frustum ShadowMap::getCascadeFrustum(int cascade)
+{
+	if (cascade < 0 || cascade >= SHADOW_CASCADE_COUNT) return Frustum();
+
+	return Frustum(GraphicsEngine::get()->getGlobalResources()->getConstantData()->lightViewProjection[cascade]);
 }
