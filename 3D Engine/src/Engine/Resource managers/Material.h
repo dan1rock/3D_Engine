@@ -11,6 +11,10 @@ class Material
 public:
 	// Ініціалізує шейдери, константні буфери та реєструє матеріал
 	Material();
+	// Копіює налаштування матеріалу, створюючи копії власний константний буфер та реєстрацію
+	Material(const Material& material);
+	// Копіює налаштування іншого матеріалу, зберігаючи власний константний буфер
+	Material& operator=(const Material& material);
 	// Звільняє ресурси та знімає реєстрацію матеріалу
 	~Material();
 
@@ -42,6 +46,8 @@ public:
 private:
 	// Оновлює дані матеріалу та встановлює константні буфери для шейдерів
 	void onMaterialSet();
+	// Переносить налаштування іншого матеріалу, не торкаючись власних ресурсів
+	void copySettings(const Material& material);
 
 	VertexShader* mVertexShader = nullptr;
 	PixelShader* mPixelShader = nullptr;

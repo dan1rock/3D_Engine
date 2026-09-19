@@ -41,6 +41,76 @@ Material::~Material()
 	EntityManager::get()->unregisterMaterial(this);
 }
 
+// Копіює налаштування матеріалу, створюючи копії власний константний буфер та реєстрацію
+Material::Material(const Material& material)
+{
+	mVertexShader = material.mVertexShader;
+	mPixelShader = material.mPixelShader;
+
+	// Текстури належать менеджеру текстур, тому копія користується тими самими
+	mTextures = material.mTextures;
+
+	copySettings(material);
+
+	// Копія завжди належить сцені: інакше скопійований позначений матеріал ніколи б не звільнився
+	dontDeleteOnLoad = false;
+
+	// Власний буфер, бо в ньому зберігаються параметри саме цієї копії
+	mConstantBuffer = GraphicsEngine::get()->createConstantBuffer();
+	mConstantBuffer->load(&materialData, sizeof(materialData));
+
+	int count = sizeof(mConstantBuffers) / sizeof(mConstantBuffers[0]);
+
+	for (int i = 0; i < count; i++)
+	{
+		mConstantBuffers[i] = material.mConstantBuffers[i];
+	}
+
+	// Нульовий слот завжди глобальний, а перший - власний буфер матеріалу
+	mConstantBuffers[0] = GraphicsEngine::get()->getGlobalResources()->getConstantBuffer();
+	mConstantBuffers[1] = mConstantBuffer;
+
+	EntityManager::get()->registerMaterial(this);
+}
+
+// Копіює налаштування іншого матеріалу, зберігаючи власний константний буфер
+Material& Material::operator=(const Material& material)
+{
+	if (this == &material) return *this;
+
+	mVertexShader = material.mVertexShader;
+	mPixelShader = material.mPixelShader;
+	mTextures = material.mTextures;
+
+	copySettings(material);
+
+	// Нульовий та перший слоти лишаються власними, решту можна перенести
+	int count = sizeof(mConstantBuffers) / sizeof(mConstantBuffers[0]);
+
+	for (int i = 2; i < count; i++)
+	{
+		mConstantBuffers[i] = material.mConstantBuffers[i];
+	}
+
+	return *this;
+}
+
+// Переносить налаштування іншого матеріалу, не торкаючись власних ресурсів
+void Material::copySettings(const Material& material)
+{
+	cullBack = material.cullBack;
+	clampTexture = material.clampTexture;
+	ambient = material.ambient;
+	smoothness = material.smoothness;
+	shininess = material.shininess;
+	textureScale = material.textureScale;
+
+	color[0] = material.color[0];
+	color[1] = material.color[1];
+	color[2] = material.color[2];
+	color[3] = material.color[3];
+}
+
 // Встановлює вершинний шейдер для матеріалу
 void Material::setVertexShader(VertexShader* vertexShader)
 {
