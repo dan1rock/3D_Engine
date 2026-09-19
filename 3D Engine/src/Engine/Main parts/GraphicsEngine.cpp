@@ -364,7 +364,14 @@ void GraphicsEngine::renderShadowPass()
 	if (!mShadowMap->isEnabled()) return;
 
 	mShadowMap->begin();
-	EntityManager::get()->renderShadowCasters();
+
+	// Кожен каскад отримує власний прохід глибини по всій сцені
+	for (int cascade = 0; cascade < mShadowMap->getCascadeCount(); cascade++)
+	{
+		mShadowMap->beginCascade(cascade);
+		EntityManager::get()->renderShadowCasters();
+	}
+
 	mShadowMap->end();
 }
 

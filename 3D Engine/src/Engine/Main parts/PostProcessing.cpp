@@ -65,6 +65,15 @@ bool PostProcessing::init()
 	if (FAILED(hr))
 		return false;
 
+	// Повноекранний трикутник не має відкидатися за напрямком обходу, яким би не був стан після сцени
+	CD3D11_RASTERIZER_DESC rastDesc(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE,
+		0, D3D11_DEFAULT_DEPTH_BIAS_CLAMP, 0.0f, FALSE, FALSE, FALSE, FALSE);
+
+	hr = GraphicsEngine::get()->mD3dDevice->CreateRasterizerState(&rastDesc, &mRasterState);
+
+	if (FAILED(hr))
+		return false;
+
 	return true;
 }
 
@@ -75,6 +84,7 @@ bool PostProcessing::release()
 	releaseRenderTexture(mBloomTextures[0]);
 	releaseRenderTexture(mBloomTextures[1]);
 
+	if (mRasterState) mRasterState->Release();
 	if (mSampler) mSampler->Release();
 	if (mConstantBuffer) mConstantBuffer->release();
 
@@ -141,6 +151,8 @@ void PostProcessing::apply(SwapChain* swapChain)
 	// Глибина більше не потрібна, а сцену треба звільнити для читання в шейдерах
 	deviceContext->unsetRenderTargets();
 
+	// Проходи постобробки не залежать від станів, які лишила по собі сцена
+	deviceContext->setRasterizer(mRasterState);
 	deviceContext->setVertexShader(mFullscreenVertexShader);
 	deviceContext->setSamplerState(mSampler, SAMPLER_SLOT);
 	deviceContext->setConstantBuffer(mCompositePixelShader, mConstantBuffer, 0);
@@ -149,7 +161,8 @@ void PostProcessing::apply(SwapChain* swapChain)
 	if (mBloomEnabled) renderBloom();
 
 	// Підсумковий прохід поєднує сцену зі світінням та затемнює краї кадру
-	deviceContext->setRenderTarget(swapChain);
+	// Буфер глибини не потрібен, інакше глибина сцени впливала б на повноекранний трикутник
+	deviceContext->setRenderTarget(swapChain, false);
 	deviceContext->setViewportSize(mSceneTexture.width, mSceneTexture.height);
 
 	updateConstantBuffer(mSceneTexture);

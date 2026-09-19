@@ -8,7 +8,7 @@ struct PS_INPUT
     float2 texCoord : TEXCOORD0;
     float3 cameraDir : TEXCOORD2;
     float3 lightDir : TEXCOORD3;
-    float4 shadowPos : TEXCOORD4;
+    float3 worldPos : TEXCOORD4;
 };
 
 float4 main(PS_INPUT input) : SV_TARGET

@@ -100,6 +100,7 @@ private:
 
 	ConstantBuffer* mConstantBuffer = nullptr;
 	ID3D11SamplerState* mSampler = nullptr;
+	ID3D11RasterizerState* mRasterState = nullptr;
 
 	// Поточний напрямок та крок розмиття, які потрапляють у константний буфер
 	float mBlurDirection[4] = {};

@@ -20,7 +20,7 @@ public:
 	// Очищає вказану ціль рендеру разом з буфером глибини SwapChain та робить їх активними
 	void clearRenderTarget(ID3D11RenderTargetView* renderTargetView, SwapChain* swapChain, float r, float g, float b, float a);
 	// Повертає ціль рендеру вказаного SwapChain без очищення його буферів
-	void setRenderTarget(SwapChain* swapChain);
+	void setRenderTarget(SwapChain* swapChain, bool withDepthBuffer = true);
 	// Встановлює вказану ціль рендеру без буфера глибини
 	void setRenderTarget(ID3D11RenderTargetView* renderTargetView);
 	// Очищає вказаний буфер глибини та встановлює його єдиною ціллю рендеру

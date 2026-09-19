@@ -1,7 +1,10 @@
+// Кількість каскадів карти тіней; те саме значення визначено в GlobalResources.h
+#define SHADOW_CASCADE_COUNT 4
+
 Texture2D Texture : register(t0);
 sampler TextureSampler : register(s0);
 
-Texture2D ShadowMap : register(t1);
+Texture2DArray ShadowMap : register(t1);
 SamplerComparisonState ShadowSampler : register(s1);
 
 struct PS_INPUT
@@ -11,7 +14,7 @@ struct PS_INPUT
     float2 texCoord : TEXCOORD0;
     float3 cameraDir : TEXCOORD2;
     float3 lightDir : TEXCOORD3;
-    float4 shadowPos : TEXCOORD4;
+    float3 worldPos : TEXCOORD4;
 };
 
 cbuffer constant : register(b0)
@@ -21,7 +24,7 @@ cbuffer constant : register(b0)
     row_major float4x4 invTransModel;
     row_major float4x4 view;
     row_major float4x4 projection;
-    row_major float4x4 lightViewProjection;
+    row_major float4x4 lightViewProjection[SHADOW_CASCADE_COUNT];
     float3 cameraPos;
     float cameraPosPadding;
     float3 lightPos;
@@ -31,6 +34,9 @@ cbuffer constant : register(b0)
     float3 lightDir;
     float lightDirPadding;
     float4 shadowParams;
+    float4 cascadeSplits;
+    float4 cascadeBias;
+    float4 cascadeParams;
     unsigned int time;
 };
 
@@ -45,22 +51,20 @@ cbuffer material : register(b1)
     bool isTextured;
 };
 
-// Обчислює освітленість точки з боку світла за картою тіней
-float calculateShadow(float4 shadowPos, float3 normal, float3 lightDir)
+// Зчитує освітленість точки з одного каскаду карти тіней
+float sampleCascade(int cascade, float3 worldPos, float slope)
 {
-    float strength = shadowParams.w;
-    if (strength <= 0.0f) return 1.0f;
+    float4 shadowPos = mul(float4(worldPos, 1.0f), lightViewProjection[cascade]);
 
 	// Переводить позицію зі простору світла в координати карти тіней
     float3 projected = shadowPos.xyz / shadowPos.w;
     float2 shadowCoord = float2(projected.x, -projected.y) * 0.5f + 0.5f;
 
-	// Поза межами карти тіней освітлення залишається без змін
+	// Поза межами каскаду освітлення залишається без змін
     if (projected.z > 1.0f || any(saturate(shadowCoord) != shadowCoord)) return 1.0f;
 
-	// Зсуває глибину тим сильніше, чим більший кут падіння світла на поверхню
-    float slope = 1.0f - saturate(dot(normal, lightDir));
-    float depth = projected.z - (shadowParams.y + shadowParams.z * slope);
+	// Зсув підібрано під розмір текселя каскаду і збільшено на похилих поверхнях
+    float depth = projected.z - cascadeBias[cascade] * (1.0f + 2.0f * slope);
 
 	// Згладжує край тіні, усереднюючи результат порівняння по дев'яти текселях
     float lit = 0.0f;
@@ -71,11 +75,47 @@ float calculateShadow(float4 shadowPos, float3 normal, float3 lightDir)
         [unroll]
         for (int x = -1; x <= 1; x++)
         {
-            lit += ShadowMap.SampleCmpLevelZero(ShadowSampler, shadowCoord + float2(x, y) * shadowParams.x, depth);
+            lit += ShadowMap.SampleCmpLevelZero(ShadowSampler,
+                float3(shadowCoord + float2(x, y) * shadowParams.x, cascade), depth);
         }
     }
 
-    return lerp(1.0f, lit / 9.0f, strength);
+    return lit / 9.0f;
+}
+
+// Обчислює освітленість точки з боку світла за каскадною картою тіней
+float calculateShadow(float3 worldPos, float3 normal, float3 lightDir)
+{
+    float strength = shadowParams.w;
+    if (strength <= 0.0f) return 1.0f;
+
+	// Відстань уздовж осі камери визначає, який каскад покриває цей піксель
+    float viewDepth = mul(float4(worldPos, 1.0f), view).z;
+
+	// Номер каскаду дорівнює кількості перетнутих меж
+    int cascade = (int) dot(step(cascadeSplits, viewDepth.xxxx), float4(1.0f, 1.0f, 1.0f, 1.0f));
+
+	// Далі за останній каскад тіні не будуються
+    if (cascade >= SHADOW_CASCADE_COUNT) return 1.0f;
+
+    float slope = 1.0f - saturate(dot(normal, lightDir));
+
+    float lit = sampleCascade(cascade, worldPos, slope);
+
+	// Ближче до межі каскаду підмішується наступний, щоб перехід не був помітним
+    float blendBand = cascadeParams.y;
+
+    if (blendBand > 0.0f && cascade + 1 < SHADOW_CASCADE_COUNT)
+    {
+        float blend = saturate((viewDepth - (cascadeSplits[cascade] - blendBand)) / blendBand);
+
+        if (blend > 0.0f)
+        {
+            lit = lerp(lit, sampleCascade(cascade + 1, worldPos, slope), blend);
+        }
+    }
+
+    return lerp(1.0f, lit, strength);
 }
 
 float3 calculateLighting(float ambient, float diffuse, float specular, float shininess, float3 lightColor, float3 normal, float3 lightDir, float3 cameraDir, float shadow)
@@ -103,7 +143,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 {
     float3 Normal = normalize(mul(input.normal, (float3x3) invTransModel));
 
-    float shadow = calculateShadow(input.shadowPos, Normal, input.lightDir);
+    float shadow = calculateShadow(input.worldPos, Normal, input.lightDir);
 
     float3 lighting = calculateLighting(ambient, diffuse, specular, shininess, lightColor, Normal, input.lightDir, input.cameraDir, shadow);
 

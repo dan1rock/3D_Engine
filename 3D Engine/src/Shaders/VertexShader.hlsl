@@ -1,3 +1,6 @@
+// Кількість каскадів карти тіней; те саме значення визначено в GlobalResources.h
+#define SHADOW_CASCADE_COUNT 4
+
 struct VS_INPUT {
 	float4 pos: POSITION0;
 	float3 normal: NORMAL0;
@@ -10,7 +13,7 @@ struct VS_OUTPUT {
     float2 texCoord : TEXCOORD0;
     float3 cameraDir : TEXCOORD2;
     float3 lightDir : TEXCOORD3;
-    float4 shadowPos : TEXCOORD4;
+    float3 worldPos : TEXCOORD4;
 };
 
 cbuffer constant: register(b0)
@@ -20,7 +23,7 @@ cbuffer constant: register(b0)
     row_major float4x4 invTransModel;
 	row_major float4x4 view;
 	row_major float4x4 projection;
-    row_major float4x4 lightViewProjection;
+    row_major float4x4 lightViewProjection[SHADOW_CASCADE_COUNT];
     float3 cameraPos;
     float cameraPosPadding;
     float3 lightPos;
@@ -30,6 +33,9 @@ cbuffer constant: register(b0)
     float3 lightDir;
     float lightDirPadding;
     float4 shadowParams;
+    float4 cascadeSplits;
+    float4 cascadeBias;
+    float4 cascadeParams;
 	unsigned int time;
 }
 
@@ -42,8 +48,8 @@ VS_OUTPUT main(VS_INPUT input)
     output.cameraDir = normalize(output.pos.xyz - cameraPos.xyz);
     output.lightDir = normalize(lightPos.xyz - output.pos.xyz);
 
-	// Позиція вершини у просторі світла, за якою піксельний шейдер читає карту тіней
-    output.shadowPos = mul(output.pos, lightViewProjection);
+	// Каскад обирається для кожного пікселя окремо, тому далі передається світова позиція
+    output.worldPos = output.pos.xyz;
 
 	output.pos = mul(output.pos, view);
 	output.pos = mul(output.pos, projection);

@@ -32,9 +32,10 @@ void DeviceContext::clearRenderTarget(ID3D11RenderTargetView* renderTargetView, 
 }
 
 // Повертає ціль рендеру вказаного SwapChain без очищення його буферів
-void DeviceContext::setRenderTarget(SwapChain* swapChain)
+void DeviceContext::setRenderTarget(SwapChain* swapChain, bool withDepthBuffer)
 {
-	mDeviceContext->OMSetRenderTargets(1, &swapChain->mRenderTargetView, swapChain->mDepthStencilView);
+	mDeviceContext->OMSetRenderTargets(1, &swapChain->mRenderTargetView,
+		withDepthBuffer ? swapChain->mDepthStencilView : nullptr);
 }
 
 // Встановлює вказану ціль рендеру без буфера глибини
