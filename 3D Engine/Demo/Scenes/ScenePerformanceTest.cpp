@@ -36,20 +36,24 @@ void ScenePerformanceTest::init()
 	prototypeMaterial->clampTexture = false;
 
 	Entity* plane = new Entity(Vector3(0.0f, -2.0f, 0.0f));
+	plane->setName("Ground");
 	plane->getTransform()->setScale(Vector3(100.0f, 1.0f, 100.0f));
 	plane->addComponent<MeshRenderer>(planeMesh, prototypeMaterial);
 	plane->addComponent<MeshCollider>();
 	plane->addComponent<RigidBody>(true);
 
 	Entity* camera = new Entity(Vector3(0, 2, 10));
+	camera->setName("Camera");
 	camera->getTransform()->setRotation(Vector3(0.5f, 3.1416f, 0));
 	camera->addComponent<Camera>();
 	camera->addComponent<DemoPlayer>(2.0f, 0.002f);
 
 	Entity* skyDome = new Entity();
+	skyDome->setName("Sky");
 	skyDome->addComponent<SkySphere>();
 
 	Entity* sun = new Entity();
+	sun->setName("Sun");
 	sun->getTransform()->setForward(Vector3(-0.55f, -1.0f, -0.35f));
 	sun->addComponent<DirectionalLight>();
 
@@ -64,5 +68,6 @@ void ScenePerformanceTest::init()
 	testPrefab->addComponent<RigidBody>(1.0f);
 
 	Entity* spawner = new Entity();
+	spawner->setName("Object Spawner");
 	spawner->addComponent<ObjectSpawner>(testPrefab);
 }

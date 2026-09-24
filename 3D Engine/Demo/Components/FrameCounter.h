@@ -4,6 +4,8 @@
 class FrameCounter : public Component
 {
 public:
+	COMPONENT_TYPE(FrameCounter)
+
 	FrameCounter();
 	~FrameCounter();
 

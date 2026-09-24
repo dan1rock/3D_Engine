@@ -6,6 +6,8 @@
 class Transform : public Component
 {
 public:
+	COMPONENT_TYPE(Transform)
+
 	// Ініціалізує модельну матрицю як одиничну
 	Transform();
 	~Transform() override;

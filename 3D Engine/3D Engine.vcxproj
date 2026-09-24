@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\packages\NVIDIA.PhysX.4.1.229882250\build\native\NVIDIA.PhysX.props" Condition="Exists('..\packages\NVIDIA.PhysX.4.1.229882250\build\native\NVIDIA.PhysX.props')" />
   <ItemGroup Label="ProjectConfigurations">
@@ -120,7 +120,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)Demo\Scenes;$(ProjectDir)Demo\Components;$(ProjectDir)src\imgui;$(ProjectDir)src\Math;$(ProjectDir)src\Main;$(ProjectDir)src\Engine\Shader managers;$(ProjectDir)src\Engine\Scene;$(ProjectDir)src\Engine\Resource managers;$(ProjectDir)src\Engine\Physics;$(ProjectDir)src\Engine\Main parts;$(ProjectDir)src\Engine\Entity;$(ProjectDir)src\Engine\Buffer managers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\Editor;$(ProjectDir)Demo\Scenes;$(ProjectDir)Demo\Components;$(ProjectDir)src\imgui;$(ProjectDir)src\Math;$(ProjectDir)src\Main;$(ProjectDir)src\Engine\Shader managers;$(ProjectDir)src\Engine\Scene;$(ProjectDir)src\Engine\Resource managers;$(ProjectDir)src\Engine\Physics;$(ProjectDir)src\Engine\Main parts;$(ProjectDir)src\Engine\Entity;$(ProjectDir)src\Engine\Buffer managers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -147,6 +147,7 @@
   <ItemGroup>
     <ClCompile Include="Demo\Components\FollowComponent.cpp" />
     <ClCompile Include="Demo\Components\FrameCounter.cpp" />
+    <ClCompile Include="Demo\Components\DemoComponentTypes.cpp" />
     <ClCompile Include="Demo\Scenes\ScenePerformanceTest.cpp" />
     <ClCompile Include="Demo\Components\ObjectSpawner.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
@@ -157,6 +158,11 @@
     <ClCompile Include="src\imgui\imgui_tables.cpp" />
     <ClCompile Include="src\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\Main\AppWindow.cpp" />
+    <ClCompile Include="src\Editor\Editor.cpp" />
+    <ClCompile Include="src\Editor\EditorCamera.cpp" />
+    <ClCompile Include="src\Editor\ComponentRegistry.cpp" />
+    <ClCompile Include="src\Editor\SceneSerializer.cpp" />
+    <ClCompile Include="src\Editor\SceneIO.cpp" />
     <ClCompile Include="src\Engine\Entity\Camera.cpp" />
     <ClCompile Include="src\Engine\Entity\Collider.cpp" />
     <ClCompile Include="src\Engine\Entity\Component.cpp" />
@@ -211,6 +217,7 @@
   <ItemGroup>
     <ClInclude Include="Demo\Components\FollowComponent.h" />
     <ClInclude Include="Demo\Components\FrameCounter.h" />
+    <ClInclude Include="Demo\Components\DemoComponentTypes.h" />
     <ClInclude Include="Demo\Scenes\ScenePerformanceTest.h" />
     <ClInclude Include="Demo\Components\ObjectSpawner.h" />
     <ClInclude Include="src\imgui\imconfig.h" />
@@ -222,6 +229,11 @@
     <ClInclude Include="src\imgui\imstb_textedit.h" />
     <ClInclude Include="src\imgui\imstb_truetype.h" />
     <ClInclude Include="src\Main\AppWindow.h" />
+    <ClInclude Include="src\Editor\Editor.h" />
+    <ClInclude Include="src\Editor\EditorCamera.h" />
+    <ClInclude Include="src\Editor\ComponentRegistry.h" />
+    <ClInclude Include="src\Editor\SceneSerializer.h" />
+    <ClInclude Include="src\Editor\SceneIO.h" />
     <ClInclude Include="src\Engine\Entity\Camera.h" />
     <ClInclude Include="src\Engine\Entity\Collider.h" />
     <ClInclude Include="src\Engine\Entity\Component.h" />

@@ -5,6 +5,8 @@
 class SkySphere : public Renderer
 {
 public:
+	COMPONENT_TYPE(SkySphere)
+
 	SkySphere();
 	~SkySphere() override;
 

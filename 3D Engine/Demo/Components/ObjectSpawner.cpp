@@ -7,6 +7,7 @@
 
 #include <random>
 #include <ctime>
+#include "SceneIO.h"
 
 static std::mt19937 rng{ static_cast<unsigned int>(std::time(nullptr)) };
 static std::uniform_real_distribution<float> posDist(-1.0f, 1.0f);
@@ -53,6 +54,13 @@ void ObjectSpawner::update()
 	ImGui::End();
 }
 
+// Створені під час гри об'єкти вже знищено редактором, тому список слід очистити
+void ObjectSpawner::onEditorStop()
+{
+	mSpawnedObjects.clear();
+	mObjectCount = 0;
+}
+
 void ObjectSpawner::spawnObjects(int count, float range)
 {
 	for (int i = 0; i < count; ++i)
@@ -80,4 +88,20 @@ void ObjectSpawner::spawnObjects(int count, float range)
 	}
 
 	mObjectCount += count;
+}
+
+// Записує власні поля та посилання у файл сцени
+void ObjectSpawner::serialize(SceneWriter& writer) const
+{
+	writer.write("count", mCount);
+	writer.write("range", mRange);
+	writer.writeRef("prefab", mPrefab);
+}
+
+// Відновлює власні поля та посилання з файлу сцени
+void ObjectSpawner::deserialize(const SceneReader& reader)
+{
+	mCount = reader.read("count", mCount);
+	mRange = reader.read("range", mRange);
+	mPrefab = reader.readPrefab("prefab");
 }

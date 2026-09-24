@@ -7,6 +7,8 @@ class ConvexMesh;
 class MeshCollider : public Collider
 {
 public:
+	COMPONENT_TYPE(MeshCollider)
+
 	MeshCollider();
 	~MeshCollider() override;
 

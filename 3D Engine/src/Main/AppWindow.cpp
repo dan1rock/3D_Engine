@@ -9,6 +9,8 @@
 #include "SceneManager.h"
 #include "MainScene.h"
 #include "PostProcessing.h"
+#include "Editor.h"
+#include "DemoComponentTypes.h"
 
 #include <iostream>
 
@@ -58,7 +60,10 @@ void AppWindow::onCreate()
 
 	Time::init();
 
-	// Завантажує головну сцену
+	// Ініціалізує редактор та завантажує головну сцену
+	Editor::get()->init();
+	registerDemoComponentTypes();
+
 	SceneManager::get()->loadScene(new MainScene());
 }
 
@@ -84,23 +89,33 @@ void AppWindow::onUpdate()
 	Input::update();
 	Input::updateMouse(this->getClientWindowRect(), isFocused);
 
-	// Виконує фіксоване оновлення фізики та компонентів
-	static float accumulator = 0.0f;
-	constexpr float fixedStep = 1.0f / 50.0f;
-	accumulator += Time::deltaTime;
+	// Малює інтерфейс редактора та вирішує, чи симулювати сцену цього кадру
+	Editor::get()->update();
 
-	if (accumulator >= fixedStep)
+	bool simulate = Editor::get()->isPlaying() || !Editor::get()->isEnabled();
+
+	// Під час редагування сцена застигає: компоненти та фізика не оновлюються
+	if (simulate)
 	{
-		EntityManager::get()->fixedUpdateComponents();
-		PhysicsEngine::get()->update(fixedStep);
-		accumulator -= fixedStep;
+		// Виконує фіксоване оновлення фізики та компонентів
+		static float accumulator = 0.0f;
+		constexpr float fixedStep = 1.0f / 50.0f;
+		accumulator += Time::deltaTime;
+
+		if (accumulator >= fixedStep)
+		{
+			EntityManager::get()->fixedUpdateComponents();
+			PhysicsEngine::get()->update(fixedStep);
+			accumulator -= fixedStep;
+		}
+
+		// Оновлює компоненти
+		EntityManager::get()->updateComponents();
+
+		// Оновлює камери сцени, лише коли нею не керує камера редактора
+		EntityManager::get()->updateCameras();
 	}
 
-	// Оновлює компоненти
-	EntityManager::get()->updateComponents();
-
-	// Оновлює камери та джерела світла
-	EntityManager::get()->updateCameras();
 	EntityManager::get()->updateLights();
 
 	// Рендерить сцену в карту тіней з точки зору світла

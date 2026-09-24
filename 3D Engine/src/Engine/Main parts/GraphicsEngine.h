@@ -49,6 +49,8 @@ public:
 	VertexShader* getVertexShader(const wchar_t* fileName, const char* entryPoint);
 	// Повертає PixelShader за ім'ям файлу та точкою входу
 	PixelShader* getPixelShader(const wchar_t* fileName, const char* entryPoint);
+	// Повертає шлях, з якого завантажено піксельний шейдер, щоб сцена могла його зберегти
+	std::wstring getPixelShaderPath(PixelShader* pixelShader) const;
 
 	// Повертає менеджер текстур
 	TextureManager* getTextureManager();

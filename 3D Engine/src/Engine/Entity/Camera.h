@@ -5,6 +5,8 @@
 class Camera : public Component
 {
 public:
+	COMPONENT_TYPE(Camera)
+
 	Camera();
 	// Деструктор класу Camera, знімає реєстрацію камери в EntityManager
 	~Camera() override;

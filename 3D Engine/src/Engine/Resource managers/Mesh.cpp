@@ -8,6 +8,7 @@
 #include <vector>
 #include <iostream>
 #include <cfloat>
+#include <stdexcept>
 
 // Структура для зберігання вершинних даних
 struct vertex {
@@ -34,8 +35,11 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
 	// Перевіряємо, чи вдалося завантажити сцену
     if (!scene || !scene->HasMeshes())
     {
-        std::cout << "Empty Scene" << std::endl;
-        return;
+        std::cout << "Empty Scene: " << filePath << std::endl;
+
+		// Кидаємо виняток, а не просто виходимо: інакше менеджер закешував би меш без буферів,
+		// і перша ж спроба його намалювати впала б на розіменуванні nullptr
+		throw std::runtime_error("Mesh file is missing or has no geometry");
     }
 
     std::vector<vertex> outVertices;

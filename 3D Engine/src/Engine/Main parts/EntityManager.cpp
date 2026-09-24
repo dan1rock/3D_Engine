@@ -115,6 +115,12 @@ RigidBody* EntityManager::getRigidBody(void* actor)
 	return nullptr;
 }
 
+// Повертає всі зареєстровані об'єкти сцени для редактора та збереження
+const std::list<Entity*>& EntityManager::getEntities() const
+{
+	return mEntities;
+}
+
 // Оновлює всі компоненти
 void EntityManager::updateComponents()
 {
@@ -210,6 +216,17 @@ void EntityManager::updateLights()
 	for (auto* l : mLights) {
 		if (!l->getOwner()->isActive()) continue;
 		l->updateLight();
+	}
+}
+
+// Повідомляє всі компоненти, що гру зупинено
+void EntityManager::notifyEditorStop()
+{
+	// Копія списку, бо компонент може знищити об'єкти під час скидання свого стану
+	std::list<Component*> components = mComponents;
+
+	for (auto* c : components) {
+		c->onEditorStop();
 	}
 }
 

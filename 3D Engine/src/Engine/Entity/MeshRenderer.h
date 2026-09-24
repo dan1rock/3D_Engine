@@ -5,6 +5,8 @@
 class MeshRenderer : public Renderer
 {
 public:
+	COMPONENT_TYPE(MeshRenderer)
+
 	MeshRenderer();
 	// Конструктор класу MeshRenderer з вказаним мешем
 	MeshRenderer(Mesh* mesh);

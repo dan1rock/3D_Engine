@@ -1,6 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="Editor">
+      <UniqueIdentifier>{9a3f1c22-7b4e-4c31-9f08-51ab77ce1234}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Main">
       <UniqueIdentifier>{5aed8efd-55dd-493b-ae62-7922df8b047c}</UniqueIdentifier>
     </Filter>
@@ -47,6 +50,18 @@
   <ItemGroup>
     <ClCompile Include="src\Main\Main.cpp">
       <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Editor\Editor.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Editor\EditorCamera.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Editor\ComponentRegistry.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Editor\SceneSerializer.cpp">
+      <Filter>Editor</Filter>
     </ClCompile>
     <ClCompile Include="src\Main\AppWindow.cpp">
       <Filter>Main</Filter>
@@ -211,6 +226,18 @@
     <ClCompile Include="src\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Editor\Editor.h">
+      <Filter>Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Editor\EditorCamera.h">
+      <Filter>Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Editor\ComponentRegistry.h">
+      <Filter>Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Editor\SceneSerializer.h">
+      <Filter>Editor</Filter>
+    </ClInclude>
     <ClInclude Include="src\Main\AppWindow.h">
       <Filter>Main</Filter>
     </ClInclude>

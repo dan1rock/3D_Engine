@@ -46,6 +46,9 @@ public:
 	// Повертає фізичне тіло за вказаним актором
 	RigidBody* getRigidBody(void* actor);
 
+	// Повертає всі зареєстровані об'єкти сцени для редактора та збереження
+	const std::list<Entity*>& getEntities() const;
+
 	// Оновлює всі компоненти
 	void updateComponents();
 	// Виконує фіксоване оновлення для всіх компонентів
@@ -58,6 +61,9 @@ public:
 	void updateCameras();
 	// Оновлює всі джерела напрямленого світла
 	void updateLights();
+
+	// Повідомляє всі компоненти, що гру зупинено
+	void notifyEditorStop();
 
 	// Вмикає або вимикає відсікання об'єктів за пірамідою видимості
 	void setFrustumCullingEnabled(bool enabled);

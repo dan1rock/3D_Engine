@@ -10,10 +10,17 @@ class Material;
 class InstantiationTest : public Component
 {
 public:
+	COMPONENT_TYPE(InstantiationTest)
+
 	InstantiationTest();
 	~InstantiationTest() override;
 
 	Prefab* prefab = nullptr;
+
+	// Записує власні поля та посилання у файл сцени
+	void serialize(SceneWriter& writer) const override;
+	// Відновлює власні поля та посилання з файлу сцени
+	void deserialize(const SceneReader& reader) override;
 
 protected:
 	InstantiationTest* instantiate() const override {

@@ -246,6 +246,18 @@ PixelShader* GraphicsEngine::getPixelShader(const wchar_t* fileName, const char*
 	return nullptr;
 }
 
+// Повертає шлях, з якого завантажено піксельний шейдер, щоб сцена могла його зберегти
+std::wstring GraphicsEngine::getPixelShaderPath(PixelShader* pixelShader) const
+{
+	// Шейдери кешуються за шляхом, тому зворотний пошук по тому ж словнику дає потрібне ім'я файлу
+	for (const auto& entry : pixelShaderMap)
+	{
+		if (entry.second == pixelShader) return entry.first;
+	}
+
+	return std::wstring();
+}
+
 // Повертає менеджер текстур
 TextureManager* GraphicsEngine::getTextureManager()
 {

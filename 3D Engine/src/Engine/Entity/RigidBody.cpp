@@ -5,6 +5,7 @@
 #include "Quaternion.h"
 #include "Collider.h"
 #include "EntityManager.h"
+#include "SceneIO.h"
 
 using namespace physx;
 
@@ -107,6 +108,18 @@ void RigidBody::setContinousCollisionDetection(bool ccd)
 
 	PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
 	dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, ccd);
+}
+
+// Перевіряє, чи тіло нерухоме
+bool RigidBody::isStatic() const
+{
+	return mIsStatic;
+}
+
+// Повертає масу тіла
+float RigidBody::getMass() const
+{
+	return mMass;
 }
 
 void RigidBody::setMass(float mass)
@@ -254,4 +267,11 @@ void RigidBody::updateGlobalPose()
 void RigidBody::addCollider(Collider* collider)
 {
 	mColliders.push_back(collider);
+}
+
+// Записує рухомість та масу тіла у файл сцени
+void RigidBody::serialize(SceneWriter& writer) const
+{
+	writer.write("static", mIsStatic);
+	writer.write("mass", mMass);
 }

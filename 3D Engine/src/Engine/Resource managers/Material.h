@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <string>
 
 class PixelShader;
 class VertexShader;
@@ -29,6 +30,13 @@ public:
 
 	// Встановлює колір матеріалу
 	void setColor(float r, float g, float b, float a);
+
+	// Повертає шлях до першої текстури матеріалу, або порожній рядок, якщо текстур немає
+	std::wstring getTexturePath() const;
+	// Повертає шлях до піксельного шейдера матеріалу, щоб сцена не втрачала нестандартний шейдер
+	std::wstring getPixelShaderPath() const;
+	// Повертає кількість текстур матеріалу
+	unsigned int getTextureCount() const;
 
 	bool cullBack = true;
 	bool clampTexture = true;

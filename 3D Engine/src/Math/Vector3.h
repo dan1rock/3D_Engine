@@ -24,7 +24,7 @@ public:
 	}
 
 	// Оператор множення вектора на скаляр
-	Vector3 operator *(float num) {
+	Vector3 operator *(float num) const {
 		return Vector3(x * num, y * num, z * num);
 	}
 
@@ -36,12 +36,12 @@ public:
 	}
 
 	// Оператор додавання векторів
-	Vector3 operator +(Vector3 vector) {
+	Vector3 operator +(Vector3 vector) const {
 		return Vector3(x + vector.x, y + vector.y, z + vector.z);
 	}
 
 	// Оператор віднімання векторів
-	Vector3 operator -(Vector3 vector) {
+	Vector3 operator -(Vector3 vector) const {
 		return Vector3(x - vector.x, y - vector.y, z - vector.z);
 	}
 

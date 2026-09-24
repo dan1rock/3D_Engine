@@ -6,6 +6,8 @@ class Transform;
 class FollowComponent : public Component
 {
 public:
+	COMPONENT_TYPE(FollowComponent)
+
 	FollowComponent();
 	~FollowComponent() override;
 
@@ -13,6 +15,11 @@ public:
 	void setOffset(float offset);
 	void setSpeed(float speed);
 	void setMouseSpeed(float mouseSpeed);
+
+	// Записує власні поля та посилання у файл сцени
+	void serialize(SceneWriter& writer) const override;
+	// Відновлює власні поля та посилання з файлу сцени
+	void deserialize(const SceneReader& reader) override;
 
 protected:
 	FollowComponent* instantiate() const override

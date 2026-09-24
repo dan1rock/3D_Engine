@@ -1,6 +1,7 @@
 #pragma once
 #include "Transform.h"
 #include <list>
+#include <string>
 
 class RigidBody;
 
@@ -14,6 +15,14 @@ public:
 	Entity(Vector3 position);
 	// Деструктор класу GameObject, видаляє всі компоненти та знімає реєстрацію об'єкта
 	virtual ~Entity();
+
+	// Повертає ім'я об'єкта, яке показує редактор
+	const std::string& getName() const;
+	// Встановлює ім'я об'єкта
+	void setName(const std::string& name);
+
+	// Повертає список усіх компонентів об'єкта
+	const std::list<Component*>& getComponentList() const;
 
 	// Повертає вказівник на компонент Transform цього об'єкта
 	Transform* getTransform();
@@ -55,6 +64,8 @@ public:
 protected:
 	// Чи повинен об'єкт прокидати компоненти при створенні
 	virtual bool shouldAwakeComponents() const { return true; }
+
+	std::string mName = "Entity";
 
 	Transform mTransform;
 	RigidBody* mRigidBody = nullptr;

@@ -41,6 +41,24 @@ Entity::~Entity()
     EntityManager::get()->unregisterEntity(this);
 }
 
+// Повертає ім'я об'єкта, яке показує редактор
+const std::string& Entity::getName() const
+{
+	return mName;
+}
+
+// Встановлює ім'я об'єкта
+void Entity::setName(const std::string& name)
+{
+	mName = name;
+}
+
+// Повертає список усіх компонентів об'єкта
+const std::list<Component*>& Entity::getComponentList() const
+{
+	return mComponents;
+}
+
 // Повертає вказівник на компонент Transform цього об'єкта
 Transform* Entity::getTransform()
 {

@@ -5,6 +5,7 @@
 #include "Input.h"
 
 #include <iostream>
+#include "SceneIO.h"
 
 FollowComponent::FollowComponent()
 {
@@ -75,4 +76,25 @@ void FollowComponent::update()
 
     mOwner->getTransform()->setPosition(desiredPos);
     mOwner->getTransform()->setForward(finalDir);
+}
+
+// Записує власні поля та посилання у файл сцени
+void FollowComponent::serialize(SceneWriter& writer) const
+{
+	writer.write("offset", mOffset);
+	writer.write("speed", mSpeed);
+	writer.write("mousespeed", mMouseSpeed);
+
+	// Без цілі камера не має за чим слідувати і керування мишею теж не працює
+	writer.writeRef("target", mTarget);
+}
+
+// Відновлює власні поля та посилання з файлу сцени
+void FollowComponent::deserialize(const SceneReader& reader)
+{
+	mOffset = reader.read("offset", mOffset);
+	mSpeed = reader.read("speed", mSpeed);
+	mMouseSpeed = reader.read("mousespeed", mMouseSpeed);
+
+	mTarget = reader.readTransform("target");
 }

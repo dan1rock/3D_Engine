@@ -1,6 +1,7 @@
 #include "InstantiationTest.h"
 #include "Prefab.h"
 #include "Input.h"
+#include "SceneIO.h"
 
 InstantiationTest::InstantiationTest()
 {
@@ -32,4 +33,16 @@ void InstantiationTest::update()
 			mPosition.x -= 1.0f;
 		}
 	}
+}
+
+// Записує власні поля та посилання у файл сцени
+void InstantiationTest::serialize(SceneWriter& writer) const
+{
+	writer.writeRef("prefab", prefab);
+}
+
+// Відновлює власні поля та посилання з файлу сцени
+void InstantiationTest::deserialize(const SceneReader& reader)
+{
+	prefab = reader.readPrefab("prefab");
 }

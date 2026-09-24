@@ -6,6 +6,8 @@
 class DirectionalLight : public Component
 {
 public:
+	COMPONENT_TYPE(DirectionalLight)
+
 	DirectionalLight();
 	// Деструктор класу DirectionalLight, знімає реєстрацію світла в EntityManager
 	~DirectionalLight() override;
@@ -18,6 +20,11 @@ public:
 
 	float color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	float intensity = 1.0f;
+
+	// Записує колір та яскравість світла у файл сцени
+	void serialize(SceneWriter& writer) const override;
+	// Відновлює колір та яскравість світла з файлу сцени
+	void deserialize(const SceneReader& reader) override;
 
 protected:
 	// Конструктор копіювання

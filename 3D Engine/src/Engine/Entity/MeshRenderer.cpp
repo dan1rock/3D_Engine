@@ -32,7 +32,8 @@ void MeshRenderer::render()
 {
 	Renderer::render();
 
-	if (mMesh == nullptr) return;
+	// Меш, який не вдалося завантажити, лишається без буферів, тому його пропускаємо
+	if (mMesh == nullptr || mMesh->getIndexBuffer() == nullptr) return;
 
 	DeviceContext* deviceContext = GraphicsEngine::get()->getImmDeviceContext();
 

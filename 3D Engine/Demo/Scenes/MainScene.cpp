@@ -64,6 +64,7 @@ void MainScene::init()
 	wheelMaterial->addTexture(wheelTexture);
 
 	Entity* offroad = new Entity(Vector3(100.0f, -2.0f, 0.0f));
+	offroad->setName("Offroad");
 	offroad->getTransform()->setScale(Vector3(40.0f, 1.0f, 40.0f));
 	offroad->getTransform()->setScale(Vector3(2.0f, 0.3f, 2.0f));
 	offroad->addComponent<MeshRenderer>(offroadMesh);
@@ -71,15 +72,18 @@ void MainScene::init()
 	offroad->addComponent<RigidBody>(true);
 
 	Entity* plane = new Entity(Vector3(0.0f, -2.01f, 0.0f));
+	plane->setName("Ground");
 	plane->getTransform()->setScale(Vector3(80.0f, 1.0f, 80.0f));
 	plane->addComponent<MeshRenderer>(planeMesh, prototypeMaterial);
 	plane->addComponent<MeshCollider>();
 	plane->addComponent<RigidBody>(true);
 
 	Entity* skyDome = new Entity();
+	skyDome->setName("Sky");
 	skyDome->addComponent<SkySphere>();
 
 	Entity* sun = new Entity();
+	sun->setName("Sun");
 	sun->getTransform()->setForward(Vector3(-0.55f, -1.0f, -0.35f));
 	sun->addComponent<DirectionalLight>();
 
@@ -98,6 +102,7 @@ void MainScene::init()
 	rb->setContinousCollisionDetection(true);
 
 	Entity* camera = new Entity(Vector3(0, 1, 3));
+	camera->setName("Camera");
 	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
 	camera->addComponent<Camera>();
 	FollowComponent* followComponent = camera->addComponent<FollowComponent>();
@@ -117,10 +122,12 @@ void MainScene::init()
 	c->wheelPrefab = wheelPrefab;
 
 	Entity* sceneChanger = new Entity();
+	sceneChanger->setName("Scene Changer");
 	sceneChanger->addComponent<FrameCounter>();
 	sceneChanger->addComponent<SceneChanger>();
 
 	Entity* playerCar = carPrefab->instantiate();
+	playerCar->setName("Player Car");
 
 	followComponent->setTarget(playerCar->getTransform());
 }

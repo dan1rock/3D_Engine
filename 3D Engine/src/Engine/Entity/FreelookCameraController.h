@@ -5,6 +5,8 @@
 class FreelookCameraController : public Component
 {
 public:
+	COMPONENT_TYPE(FreelookCameraController)
+
 	FreelookCameraController();
 	FreelookCameraController(float speed, float mouseSpeed);
 	~FreelookCameraController() override;

@@ -4,6 +4,8 @@
 class SceneChanger : public Component
 {
 public:
+	COMPONENT_TYPE(SceneChanger)
+
 	SceneChanger();
 	~SceneChanger() override;
 

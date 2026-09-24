@@ -5,8 +5,10 @@
 #include "Input.h"
 #include "EngineTime.h"
 #include "imgui.h"
+#include <iostream>
 
 #include <string>
+#include "SceneIO.h"
 
 CarComponent::CarComponent()
 {
@@ -21,8 +23,34 @@ void CarComponent::awake()
 	isStarted = false;
 }
 
+// Скидає стан, набутий під час гри, щоб наступний запуск створив колеса заново
+void CarComponent::onEditorStop()
+{
+	isStarted = false;
+	mRigidBody = nullptr;
+
+	// Колеса створювала сама гра, тож редактор їх уже знищив
+	wheel* wheels[] = { &mWheelFR, &mWheelFL, &mWheelBR, &mWheelBL };
+
+	for (wheel* w : wheels)
+	{
+		w->wheelTransform = nullptr;
+		w->positionTransform = nullptr;
+	}
+}
+
 void CarComponent::start()
 {
+	isStarted = true;
+
+	// Сцена, завантажена з файлу, не містить посилання на образ колеса, бо формат їх не зберігає.
+	// Без нього чи без фізичного тіла машина просто не вмикається, замість того щоб зламати гру
+	if (wheelPrefab == nullptr || getOwner()->getComponent<RigidBody>() == nullptr)
+	{
+		std::cout << "CarComponent: no wheel prefab or rigid body, car stays disabled" << std::endl;
+		return;
+	}
+
 	mRigidBody = getOwner()->getComponent<RigidBody>();
 	mRigidBody->setCenterOfMass(Vector3(0.0f, 0.3f, -0.1f));
 
@@ -43,8 +71,6 @@ void CarComponent::start()
 
 	mWheelFR.rightSide = true;
 	mWheelBR.rightSide = true;
-
-	isStarted = true;
 }
 
 void CarComponent::update()
@@ -233,4 +259,33 @@ void CarComponent::initWheel(wheel& wheel, Vector3 position)
 	wheel.positionTransform->setLocalPosition(position);
 	wheel.wheelTransform = wheelPrefab->instantiate()->getTransform();
 	wheel.wheelTransform->getOwner()->setParent(wheel.positionTransform->getOwner());
+}
+
+// Записує власні поля та посилання у файл сцени
+void CarComponent::serialize(SceneWriter& writer) const
+{
+	writer.write("id", id);
+	writer.write("force", force);
+	writer.write("damping", damping);
+	writer.write("maxdistance", maxDistance);
+	writer.write("maxspeed", maxSpeed);
+	writer.write("maxsteering", maxSteering);
+	writer.write("gripratio", gripRatio);
+
+	// Без образу колеса машина після завантаження лишилася б без коліс
+	writer.writeRef("wheelprefab", wheelPrefab);
+}
+
+// Відновлює власні поля та посилання з файлу сцени
+void CarComponent::deserialize(const SceneReader& reader)
+{
+	id = reader.read("id", id);
+	force = reader.read("force", force);
+	damping = reader.read("damping", damping);
+	maxDistance = reader.read("maxdistance", maxDistance);
+	maxSpeed = reader.read("maxspeed", maxSpeed);
+	maxSteering = reader.read("maxsteering", maxSteering);
+	gripRatio = reader.read("gripratio", gripRatio);
+
+	wheelPrefab = reader.readPrefab("wheelprefab");
 }

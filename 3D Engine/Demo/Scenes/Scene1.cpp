@@ -43,9 +43,11 @@ void Scene1::init()
 
 	// Створюємо небесну сферу
 	Entity* skyDome = new Entity();
+	skyDome->setName("Sky");
 	skyDome->addComponent<SkySphere>();
 
 	Entity* sun = new Entity();
+	sun->setName("Sun");
 	sun->getTransform()->setForward(Vector3(-0.55f, -1.0f, -0.35f));
 	sun->addComponent<DirectionalLight>();
 
@@ -57,6 +59,7 @@ void Scene1::init()
 
 	// Створюємо камеру з контролем гравця
 	Entity* camera = new Entity(Vector3(0, 1, 3));
+	camera->setName("Camera");
 	camera->getTransform()->setRotation(Vector3(0, 3.1416f, 0));
 	camera->addComponent<Camera>();
 	DemoPlayer* demoPlayer = camera->addComponent<DemoPlayer>(2.0f, 0.002f);
@@ -67,18 +70,21 @@ void Scene1::init()
 	cityBaseMaterial->addTexture(cityTexture);
 
 	Entity* cityBase = new Entity(Vector3(0, -10, -10));
+	cityBase->setName("City Base");
 	cityBase->getTransform()->setRotation(Vector3(0, 0, 0));
 	cityBase->addComponent<MeshRenderer>(cityBaseMesh, cityBaseMaterial);
 	cityBase->addComponent<MeshCollider>();
 	cityBase->addComponent<RigidBody>(true);
 
 	Entity* city = new Entity();
+	city->setName("City");
 	city->setParent(cityBase);
 	city->addComponent<MeshRenderer>(cityMesh, cityMaterial);
 	city->addComponent<MeshCollider>();
 	city->addComponent<RigidBody>(true);
 
 	Entity* plane = new Entity(Vector3(0, -1, 0));
+	plane->setName("Ground");
 	plane->setParent(cityBase);
 	plane->getTransform()->setLocalPosition(Vector3(0, 0.02f, 0));
 	plane->getTransform()->setLocalRotation(Vector3(0, 0, -3.1416f / 2.0f));

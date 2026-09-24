@@ -4,6 +4,7 @@
 #include "GlobalResources.h"
 #include "ConstantBuffer.h"
 #include "EntityManager.h"
+#include "Texture.h"
 #include <iostream>
 
 __declspec(align(16))
@@ -145,6 +146,28 @@ void Material::setColor(float r, float g, float b, float a)
 	color[1] = g;
 	color[2] = b;
 	color[3] = a;
+}
+
+// Повертає шлях до першої текстури матеріалу, або порожній рядок, якщо текстур немає
+std::wstring Material::getTexturePath() const
+{
+	if (mTextures.empty() || mTextures[0] == nullptr) return std::wstring();
+
+	return mTextures[0]->getFullPath();
+}
+
+// Повертає шлях до піксельного шейдера матеріалу, щоб сцена не втрачала нестандартний шейдер
+std::wstring Material::getPixelShaderPath() const
+{
+	if (mPixelShader == nullptr) return std::wstring();
+
+	return GraphicsEngine::get()->getPixelShaderPath(mPixelShader);
+}
+
+// Повертає кількість текстур матеріалу
+unsigned int Material::getTextureCount() const
+{
+	return (unsigned int)mTextures.size();
 }
 
 // Встановлює константний буфер для матеріалу у відповідний слот

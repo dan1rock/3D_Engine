@@ -10,6 +10,8 @@ class Collider;
 class RigidBody : public Component
 {
 public:
+	COMPONENT_TYPE(RigidBody)
+
 	// Конструктор класу RigidBody для статичного або динамічного тіла
 	RigidBody(bool isStatic = false);
 	// Конструктор класу RigidBody з масою та типом (статичний/динамічний)
@@ -36,6 +38,15 @@ public:
 	void setMass(float mass);
 	// Встановлює центр мас тіла
 	void setCenterOfMass(const Vector3& com);
+
+	// Перевіряє, чи тіло нерухоме
+	bool isStatic() const;
+	// Повертає масу тіла
+	float getMass() const;
+
+	// Записує рухомість та масу тіла у файл сцени. Обидва значення задаються лише конструктором,
+	// тому під час завантаження їх читає сам серіалізатор ще до створення компонента
+	void serialize(SceneWriter& writer) const override;
 
 protected:
 	// Конструктор копіювання

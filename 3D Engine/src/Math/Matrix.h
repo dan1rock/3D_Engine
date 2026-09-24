@@ -215,10 +215,13 @@ public:
 		u = u.normalized();
 		f = f.normalized();
 
+		// Кути знімаються у тій самій послідовності, у якій їх складає setRotation: інакше
+		// setRotation(getRotation()) повертає інший поворот, і об'єкт після завантаження
+		// сцени дивиться не туди, куди дивився до збереження
 		Vector3 rotation;
-		rotation.x = atan2f(f.y, f.z);
-		rotation.y = atan2f(-f.x, sqrtf(f.y * f.y + f.z * f.z));
-		rotation.z = atan2f(u.x, r.x);
+		rotation.x = atan2f(u.z, f.z);
+		rotation.y = atan2f(-r.z, sqrtf(r.x * r.x + r.y * r.y));
+		rotation.z = atan2f(r.y, r.x);
 
 		return rotation;
 	}

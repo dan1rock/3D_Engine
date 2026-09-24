@@ -5,6 +5,8 @@
 class PlaneCollider : public Collider
 {
 public:
+	COMPONENT_TYPE(PlaneCollider)
+
 	PlaneCollider();
 	~PlaneCollider() override;
 

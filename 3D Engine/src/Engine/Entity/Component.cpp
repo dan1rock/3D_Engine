@@ -43,3 +43,8 @@ void Component::update()
 void Component::fixedUpdate()
 {
 }
+
+// Викликається після зупинки гри в редакторі: компонент має забути все, що створив під час неї
+void Component::onEditorStop()
+{
+}

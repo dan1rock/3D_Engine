@@ -8,8 +8,15 @@ class Entity;
 class ObjectSpawner : public Component
 {
 public:
+	COMPONENT_TYPE(ObjectSpawner)
+
 	ObjectSpawner(Prefab* prefab);
 	~ObjectSpawner();
+
+	// Записує власні поля та посилання у файл сцени
+	void serialize(SceneWriter& writer) const override;
+	// Відновлює власні поля та посилання з файлу сцени
+	void deserialize(const SceneReader& reader) override;
 
 protected:
 	ObjectSpawner* instantiate() const override
@@ -21,6 +28,9 @@ private:
 	void update() override;
 
 	void spawnObjects(int count, float range);
+
+	// Створені під час гри об'єкти вже знищено редактором, тому список слід очистити
+	void onEditorStop() override;
 
 	Prefab* mPrefab = nullptr;
 	int mCount = 100;
