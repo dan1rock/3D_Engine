@@ -3,7 +3,7 @@
 #include "GraphicsEngine.h"
 #include "GlobalResources.h"
 #include "EntityManager.h"
-#include "SceneIO.h"
+#include "Properties.h"
 
 DirectionalLight::DirectionalLight()
 {
@@ -64,22 +64,9 @@ void DirectionalLight::updateLight()
 void DirectionalLight::awake()
 {
 }
-
-// Записує колір та яскравість світла у файл сцени
-void DirectionalLight::serialize(SceneWriter& writer) const
+// Перелічує власні поля для файлу сцени та інспектора
+void DirectionalLight::visitProperties(PropertyVisitor& visitor)
 {
-	writer.write("lightColor", Vector3(color[0], color[1], color[2]));
-	writer.write("intensity", intensity);
-}
-
-// Відновлює колір та яскравість світла з файлу сцени
-void DirectionalLight::deserialize(const SceneReader& reader)
-{
-	Vector3 loaded = reader.read("lightColor", Vector3(color[0], color[1], color[2]));
-
-	color[0] = loaded.x;
-	color[1] = loaded.y;
-	color[2] = loaded.z;
-
-	intensity = reader.read("intensity", intensity);
+	visitor.color("lightColor", color, 3);
+	visitor.property("intensity", intensity, 0.05f);
 }

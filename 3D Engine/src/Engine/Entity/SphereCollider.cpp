@@ -1,6 +1,6 @@
 #include "SphereCollider.h"
 #include <PxPhysicsAPI.h>
-#include "SceneIO.h"
+#include "Properties.h"
 
 SphereCollider::SphereCollider()
 {
@@ -37,15 +37,8 @@ void* SphereCollider::getGeometry(Vector3& scale, bool convex)
 
     return mGeometry;
 }
-
-// Записує радіус коллайдера у файл сцени
-void SphereCollider::serialize(SceneWriter& writer) const
+// Перелічує власні поля для файлу сцени та інспектора
+void SphereCollider::visitProperties(PropertyVisitor& visitor)
 {
-	writer.write("radius", radius);
-}
-
-// Відновлює радіус коллайдера з файлу сцени
-void SphereCollider::deserialize(const SceneReader& reader)
-{
-	radius = reader.read("radius", radius);
+	visitor.property("radius", radius, 0.05f);
 }

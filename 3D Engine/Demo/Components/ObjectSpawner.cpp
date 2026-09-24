@@ -7,7 +7,7 @@
 
 #include <random>
 #include <ctime>
-#include "SceneIO.h"
+#include "Properties.h"
 
 static std::mt19937 rng{ static_cast<unsigned int>(std::time(nullptr)) };
 static std::uniform_real_distribution<float> posDist(-1.0f, 1.0f);
@@ -89,19 +89,10 @@ void ObjectSpawner::spawnObjects(int count, float range)
 
 	mObjectCount += count;
 }
-
-// Записує власні поля та посилання у файл сцени
-void ObjectSpawner::serialize(SceneWriter& writer) const
+// Перелічує власні поля для файлу сцени та інспектора
+void ObjectSpawner::visitProperties(PropertyVisitor& visitor)
 {
-	writer.write("count", mCount);
-	writer.write("range", mRange);
-	writer.writeRef("prefab", mPrefab);
-}
-
-// Відновлює власні поля та посилання з файлу сцени
-void ObjectSpawner::deserialize(const SceneReader& reader)
-{
-	mCount = reader.read("count", mCount);
-	mRange = reader.read("range", mRange);
-	mPrefab = reader.readPrefab("prefab");
+	visitor.property("count", mCount);
+	visitor.property("range", mRange, 0.5f);
+	visitor.reference("prefab", mPrefab);
 }

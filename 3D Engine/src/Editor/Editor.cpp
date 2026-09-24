@@ -1,6 +1,7 @@
 #include "Editor.h"
 #include "ComponentRegistry.h"
 #include "SceneSerializer.h"
+#include "InspectorVisitor.h"
 
 #include "EntityManager.h"
 #include "Entity.h"
@@ -42,6 +43,32 @@ static void placeWindow(float x, float y, float width, float height)
 
 	ImGui::SetNextWindowPos(ImVec2(x, y), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_FirstUseEver);
+}
+
+// Повертає вікно у межі екрана. Розміри та позиції панелей зберігаються в imgui.ini, тому
+// після запуску у меншому вікні панель може опинитися за краєм екрана разом з усіма полями
+static void keepWindowOnScreen()
+{
+	ImVec2 display = ImGui::GetIO().DisplaySize;
+	ImVec2 pos = ImGui::GetWindowPos();
+	ImVec2 size = ImGui::GetWindowSize();
+
+	// Спершу звужуємо саме вікно: інакше зсув не допоміг би
+	ImVec2 fitted = size;
+
+	if (fitted.x > display.x) fitted.x = display.x;
+	if (fitted.y > display.y) fitted.y = display.y;
+
+	if (fitted.x != size.x || fitted.y != size.y) ImGui::SetWindowSize(fitted);
+
+	ImVec2 moved = pos;
+
+	if (moved.x + fitted.x > display.x) moved.x = display.x - fitted.x;
+	if (moved.y + fitted.y > display.y) moved.y = display.y - fitted.y;
+	if (moved.x < 0.0f) moved.x = 0.0f;
+	if (moved.y < 0.0f) moved.y = 0.0f;
+
+	if (moved.x != pos.x || moved.y != pos.y) ImGui::SetWindowPos(moved);
 }
 
 // Повертає єдиний екземпляр редактора (синглтон)
@@ -162,6 +189,7 @@ void Editor::drawToolbar()
 	placeWindow(10.0f, 10.0f, 300.0f, 300.0f);
 
 	ImGui::Begin("Editor");
+	keepWindowOnScreen();
 
 	if (mPlaying)
 	{
@@ -248,6 +276,7 @@ void Editor::drawHierarchy()
 	placeWindow(10.0f, 320.0f, 300.0f, -540.0f);
 
 	ImGui::Begin("Hierarchy");
+	keepWindowOnScreen();
 
 	drawCreateMenu();
 
@@ -376,6 +405,7 @@ void Editor::drawInspector()
 	placeWindow(-380.0f, 10.0f, 370.0f, -20.0f);
 
 	ImGui::Begin("Inspector");
+	keepWindowOnScreen();
 
 	if (mSelected == nullptr)
 	{
@@ -406,12 +436,14 @@ void Editor::drawInspector()
 		strncpy_s(mNameBuffer, sizeof(mNameBuffer), mSelected->getName().c_str(), _TRUNCATE);
 	}
 
-	if (ImGui::InputText("Name", mNameBuffer, sizeof(mNameBuffer)))
+	inspectorLabel("Name");
+	if (ImGui::InputText("##name", mNameBuffer, sizeof(mNameBuffer)))
 	{
 		mSelected->setName(mNameBuffer);
 	}
 
-	ImGui::Checkbox("Active", &mSelected->isActiveSelf);
+	inspectorLabel("Active");
+	ImGui::Checkbox("##active", &mSelected->isActiveSelf);
 
 	ImGui::Separator();
 
@@ -438,7 +470,8 @@ void Editor::drawInspector()
 
 		if (open)
 		{
-			component->drawInspector();
+			InspectorVisitor inspector;
+			component->visitProperties(inspector);
 
 			if (Renderer* renderer = dynamic_cast<Renderer*>(component))
 			{
@@ -471,19 +504,22 @@ void Editor::drawTransform(Entity* entity)
 	Vector3 rotation = hasParent ? transform->getLocalRotation() : transform->getRotation();
 	Vector3 scale = hasParent ? transform->getLocalScale() : transform->getScale();
 
-	if (ImGui::DragFloat3("Position", &position.x, 0.05f))
+	inspectorLabel("Position");
+	if (ImGui::DragFloat3("##position", &position.x, 0.05f))
 	{
 		if (hasParent) transform->setLocalPosition(position);
 		else transform->setPosition(position);
 	}
 
-	if (ImGui::DragFloat3("Rotation", &rotation.x, 0.01f))
+	inspectorLabel("Rotation");
+	if (ImGui::DragFloat3("##rotation", &rotation.x, 0.01f))
 	{
 		if (hasParent) transform->setLocalRotation(rotation);
 		else transform->setRotation(rotation);
 	}
 
-	if (ImGui::DragFloat3("Scale", &scale.x, 0.02f))
+	inspectorLabel("Scale");
+	if (ImGui::DragFloat3("##scale", &scale.x, 0.02f))
 	{
 		if (hasParent) transform->setLocalScale(scale);
 		else transform->setScale(scale);
@@ -528,7 +564,8 @@ void Editor::drawRendererAssets(Renderer* renderer)
 		if (slash != std::string::npos) current = current.substr(slash + 1);
 	}
 
-	if (ImGui::BeginCombo("Mesh", current.c_str()))
+	inspectorLabel("Mesh");
+	if (ImGui::BeginCombo("##mesh", current.c_str()))
 	{
 		for (size_t i = 0; i < mMeshPaths.size(); i++)
 		{
@@ -546,7 +583,8 @@ void Editor::drawRendererAssets(Renderer* renderer)
 		ImGui::EndCombo();
 	}
 
-	ImGui::Checkbox("Cast Shadows", &renderer->castShadows);
+	inspectorLabel("Cast Shadows");
+	ImGui::Checkbox("##castShadows", &renderer->castShadows);
 
 	// Кожен слот матеріалу редагується окремо
 	unsigned int slots = renderer->getMaterialCount();
@@ -569,14 +607,21 @@ void Editor::drawMaterial(Material* material, int slot)
 
 	if (ImGui::TreeNode(label))
 	{
-		ImGui::ColorEdit4("Color", material->color);
-		ImGui::DragFloat("Ambient", &material->ambient, 0.01f, 0.0f, 2.0f);
-		ImGui::DragFloat("Smoothness", &material->smoothness, 0.01f, 0.0f, 1.0f);
-		ImGui::DragFloat("Shininess", &material->shininess, 0.5f, 1.0f, 256.0f);
-		ImGui::DragFloat("Texture Scale", &material->textureScale, 0.1f, 0.01f, 200.0f);
-		ImGui::Checkbox("Cull Back", &material->cullBack);
+		inspectorLabel("Color");
+		ImGui::ColorEdit4("##color", material->color);
+		inspectorLabel("Ambient");
+		ImGui::DragFloat("##ambient", &material->ambient, 0.01f, 0.0f, 2.0f);
+		inspectorLabel("Smoothness");
+		ImGui::DragFloat("##smoothness", &material->smoothness, 0.01f, 0.0f, 1.0f);
+		inspectorLabel("Shininess");
+		ImGui::DragFloat("##shininess", &material->shininess, 0.5f, 1.0f, 256.0f);
+		inspectorLabel("Texture Scale");
+		ImGui::DragFloat("##textureScale", &material->textureScale, 0.1f, 0.01f, 200.0f);
+		inspectorLabel("Cull Back");
+		ImGui::Checkbox("##cullBack", &material->cullBack);
 		ImGui::SameLine();
-		ImGui::Checkbox("Clamp", &material->clampTexture);
+		inspectorLabel("Clamp");
+		ImGui::Checkbox("##clamp", &material->clampTexture);
 
 		std::wstring texture = material->getTexturePath();
 		std::string current = texture.empty() ? "none" : std::string(texture.begin(), texture.end());
@@ -584,7 +629,8 @@ void Editor::drawMaterial(Material* material, int slot)
 		size_t slash = current.find_last_of("\\/");
 		if (slash != std::string::npos) current = current.substr(slash + 1);
 
-		if (ImGui::BeginCombo("Texture", current.c_str()))
+		inspectorLabel("Texture");
+		if (ImGui::BeginCombo("##texture", current.c_str()))
 		{
 			for (size_t i = 0; i < mTexturePaths.size(); i++)
 			{
@@ -617,6 +663,7 @@ void Editor::drawAssets()
 	placeWindow(10.0f, -210.0f, 300.0f, 200.0f);
 
 	ImGui::Begin("Assets");
+	keepWindowOnScreen();
 
 	if (ImGui::CollapsingHeader("Meshes", ImGuiTreeNodeFlags_DefaultOpen))
 	{

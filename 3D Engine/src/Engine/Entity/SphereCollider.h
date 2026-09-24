@@ -13,10 +13,8 @@ public:
 
 	float radius = 1.0f;
 
-	// Записує радіус коллайдера у файл сцени
-	void serialize(SceneWriter& writer) const override;
-	// Відновлює радіус коллайдера з файлу сцени
-	void deserialize(const SceneReader& reader) override;
+	// Перелічує власні поля для файлу сцени та інспектора
+	void visitProperties(PropertyVisitor& visitor) override;
 
 	// Повертає вказівник на геометрію коллайдера
 	void* getGeometry(Vector3& scale, bool convex = true) override;

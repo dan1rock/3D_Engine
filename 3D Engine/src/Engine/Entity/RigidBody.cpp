@@ -5,7 +5,7 @@
 #include "Quaternion.h"
 #include "Collider.h"
 #include "EntityManager.h"
-#include "SceneIO.h"
+#include "Properties.h"
 
 using namespace physx;
 
@@ -122,6 +122,46 @@ float RigidBody::getMass() const
 	return mMass;
 }
 
+// Робить тіло нерухомим або рухомим, замінивши актора PhysX новим
+void RigidBody::setStatic(bool isStatic)
+{
+	if (mIsStatic == isStatic) return;
+
+	// До awake актора ще немає, тому достатньо запам'ятати потрібний тип
+	if (!mActor)
+	{
+		mIsStatic = isStatic;
+		return;
+	}
+
+	// Поза береться з самого актора: вона свіжіша за Transform у момент перемикання
+	PxTransform pose = mActor->getGlobalPose();
+
+	releaseShapes();
+	mActor->release();
+	mActor = nullptr;
+
+	mIsStatic = isStatic;
+
+	PhysicsEngine* physics = PhysicsEngine::get();
+
+	if (mIsStatic) mActor = physics->getPhysics()->createRigidStatic(pose);
+	else mActor = physics->getPhysics()->createRigidDynamic(pose);
+
+	// Форми будуються наново, бо рухоме тіло PhysX приймає лише з опуклою оболонкою,
+	// а трикутну сітку дозволяє тільки нерухомому
+	updateShape();
+
+	if (!mIsStatic)
+	{
+		PxRigidDynamic* dynamicActor = static_cast<PxRigidDynamic*>(mActor);
+		PxRigidBodyExt::updateMassAndInertia(*dynamicActor, mMass);
+		dynamicActor->setMass(mMass);
+		dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, mCcd);
+	}
+
+	physics->getScene()->addActor(*mActor);
+}
 void RigidBody::setMass(float mass)
 {
 	if (mIsStatic) return;
@@ -221,7 +261,12 @@ void RigidBody::updateShape()
 	releaseShapes();
 
 	for (Collider* c : mColliders) {
-		PxShape* s = PhysicsEngine::get()->getPhysics()->createShape(*static_cast<PxGeometry*>(c->getGeometry(mScale, !mIsStatic)), *mMaterial);
+		void* geometry = c->getGeometry(mScale, !mIsStatic);
+
+		// Коллайдер без меша не має що дати фізиці, а розіменування nullptr тут впало б
+		if (geometry == nullptr) continue;
+
+		PxShape* s = PhysicsEngine::get()->getPhysics()->createShape(*static_cast<PxGeometry*>(geometry), *mMaterial);
 		mActor->attachShape(*s);
 	}
 }
@@ -268,10 +313,24 @@ void RigidBody::addCollider(Collider* collider)
 {
 	mColliders.push_back(collider);
 }
-
-// Записує рухомість та масу тіла у файл сцени
-void RigidBody::serialize(SceneWriter& writer) const
+// Перелічує власні поля для файлу сцени та інспектора
+void RigidBody::visitProperties(PropertyVisitor& visitor)
 {
-	writer.write("static", mIsStatic);
-	writer.write("mass", mMass);
+	bool isStatic = mIsStatic;
+	visitor.property("static", isStatic);
+
+	// Тип тіла міняє самого актора PhysX, тому його не можна просто привласнити полю
+	if (isStatic != mIsStatic) setStatic(isStatic);
+
+	float mass = mMass;
+
+	// Нерухоме тіло маси не має, тому показуємо її, але не даємо правити
+	if (mIsStatic) visitor.beginReadOnly();
+
+	visitor.property("mass", mass, 0.1f);
+
+	if (mIsStatic) visitor.endReadOnly();
+
+	// Масу мало записати у поле: її має знати й сам рушій фізики
+	if (mass != mMass) setMass(mass);
 }

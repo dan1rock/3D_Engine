@@ -7,7 +7,7 @@
 #include "MeshRenderer.h"
 #include "Material.h"
 #include "TextureManager.h"
-#include "SceneIO.h"
+#include "Properties.h"
 
 DemoPlayer::DemoPlayer(float speed, float sensitivity) : FreelookCameraController(speed, sensitivity)
 {
@@ -35,15 +35,8 @@ void DemoPlayer::update()
 		projectile->getComponent<RigidBody>()->addForce(mOwner->getTransform()->getForward() * 1000.0f);
 	}
 }
-
-// Записує власні поля та посилання у файл сцени
-void DemoPlayer::serialize(SceneWriter& writer) const
+// Перелічує власні поля для файлу сцени та інспектора
+void DemoPlayer::visitProperties(PropertyVisitor& visitor)
 {
-	writer.writeRef("projectilePrefab", projectilePrefab);
-}
-
-// Відновлює власні поля та посилання з файлу сцени
-void DemoPlayer::deserialize(const SceneReader& reader)
-{
-	projectilePrefab = reader.readPrefab("projectilePrefab");
+	visitor.reference("projectilePrefab", projectilePrefab);
 }

@@ -164,6 +164,8 @@
     <ClCompile Include="src\Editor\SceneSerializer.cpp" />
     <ClCompile Include="src\Editor\SceneIO.cpp" />
     <ClCompile Include="src\Editor\Json.cpp" />
+    <ClCompile Include="src\Editor\Properties.cpp" />
+    <ClCompile Include="src\Editor\InspectorVisitor.cpp" />
     <ClCompile Include="src\Engine\Entity\Camera.cpp" />
     <ClCompile Include="src\Engine\Entity\Collider.cpp" />
     <ClCompile Include="src\Engine\Entity\Component.cpp" />
@@ -236,6 +238,8 @@
     <ClInclude Include="src\Editor\SceneSerializer.h" />
     <ClInclude Include="src\Editor\SceneIO.h" />
     <ClInclude Include="src\Editor\Json.h" />
+    <ClInclude Include="src\Editor\Properties.h" />
+    <ClInclude Include="src\Editor\InspectorVisitor.h" />
     <ClInclude Include="src\Engine\Entity\Camera.h" />
     <ClInclude Include="src\Engine\Entity\Collider.h" />
     <ClInclude Include="src\Engine\Entity\Component.h" />

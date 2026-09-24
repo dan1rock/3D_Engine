@@ -172,8 +172,8 @@ std::string SceneSerializer::serialize()
 			}
 
 			// Решту полів компонент записує сам, бо лише він знає, що саме варто зберігати
-			SceneWriter writer(componentValue, indices);
-			component->serialize(writer);
+			SceneWriteVisitor writer(componentValue, indices);
+			component->visitProperties(writer);
 
 			componentList.push(componentValue);
 		}
@@ -252,7 +252,9 @@ static void buildComponent(Entity* entity, const JsonValue& data, const std::vec
 		bool isStatic = data.get("static").asBool(true);
 		float mass = data.get("mass").asFloat(1.0f);
 
-		component = isStatic ? entity->addComponent<RigidBody>(true) : entity->addComponent<RigidBody>(mass, false);
+		// Масу передаємо і нерухомому тілу: setMass її вже не прийме, а без неї збережене
+		// значення губилося б і після перемикання на рухоме тіло тут була б одиниця
+		component = entity->addComponent<RigidBody>(mass, isStatic);
 	}
 	else
 	{
@@ -284,8 +286,8 @@ static void buildComponent(Entity* entity, const JsonValue& data, const std::vec
 		}
 	}
 
-	SceneReader reader(data, created);
-	component->deserialize(reader);
+	SceneReadVisitor reader(data, created);
+	component->visitProperties(reader);
 }
 
 // Відновлює сцену з тексту, знищивши те, що було у сцені до цього

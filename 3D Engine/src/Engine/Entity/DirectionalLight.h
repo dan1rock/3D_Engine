@@ -21,10 +21,8 @@ public:
 	float color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	float intensity = 1.0f;
 
-	// Записує колір та яскравість світла у файл сцени
-	void serialize(SceneWriter& writer) const override;
-	// Відновлює колір та яскравість світла з файлу сцени
-	void deserialize(const SceneReader& reader) override;
+	// Перелічує власні поля для файлу сцени та інспектора
+	void visitProperties(PropertyVisitor& visitor) override;
 
 protected:
 	// Конструктор копіювання

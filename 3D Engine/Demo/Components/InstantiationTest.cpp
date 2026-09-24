@@ -1,7 +1,7 @@
 #include "InstantiationTest.h"
 #include "Prefab.h"
 #include "Input.h"
-#include "SceneIO.h"
+#include "Properties.h"
 
 InstantiationTest::InstantiationTest()
 {
@@ -34,15 +34,8 @@ void InstantiationTest::update()
 		}
 	}
 }
-
-// Записує власні поля та посилання у файл сцени
-void InstantiationTest::serialize(SceneWriter& writer) const
+// Перелічує власні поля для файлу сцени та інспектора
+void InstantiationTest::visitProperties(PropertyVisitor& visitor)
 {
-	writer.writeRef("prefab", prefab);
-}
-
-// Відновлює власні поля та посилання з файлу сцени
-void InstantiationTest::deserialize(const SceneReader& reader)
-{
-	prefab = reader.readPrefab("prefab");
+	visitor.reference("prefab", prefab);
 }

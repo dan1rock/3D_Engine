@@ -17,9 +17,9 @@ MeshCollider::~MeshCollider()
 // Повертає вказівник на геометрію коллайдера
 void* MeshCollider::getGeometry(Vector3& scale, bool convex)
 {
-	// Якщо геометрія вже існує і масштаб не змінився, повертаємо її
+	// Якщо геометрія вже існує, масштаб не змінився і вид геометрії той самий, повертаємо її
 	if (mGeometry) {
-		if (scale == mScale) {
+		if (scale == mScale && convex == mGeometryIsConvex) {
 			return mGeometry;
 		}
 
@@ -28,6 +28,7 @@ void* MeshCollider::getGeometry(Vector3& scale, bool convex)
 	}
 
 	mScale = scale;
+	mGeometryIsConvex = convex;
 
 	// Меш рендерера віддає свою геометрію фізиці, щоб не читати той самий файл вдруге
 	Mesh* sourceMesh = nullptr;

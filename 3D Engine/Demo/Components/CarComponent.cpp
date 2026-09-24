@@ -8,7 +8,7 @@
 #include <iostream>
 
 #include <string>
-#include "SceneIO.h"
+#include "Properties.h"
 
 CarComponent::CarComponent()
 {
@@ -260,32 +260,17 @@ void CarComponent::initWheel(wheel& wheel, Vector3 position)
 	wheel.wheelTransform = wheelPrefab->instantiate()->getTransform();
 	wheel.wheelTransform->getOwner()->setParent(wheel.positionTransform->getOwner());
 }
-
-// Записує власні поля та посилання у файл сцени
-void CarComponent::serialize(SceneWriter& writer) const
+// Перелічує власні поля для файлу сцени та інспектора
+void CarComponent::visitProperties(PropertyVisitor& visitor)
 {
-	writer.write("id", id);
-	writer.write("force", force);
-	writer.write("damping", damping);
-	writer.write("maxDistance", maxDistance);
-	writer.write("maxSpeed", maxSpeed);
-	writer.write("maxSteering", maxSteering);
-	writer.write("gripRatio", gripRatio);
+	visitor.property("id", id);
+	visitor.property("force", force, 0.5f);
+	visitor.property("damping", damping, 0.1f);
+	visitor.property("maxDistance", maxDistance, 0.01f);
+	visitor.property("maxSpeed", maxSpeed, 0.5f);
+	visitor.property("maxSteering", maxSteering, 0.01f);
+	visitor.property("gripRatio", gripRatio, 0.01f);
 
 	// Без образу колеса машина після завантаження лишилася б без коліс
-	writer.writeRef("wheelPrefab", wheelPrefab);
-}
-
-// Відновлює власні поля та посилання з файлу сцени
-void CarComponent::deserialize(const SceneReader& reader)
-{
-	id = reader.read("id", id);
-	force = reader.read("force", force);
-	damping = reader.read("damping", damping);
-	maxDistance = reader.read("maxDistance", maxDistance);
-	maxSpeed = reader.read("maxSpeed", maxSpeed);
-	maxSteering = reader.read("maxSteering", maxSteering);
-	gripRatio = reader.read("gripRatio", gripRatio);
-
-	wheelPrefab = reader.readPrefab("wheelPrefab");
+	visitor.reference("wheelPrefab", wheelPrefab);
 }

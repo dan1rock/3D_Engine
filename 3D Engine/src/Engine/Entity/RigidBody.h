@@ -34,6 +34,9 @@ public:
 	void addTorque(const Vector3& torque);
 	// Вмикає або вимикає режим безперервного виявлення зіткнень (CCD)
 	void setContinousCollisionDetection(bool ccd);
+	// Робить тіло нерухомим або рухомим. PhysX не перетворює актора на місці, тому старого
+	// замінює новий: поза та коллайдери переносяться, набута швидкість втрачається
+	void setStatic(bool isStatic);
 	// Встановлює масу тіла
 	void setMass(float mass);
 	// Встановлює центр мас тіла
@@ -44,9 +47,8 @@ public:
 	// Повертає масу тіла
 	float getMass() const;
 
-	// Записує рухомість та масу тіла у файл сцени. Обидва значення задаються лише конструктором,
-	// тому під час завантаження їх читає сам серіалізатор ще до створення компонента
-	void serialize(SceneWriter& writer) const override;
+	// Перелічує власні поля для файлу сцени та інспектора
+	void visitProperties(PropertyVisitor& visitor) override;
 
 protected:
 	// Конструктор копіювання

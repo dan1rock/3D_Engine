@@ -1,8 +1,7 @@
 #pragma once
 
 class Entity;
-class SceneWriter;
-class SceneReader;
+class PropertyVisitor;
 
 // Оголошує ім'я типу компонента, за яким редактор і файл сцени його впізнають
 #define COMPONENT_TYPE(typeName) const char* getTypeName() const override { return #typeName; }
@@ -20,14 +19,10 @@ public:
 
 	// Повертає ім'я типу компонента для редактора та збереження сцени
 	virtual const char* getTypeName() const { return "Component"; }
-	// Малює поля компонента в інспекторі редактора
-	virtual void drawInspector() {}
-
-	// Записує власні поля у файл сцени: без цього компонент відновлюється з налаштуваннями
-	// за замовчуванням і втрачає як числа, так і посилання на інші об'єкти
-	virtual void serialize(SceneWriter& writer) const {}
-	// Відновлює власні поля з файлу сцени
-	virtual void deserialize(const SceneReader& reader) {}
+	// Перелічує власні поля компонента. Один список обслуговує і збереження сцени, і інспектор:
+	// без нього компонент відновлюється з налаштуваннями за замовчуванням, втрачає посилання
+	// на інші об'єкти і не має що показати в редакторі
+	virtual void visitProperties(PropertyVisitor& visitor) {}
 
 protected:
 	Entity* mOwner = nullptr;

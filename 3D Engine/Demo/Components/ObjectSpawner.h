@@ -13,10 +13,8 @@ public:
 	ObjectSpawner(Prefab* prefab);
 	~ObjectSpawner();
 
-	// Записує власні поля та посилання у файл сцени
-	void serialize(SceneWriter& writer) const override;
-	// Відновлює власні поля та посилання з файлу сцени
-	void deserialize(const SceneReader& reader) override;
+	// Перелічує власні поля для файлу сцени та інспектора
+	void visitProperties(PropertyVisitor& visitor) override;
 
 protected:
 	ObjectSpawner* instantiate() const override

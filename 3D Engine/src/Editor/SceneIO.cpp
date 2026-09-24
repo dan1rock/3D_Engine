@@ -1,7 +1,5 @@
 #include "SceneIO.h"
 #include "Entity.h"
-#include "Prefab.h"
-#include "Transform.h"
 
 // Перетворює вектор на масив з трьох чисел і навпаки: так вектори лишаються в один рядок
 JsonValue vectorToJson(const Vector3& value)
@@ -26,129 +24,111 @@ Vector3 jsonToVector(const JsonValue& value, const Vector3& fallback)
 		value.at(2).asFloat(fallback.z));
 }
 
-SceneWriter::SceneWriter(JsonValue& out, const std::unordered_map<Entity*, int>& indices)
+SceneWriteVisitor::SceneWriteVisitor(JsonValue& out, const std::unordered_map<Entity*, int>& indices)
 	: mOut(out), mIndices(indices)
 {
 }
 
-// Записує одне поле компонента під вказаним ключем
-void SceneWriter::write(const char* key, float value)
+void SceneWriteVisitor::property(const char* name, float& value, float step)
 {
-	mOut.set(key, value);
+	mOut.set(name, value);
 }
 
-// Записує одне поле компонента під вказаним ключем
-void SceneWriter::write(const char* key, int value)
+void SceneWriteVisitor::property(const char* name, int& value)
 {
-	mOut.set(key, value);
+	mOut.set(name, value);
 }
 
-// Записує одне поле компонента під вказаним ключем
-void SceneWriter::write(const char* key, bool value)
+void SceneWriteVisitor::property(const char* name, bool& value)
 {
-	mOut.set(key, value);
+	mOut.set(name, value);
 }
 
-// Записує одне поле компонента під вказаним ключем
-void SceneWriter::write(const char* key, const Vector3& value)
+void SceneWriteVisitor::property(const char* name, Vector3& value)
 {
-	mOut.set(key, vectorToJson(value));
+	mOut.set(name, vectorToJson(value));
 }
 
-// Записує одне поле компонента під вказаним ключем
-void SceneWriter::write(const char* key, const std::string& value)
+void SceneWriteVisitor::property(const char* name, std::string& value)
 {
 	// Порожній рядок не пишемо: читання все одно взяло б значення за замовчуванням
 	if (value.empty()) return;
 
-	mOut.set(key, value);
+	mOut.set(name, value);
 }
 
-// Посилання на інший об'єкт сцени зберігається його номером: вказівник після перезапуску не діє
-void SceneWriter::writeRef(const char* key, Entity* entity)
+void SceneWriteVisitor::color(const char* name, float* channels, int count)
 {
-	if (entity == nullptr) return;
+	JsonValue out = JsonValue::array();
 
-	auto it = mIndices.find(entity);
+	for (int channel = 0; channel < count; channel++)
+	{
+		out.push(channels[channel]);
+	}
+
+	mOut.set(name, out);
+}
+
+void SceneWriteVisitor::reference(const char* name, Entity*& value, ReferenceKind kind)
+{
+	if (value == nullptr) return;
+
+	auto it = mIndices.find(value);
 
 	// Об'єкт поза сценою зберегти нічим, тому посилання просто не записуємо
 	if (it == mIndices.end()) return;
 
-	mOut.set(key, it->second);
+	mOut.set(name, it->second);
 }
 
-// Посилання на інший об'єкт сцени зберігається його номером: вказівник після перезапуску не діє
-void SceneWriter::writeRef(const char* key, Transform* transform)
-{
-	if (transform == nullptr) return;
-
-	writeRef(key, transform->getOwner());
-}
-
-SceneReader::SceneReader(const JsonValue& fields, const std::vector<Entity*>& entities)
+SceneReadVisitor::SceneReadVisitor(const JsonValue& fields, const std::vector<Entity*>& entities)
 	: mFields(fields), mEntities(entities)
 {
 }
 
-// Перевіряє, чи є таке поле у файлі: інакше компонент лишає своє значення за замовчуванням
-bool SceneReader::has(const char* key) const
+void SceneReadVisitor::property(const char* name, float& value, float step)
 {
-	return mFields.has(key);
+	value = mFields.get(name).asFloat(value);
 }
 
-// Читає одне поле компонента, повертаючи запасне значення, якщо його немає у файлі
-float SceneReader::read(const char* key, float fallback) const
+void SceneReadVisitor::property(const char* name, int& value)
 {
-	return mFields.get(key).asFloat(fallback);
+	value = mFields.get(name).asInt(value);
 }
 
-// Читає одне поле компонента, повертаючи запасне значення, якщо його немає у файлі
-int SceneReader::read(const char* key, int fallback) const
+void SceneReadVisitor::property(const char* name, bool& value)
 {
-	return mFields.get(key).asInt(fallback);
+	value = mFields.get(name).asBool(value);
 }
 
-// Читає одне поле компонента, повертаючи запасне значення, якщо його немає у файлі
-bool SceneReader::read(const char* key, bool fallback) const
+void SceneReadVisitor::property(const char* name, Vector3& value)
 {
-	return mFields.get(key).asBool(fallback);
+	value = jsonToVector(mFields.get(name), value);
 }
 
-// Читає одне поле компонента, повертаючи запасне значення, якщо його немає у файлі
-Vector3 SceneReader::read(const char* key, const Vector3& fallback) const
+void SceneReadVisitor::property(const char* name, std::string& value)
 {
-	return jsonToVector(mFields.get(key), fallback);
+	value = mFields.get(name).asString(value);
 }
 
-// Читає одне поле компонента, повертаючи запасне значення, якщо його немає у файлі
-std::string SceneReader::read(const char* key, const std::string& fallback) const
+void SceneReadVisitor::color(const char* name, float* channels, int count)
 {
-	return mFields.get(key).asString(fallback);
+	const JsonValue& value = mFields.get(name);
+
+	if (value.getType() != JsonValue::Type::Array) return;
+
+	for (int channel = 0; channel < count && (size_t)channel < value.size(); channel++)
+	{
+		channels[channel] = value.at((size_t)channel).asFloat(channels[channel]);
+	}
 }
 
-// Відновлює посилання на об'єкт сцени за збереженим номером
-Entity* SceneReader::readEntity(const char* key) const
+void SceneReadVisitor::reference(const char* name, Entity*& value, ReferenceKind kind)
 {
-	int index = read(key, -1);
+	// Поля немає у файлі: лишаємо те, що компонент поставив собі сам
+	if (!mFields.has(name)) return;
 
-	if (index < 0 || index >= (int)mEntities.size()) return nullptr;
+	int index = mFields.get(name).asInt(-1);
 
-	return mEntities[index];
-}
-
-// Відновлює посилання на об'єкт сцени за збереженим номером
-Prefab* SceneReader::readPrefab(const char* key) const
-{
-	// Образ відрізняється від звичайного об'єкта типом, тому перевіряємо його явно
-	return dynamic_cast<Prefab*>(readEntity(key));
-}
-
-// Відновлює посилання на об'єкт сцени за збереженим номером
-Transform* SceneReader::readTransform(const char* key) const
-{
-	Entity* entity = readEntity(key);
-
-	if (entity == nullptr) return nullptr;
-
-	return entity->getTransform();
+	value = (index >= 0 && index < (int)mEntities.size()) ? mEntities[index] : nullptr;
 }
