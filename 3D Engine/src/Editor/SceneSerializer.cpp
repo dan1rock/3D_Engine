@@ -1,5 +1,6 @@
 #include "SceneSerializer.h"
 #include "SceneIO.h"
+#include "Json.h"
 #include "ComponentRegistry.h"
 #include "EntityManager.h"
 #include "Entity.h"
@@ -14,13 +15,14 @@
 #include "RigidBody.h"
 #include "GraphicsEngine.h"
 
-#include <sstream>
-#include <iomanip>
-#include <limits>
 #include <fstream>
+#include <sstream>
 #include <unordered_map>
 #include <vector>
 #include <iostream>
+
+// Номер формату: змінюється, коли файли старих версій більше не читаються так само
+static const int SCENE_VERSION = 3;
 
 // Переводить вузький рядок у широкий, бо шляхи ресурсів рушій приймає як wchar_t
 static std::wstring toWide(const std::string& text)
@@ -51,43 +53,43 @@ static std::string toRelativePath(const std::wstring& fullPath)
 	return path;
 }
 
-// Записує один матеріал рендер-компонента
-static void writeMaterial(std::ostringstream& out, Material* material, int slot)
+// Складає опис одного матеріалу рендер-компонента
+static JsonValue writeMaterial(Material* material, int slot)
 {
-	if (material == nullptr) return;
+	JsonValue out = JsonValue::object();
 
-	out << "material " << slot << "\n";
-	out << "color " << material->color[0] << " " << material->color[1] << " "
-		<< material->color[2] << " " << material->color[3] << "\n";
-	out << "ambient " << material->ambient << "\n";
-	out << "smoothness " << material->smoothness << "\n";
-	out << "shininess " << material->shininess << "\n";
-	out << "texturescale " << material->textureScale << "\n";
-	out << "cullback " << (material->cullBack ? 1 : 0) << "\n";
-	out << "clamptexture " << (material->clampTexture ? 1 : 0) << "\n";
+	out.set("slot", slot);
+
+	JsonValue color = JsonValue::array();
+	color.push(material->color[0]);
+	color.push(material->color[1]);
+	color.push(material->color[2]);
+	color.push(material->color[3]);
+
+	out.set("color", color);
+	out.set("ambient", material->ambient);
+	out.set("smoothness", material->smoothness);
+	out.set("shininess", material->shininess);
+	out.set("textureScale", material->textureScale);
+	out.set("cullBack", material->cullBack);
+	out.set("clampTexture", material->clampTexture);
 
 	std::wstring texturePath = material->getTexturePath();
 
-	if (!texturePath.empty()) out << "texture " << toRelativePath(texturePath) << "\n";
+	if (!texturePath.empty()) out.set("texture", toRelativePath(texturePath));
 
 	// Нестандартний піксельний шейдер треба зберегти: інакше матеріал відновиться зі звичайним,
 	// а той по-іншому змішує текстуру з кольором і малює, наприклад, прототипну сітку чорною
 	std::wstring shaderPath = material->getPixelShaderPath();
 
-	if (!shaderPath.empty()) out << "shader " << toRelativePath(shaderPath) << "\n";
+	if (!shaderPath.empty()) out.set("shader", toRelativePath(shaderPath));
 
-	out << "endmaterial\n";
+	return out;
 }
 
 // Записує поточну сцену у текст
 std::string SceneSerializer::serialize()
 {
-	std::ostringstream out;
-
-	// Типові шість значущих цифр округлюють кути настільки, що після завантаження
-	// об'єкт дивиться трохи в інший бік; max_digits10 дає точне повернення float
-	out << std::setprecision(std::numeric_limits<float>::max_digits10);
-
 	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
 
 	// Індекс кожного об'єкта потрібен, щоб зберегти зв'язки батько-дитина та посилання компонентів
@@ -103,327 +105,236 @@ std::string SceneSerializer::serialize()
 		indices[entity] = index++;
 	}
 
-	out << "scene 2\n";
+	JsonValue entityList = JsonValue::array();
 
 	for (Entity* entity : entities)
 	{
 		if (entity->dontDestroyOnLoad) continue;
 
-		out << "entity " << indices[entity] << "\n";
-		out << "name " << entity->getName() << "\n";
-		out << "active " << (entity->isActiveSelf ? 1 : 0) << "\n";
+		JsonValue entityValue = JsonValue::object();
+
+		entityValue.set("index", indices[entity]);
+		entityValue.set("name", entity->getName());
+		entityValue.set("active", entity->isActiveSelf);
 
 		// Образ треба відрізнити від звичайного об'єкта, бо інакше він оживе як окремий об'єкт сцени
 		// і водночас компоненти, що на нього посилаються, лишаться без образу для створення копій
-		if (dynamic_cast<Prefab*>(entity) != nullptr) out << "prefab 1\n";
+		if (dynamic_cast<Prefab*>(entity) != nullptr) entityValue.set("prefab", true);
 
 		Entity* parent = entity->getParent();
-
-		out << "parent " << (parent && indices.count(parent) ? indices[parent] : -1) << "\n";
 
 		// Кореневий об'єкт не має відносно чого зберігати локальні координати, тому пишемо світові
 		bool hasParent = parent != nullptr && indices.count(parent) > 0;
 
-		Vector3 position = hasParent ? entity->getTransform()->getLocalPosition() : entity->getTransform()->getPosition();
-		Vector3 rotation = hasParent ? entity->getTransform()->getLocalRotation() : entity->getTransform()->getRotation();
-		Vector3 scale = hasParent ? entity->getTransform()->getLocalScale() : entity->getTransform()->getScale();
+		entityValue.set("parent", hasParent ? indices[parent] : -1);
 
-		out << "pos " << position.x << " " << position.y << " " << position.z << "\n";
-		out << "rot " << rotation.x << " " << rotation.y << " " << rotation.z << "\n";
-		out << "scl " << scale.x << " " << scale.y << " " << scale.z << "\n";
+		Transform* transform = entity->getTransform();
+
+		JsonValue transformValue = JsonValue::object();
+
+		transformValue.set("position", vectorToJson(hasParent ? transform->getLocalPosition() : transform->getPosition()));
+		transformValue.set("rotation", vectorToJson(hasParent ? transform->getLocalRotation() : transform->getRotation()));
+		transformValue.set("scale", vectorToJson(hasParent ? transform->getLocalScale() : transform->getScale()));
+
+		entityValue.set("transform", transformValue);
+
+		JsonValue componentList = JsonValue::array();
 
 		for (Component* component : entity->getComponentList())
 		{
-			out << "component " << component->getTypeName() << "\n";
+			JsonValue componentValue = JsonValue::object();
+
+			componentValue.set("type", std::string(component->getTypeName()));
 
 			// Рендер-компонент зберігає свій меш та матеріали кожного слота
 			if (Renderer* renderer = dynamic_cast<Renderer*>(component))
 			{
 				if (renderer->getMesh())
 				{
-					out << "mesh " << toRelativePath(renderer->getMesh()->getFullPath()) << "\n";
+					componentValue.set("mesh", toRelativePath(renderer->getMesh()->getFullPath()));
 				}
 
-				out << "castshadows " << (renderer->castShadows ? 1 : 0) << "\n";
+				componentValue.set("castShadows", renderer->castShadows);
+
+				JsonValue materialList = JsonValue::array();
 
 				unsigned int slots = renderer->getMaterialCount();
 
 				for (unsigned int slot = 0; slot < slots; slot++)
 				{
-					writeMaterial(out, renderer->getMaterial(slot), (int)slot);
+					if (Material* material = renderer->getMaterial(slot))
+					{
+						materialList.push(writeMaterial(material, (int)slot));
+					}
 				}
+
+				if (materialList.size() > 0) componentValue.set("materials", materialList);
 			}
 
 			// Решту полів компонент записує сам, бо лише він знає, що саме варто зберігати
-			std::string fields;
-			SceneWriter writer(fields, indices);
+			SceneWriter writer(componentValue, indices);
 			component->serialize(writer);
 
-			out << fields;
-
-			out << "endcomponent\n";
+			componentList.push(componentValue);
 		}
 
-		out << "endentity\n";
+		if (componentList.size() > 0) entityValue.set("components", componentList);
+
+		entityList.push(entityValue);
 	}
 
-	return out.str();
-}
+	JsonValue scene = JsonValue::object();
 
-// Матеріал, прочитаний з файлу, ще не перетворений на об'єкт рушія
-struct MaterialData
-{
-	int slot = 0;
-	float color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	float ambient = 0.4f;
-	float smoothness = 0.5f;
-	float shininess = 32.0f;
-	float textureScale = 1.0f;
-	bool cullBack = true;
-	bool clampTexture = true;
-	std::string texture;
-	std::string shader;
-};
+	scene.set("version", SCENE_VERSION);
+	scene.set("entities", entityList);
 
-// Компонент, прочитаний з файлу: ім'я типу та всі його поля у вигляді рядків
-struct ComponentData
-{
-	std::string type;
-	std::unordered_map<std::string, std::string> fields;
-	std::vector<MaterialData> materials;
-	bool hasMesh = false;
-	std::string mesh;
-	bool castShadows = true;
-};
-
-// Об'єкт, прочитаний з файлу, ще не створений у сцені
-struct EntityData
-{
-	std::string name = "Entity";
-	bool active = true;
-	bool isPrefab = false;
-	int parent = -1;
-	Vector3 position = { 0.0f, 0.0f, 0.0f };
-	Vector3 rotation = { 0.0f, 0.0f, 0.0f };
-	Vector3 scale = { 1.0f, 1.0f, 1.0f };
-	std::vector<ComponentData> components;
-};
-
-// Розбирає текст сцени у проміжні структури, нічого ще не створюючи у світі
-static std::vector<EntityData> parseScene(const std::string& text)
-{
-	std::vector<EntityData> parsed;
-
-	std::istringstream in(text);
-	std::string line;
-
-	EntityData* entity = nullptr;
-	ComponentData* component = nullptr;
-	MaterialData* material = nullptr;
-
-	while (std::getline(in, line))
-	{
-		if (!line.empty() && line.back() == '\r') line.pop_back();
-		if (line.empty()) continue;
-
-		std::istringstream tokens(line);
-		std::string key;
-		tokens >> key;
-
-		// Решта рядка після ключа є значенням: воно може містити пробіли, як ім'я чи шлях
-		std::string value;
-		std::getline(tokens, value);
-
-		if (!value.empty() && value.front() == ' ') value.erase(0, 1);
-
-		if (key == "entity")
-		{
-			parsed.push_back(EntityData());
-			entity = &parsed.back();
-			component = nullptr;
-			material = nullptr;
-			continue;
-		}
-
-		if (entity == nullptr) continue;
-
-		if (key == "component")
-		{
-			entity->components.push_back(ComponentData());
-			component = &entity->components.back();
-			component->type = value;
-			material = nullptr;
-			continue;
-		}
-
-		if (key == "endcomponent")
-		{
-			component = nullptr;
-			material = nullptr;
-			continue;
-		}
-
-		if (key == "material" && component)
-		{
-			component->materials.push_back(MaterialData());
-			material = &component->materials.back();
-			material->slot = atoi(value.c_str());
-			continue;
-		}
-
-		if (key == "endmaterial")
-		{
-			material = nullptr;
-			continue;
-		}
-
-		if (key == "endentity")
-		{
-			entity = nullptr;
-			component = nullptr;
-			material = nullptr;
-			continue;
-		}
-
-		std::istringstream values(value);
-
-		// Поля матеріалу читаються першими, бо вони перекривають однойменні ключі компонента
-		if (material)
-		{
-			if (key == "color") values >> material->color[0] >> material->color[1] >> material->color[2] >> material->color[3];
-			else if (key == "ambient") values >> material->ambient;
-			else if (key == "smoothness") values >> material->smoothness;
-			else if (key == "shininess") values >> material->shininess;
-			else if (key == "texturescale") values >> material->textureScale;
-			else if (key == "cullback") material->cullBack = atoi(value.c_str()) != 0;
-			else if (key == "clamptexture") material->clampTexture = atoi(value.c_str()) != 0;
-			else if (key == "texture") material->texture = value;
-			else if (key == "shader") material->shader = value;
-
-			continue;
-		}
-
-		if (component)
-		{
-			if (key == "mesh") { component->hasMesh = true; component->mesh = value; }
-			else if (key == "castshadows") component->castShadows = atoi(value.c_str()) != 0;
-
-			// Усі інші ключі зберігаються як є: їх розбере сам компонент у своєму deserialize
-			component->fields[key] = value;
-
-			continue;
-		}
-
-		if (key == "name") entity->name = value;
-		else if (key == "active") entity->active = atoi(value.c_str()) != 0;
-		else if (key == "prefab") entity->isPrefab = atoi(value.c_str()) != 0;
-		else if (key == "parent") entity->parent = atoi(value.c_str());
-		else if (key == "pos") values >> entity->position.x >> entity->position.y >> entity->position.z;
-		else if (key == "rot") values >> entity->rotation.x >> entity->rotation.y >> entity->rotation.z;
-		else if (key == "scl") values >> entity->scale.x >> entity->scale.y >> entity->scale.z;
-	}
-
-	return parsed;
+	return scene.toString();
 }
 
 // Створює матеріал одного слота рендер-компонента
-static void buildMaterial(Renderer* renderer, const MaterialData& data)
+static void buildMaterial(Renderer* renderer, const JsonValue& data)
 {
 	// Кожен слот отримує власний матеріал, щоб правки не розповзалися між об'єктами
 	Material* material = new Material();
 
-	material->color[0] = data.color[0];
-	material->color[1] = data.color[1];
-	material->color[2] = data.color[2];
-	material->color[3] = data.color[3];
-	material->ambient = data.ambient;
-	material->smoothness = data.smoothness;
-	material->shininess = data.shininess;
-	material->textureScale = data.textureScale;
-	material->cullBack = data.cullBack;
-	material->clampTexture = data.clampTexture;
+	const JsonValue& color = data.get("color");
 
-	if (!data.texture.empty())
+	if (color.getType() == JsonValue::Type::Array && color.size() >= 4)
 	{
-		material->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(toWide(data.texture).c_str()));
+		for (int channel = 0; channel < 4; channel++)
+		{
+			material->color[channel] = color.at((size_t)channel).asFloat(material->color[channel]);
+		}
 	}
 
-	if (!data.shader.empty())
+	material->ambient = data.get("ambient").asFloat(material->ambient);
+	material->smoothness = data.get("smoothness").asFloat(material->smoothness);
+	material->shininess = data.get("shininess").asFloat(material->shininess);
+	material->textureScale = data.get("textureScale").asFloat(material->textureScale);
+	material->cullBack = data.get("cullBack").asBool(material->cullBack);
+	material->clampTexture = data.get("clampTexture").asBool(material->clampTexture);
+
+	std::string texture = data.get("texture").asString();
+
+	if (!texture.empty())
 	{
-		material->setPixelShader(GraphicsEngine::get()->getPixelShader(toWide(data.shader).c_str(), "main"));
+		material->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(toWide(texture).c_str()));
 	}
 
-	renderer->setMaterial((unsigned int)data.slot, material);
+	std::string shader = data.get("shader").asString();
+
+	if (!shader.empty())
+	{
+		material->setPixelShader(GraphicsEngine::get()->getPixelShader(toWide(shader).c_str(), "main"));
+	}
+
+	unsigned int slot = (unsigned int)data.get("slot").asInt(0);
+
+	renderer->setMaterial(slot, material);
 
 	// Слот 0 стає і спільним матеріалом, щоб меші без поділу на частини теж малювалися ним
-	if (data.slot == 0) renderer->setMaterial(material);
+	if (slot == 0) renderer->setMaterial(material);
 }
 
 // Створює один компонент об'єкта за прочитаними даними
-static Component* buildComponent(Entity* entity, const ComponentData& data, const std::vector<Entity*>& created)
+static void buildComponent(Entity* entity, const JsonValue& data, const std::vector<Entity*>& created)
 {
+	std::string type = data.get("type").asString();
+
+	if (type.empty()) return;
+
 	Component* component = nullptr;
 
 	// Рухомість та маса фізичного тіла задаються лише конструктором, тому їх треба знати
 	// ще до створення компонента, а не привласнювати потім у deserialize
-	if (data.type == "RigidBody")
+	if (type == "RigidBody")
 	{
-		auto isStaticField = data.fields.find("static");
-		auto massField = data.fields.find("mass");
-
-		bool isStatic = isStaticField == data.fields.end() || atoi(isStaticField->second.c_str()) != 0;
-		float mass = massField == data.fields.end() ? 1.0f : (float)atof(massField->second.c_str());
+		bool isStatic = data.get("static").asBool(true);
+		float mass = data.get("mass").asFloat(1.0f);
 
 		component = isStatic ? entity->addComponent<RigidBody>(true) : entity->addComponent<RigidBody>(mass, false);
 	}
 	else
 	{
-		component = ComponentRegistry::create(data.type, entity);
+		component = ComponentRegistry::create(type, entity);
 	}
 
 	if (component == nullptr)
 	{
-		std::cout << "Unknown component type in scene: " << data.type << std::endl;
-		return nullptr;
+		std::cout << "Unknown component type in scene: " << type << std::endl;
+		return;
 	}
 
 	if (Renderer* renderer = dynamic_cast<Renderer*>(component))
 	{
-		if (data.hasMesh)
+		std::string mesh = data.get("mesh").asString();
+
+		if (!mesh.empty())
 		{
-			renderer->setMesh(GraphicsEngine::get()->getMeshManager()->createMeshFromFile(toWide(data.mesh).c_str()));
+			renderer->setMesh(GraphicsEngine::get()->getMeshManager()->createMeshFromFile(toWide(mesh).c_str()));
 		}
 
-		renderer->castShadows = data.castShadows;
+		renderer->castShadows = data.get("castShadows").asBool(renderer->castShadows);
 
-		for (const MaterialData& materialData : data.materials)
+		const JsonValue& materials = data.get("materials");
+
+		for (size_t slot = 0; slot < materials.size(); slot++)
 		{
-			buildMaterial(renderer, materialData);
+			buildMaterial(renderer, materials.at(slot));
 		}
 	}
 
-	SceneReader reader(data.fields, created);
+	SceneReader reader(data, created);
 	component->deserialize(reader);
-
-	return component;
 }
 
 // Відновлює сцену з тексту, знищивши те, що було у сцені до цього
 void SceneSerializer::deserialize(const std::string& text)
 {
-	std::vector<EntityData> parsed = parseScene(text);
+	std::string error;
 
+	JsonValue scene = JsonValue::parse(text, &error);
+
+	if (!error.empty())
+	{
+		std::cout << "Scene is not valid JSON: " << error << std::endl;
+		return;
+	}
+
+	const JsonValue& parsed = scene.get("entities");
+
+	if (parsed.getType() != JsonValue::Type::Array)
+	{
+		std::cout << "Scene has no entity list" << std::endl;
+		return;
+	}
+
+	// Посилання між об'єктами зберігаються номером у цьому списку, тому пропустити зіпсований
+	// запис не можна: усі наступні номери зсунулися б. Такий файл відхиляємо цілком
+	for (size_t i = 0; i < parsed.size(); i++)
+	{
+		if (parsed.at(i).getType() != JsonValue::Type::Object)
+		{
+			std::cout << "Scene entity " << i << " is not an object" << std::endl;
+			return;
+		}
+	}
+
+	// Сцена читається повністю до того, як щось буде знищено: інакше помилка у файлі
+	// лишила б редактор із порожнім світом замість попередньої сцени
 	EntityManager::get()->onSceneLoadStart();
 
 	// Спершу створюються всі об'єкти, щоб посилання компонентів було на що розв'язувати
 	std::vector<Entity*> created;
 
-	for (const EntityData& data : parsed)
+	for (size_t i = 0; i < parsed.size(); i++)
 	{
-		Entity* entity = data.isPrefab ? new Prefab() : new Entity();
+		const JsonValue& data = parsed.at(i);
 
-		entity->setName(data.name);
-		entity->isActiveSelf = data.active;
+		Entity* entity = data.get("prefab").asBool(false) ? new Prefab() : new Entity();
+
+		entity->setName(data.get("name").asString("Entity"));
+		entity->isActiveSelf = data.get("active").asBool(true);
 
 		created.push_back(entity);
 	}
@@ -431,9 +342,11 @@ void SceneSerializer::deserialize(const std::string& text)
 	// Зв'язки батько-дитина встановлюються після створення всіх об'єктів
 	for (size_t i = 0; i < created.size(); i++)
 	{
-		if (parsed[i].parent >= 0 && parsed[i].parent < (int)created.size())
+		int parent = parsed.at(i).get("parent").asInt(-1);
+
+		if (parent >= 0 && parent < (int)created.size())
 		{
-			created[i]->setParent(created[parsed[i].parent]);
+			created[i]->setParent(created[parent]);
 		}
 	}
 
@@ -442,27 +355,35 @@ void SceneSerializer::deserialize(const std::string& text)
 	// поточним масштабом, тож із одиничним масштабом фізика вийшла б зовсім іншого розміру
 	for (size_t i = 0; i < created.size(); i++)
 	{
+		const JsonValue& data = parsed.at(i).get("transform");
+
+		Vector3 position = jsonToVector(data.get("position"), Vector3(0.0f, 0.0f, 0.0f));
+		Vector3 rotation = jsonToVector(data.get("rotation"), Vector3(0.0f, 0.0f, 0.0f));
+		Vector3 scale = jsonToVector(data.get("scale"), Vector3(1.0f, 1.0f, 1.0f));
+
 		Transform* transform = created[i]->getTransform();
 
 		if (created[i]->getParent())
 		{
-			transform->setLocalScale(parsed[i].scale);
-			transform->setLocalRotation(parsed[i].rotation);
-			transform->setLocalPosition(parsed[i].position);
+			transform->setLocalScale(scale);
+			transform->setLocalRotation(rotation);
+			transform->setLocalPosition(position);
 		}
 		else
 		{
-			transform->setScale(parsed[i].scale);
-			transform->setRotation(parsed[i].rotation);
-			transform->setPosition(parsed[i].position);
+			transform->setScale(scale);
+			transform->setRotation(rotation);
+			transform->setPosition(position);
 		}
 	}
 
 	for (size_t i = 0; i < created.size(); i++)
 	{
-		for (const ComponentData& data : parsed[i].components)
+		const JsonValue& components = parsed.at(i).get("components");
+
+		for (size_t c = 0; c < components.size(); c++)
 		{
-			buildComponent(created[i], data, created);
+			buildComponent(created[i], components.at(c), created);
 		}
 	}
 

@@ -267,13 +267,13 @@ void CarComponent::serialize(SceneWriter& writer) const
 	writer.write("id", id);
 	writer.write("force", force);
 	writer.write("damping", damping);
-	writer.write("maxdistance", maxDistance);
-	writer.write("maxspeed", maxSpeed);
-	writer.write("maxsteering", maxSteering);
-	writer.write("gripratio", gripRatio);
+	writer.write("maxDistance", maxDistance);
+	writer.write("maxSpeed", maxSpeed);
+	writer.write("maxSteering", maxSteering);
+	writer.write("gripRatio", gripRatio);
 
 	// Без образу колеса машина після завантаження лишилася б без коліс
-	writer.writeRef("wheelprefab", wheelPrefab);
+	writer.writeRef("wheelPrefab", wheelPrefab);
 }
 
 // Відновлює власні поля та посилання з файлу сцени
@@ -282,10 +282,10 @@ void CarComponent::deserialize(const SceneReader& reader)
 	id = reader.read("id", id);
 	force = reader.read("force", force);
 	damping = reader.read("damping", damping);
-	maxDistance = reader.read("maxdistance", maxDistance);
-	maxSpeed = reader.read("maxspeed", maxSpeed);
-	maxSteering = reader.read("maxsteering", maxSteering);
-	gripRatio = reader.read("gripratio", gripRatio);
+	maxDistance = reader.read("maxDistance", maxDistance);
+	maxSpeed = reader.read("maxSpeed", maxSpeed);
+	maxSteering = reader.read("maxSteering", maxSteering);
+	gripRatio = reader.read("gripRatio", gripRatio);
 
-	wheelPrefab = reader.readPrefab("wheelprefab");
+	wheelPrefab = reader.readPrefab("wheelPrefab");
 }

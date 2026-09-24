@@ -27,7 +27,7 @@
 namespace filesystem = std::experimental::filesystem;
 
 // Шлях, за яким редактор зберігає та завантажує сцену
-static const char* SCENE_PATH = "Assets\\Scenes\\Scene.scene";
+static const char* SCENE_PATH = "Assets\\Scenes\\Scene.json";
 
 // Розставляє панель у типове місце, поки користувач не пересунув її сам
 static void placeWindow(float x, float y, float width, float height)

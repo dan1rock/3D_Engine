@@ -3,11 +3,30 @@
 #include "Prefab.h"
 #include "Transform.h"
 
-#include <sstream>
-#include <iomanip>
-#include <limits>
+// Перетворює вектор на масив з трьох чисел і навпаки: так вектори лишаються в один рядок
+JsonValue vectorToJson(const Vector3& value)
+{
+	JsonValue out = JsonValue::array();
 
-SceneWriter::SceneWriter(std::string& out, const std::unordered_map<Entity*, int>& indices)
+	out.push(value.x);
+	out.push(value.y);
+	out.push(value.z);
+
+	return out;
+}
+
+// Перетворює вектор на масив з трьох чисел і навпаки: так вектори лишаються в один рядок
+Vector3 jsonToVector(const JsonValue& value, const Vector3& fallback)
+{
+	if (value.getType() != JsonValue::Type::Array || value.size() < 3) return fallback;
+
+	return Vector3(
+		value.at(0).asFloat(fallback.x),
+		value.at(1).asFloat(fallback.y),
+		value.at(2).asFloat(fallback.z));
+}
+
+SceneWriter::SceneWriter(JsonValue& out, const std::unordered_map<Entity*, int>& indices)
 	: mOut(out), mIndices(indices)
 {
 }
@@ -15,34 +34,25 @@ SceneWriter::SceneWriter(std::string& out, const std::unordered_map<Entity*, int
 // Записує одне поле компонента під вказаним ключем
 void SceneWriter::write(const char* key, float value)
 {
-	std::ostringstream line;
-	line << std::setprecision(std::numeric_limits<float>::max_digits10);
-	line << key << " " << value << "\n";
-	mOut += line.str();
+	mOut.set(key, value);
 }
 
 // Записує одне поле компонента під вказаним ключем
 void SceneWriter::write(const char* key, int value)
 {
-	std::ostringstream line;
-	line << std::setprecision(std::numeric_limits<float>::max_digits10);
-	line << key << " " << value << "\n";
-	mOut += line.str();
+	mOut.set(key, value);
 }
 
 // Записує одне поле компонента під вказаним ключем
 void SceneWriter::write(const char* key, bool value)
 {
-	write(key, value ? 1 : 0);
+	mOut.set(key, value);
 }
 
 // Записує одне поле компонента під вказаним ключем
 void SceneWriter::write(const char* key, const Vector3& value)
 {
-	std::ostringstream line;
-	line << std::setprecision(std::numeric_limits<float>::max_digits10);
-	line << key << " " << value.x << " " << value.y << " " << value.z << "\n";
-	mOut += line.str();
+	mOut.set(key, vectorToJson(value));
 }
 
 // Записує одне поле компонента під вказаним ключем
@@ -51,7 +61,7 @@ void SceneWriter::write(const char* key, const std::string& value)
 	// Порожній рядок не пишемо: читання все одно взяло б значення за замовчуванням
 	if (value.empty()) return;
 
-	mOut += std::string(key) + " " + value + "\n";
+	mOut.set(key, value);
 }
 
 // Посилання на інший об'єкт сцени зберігається його номером: вказівник після перезапуску не діє
@@ -64,7 +74,7 @@ void SceneWriter::writeRef(const char* key, Entity* entity)
 	// Об'єкт поза сценою зберегти нічим, тому посилання просто не записуємо
 	if (it == mIndices.end()) return;
 
-	write(key, it->second);
+	mOut.set(key, it->second);
 }
 
 // Посилання на інший об'єкт сцени зберігається його номером: вказівник після перезапуску не діє
@@ -75,83 +85,45 @@ void SceneWriter::writeRef(const char* key, Transform* transform)
 	writeRef(key, transform->getOwner());
 }
 
-SceneReader::SceneReader(const std::unordered_map<std::string, std::string>& fields, const std::vector<Entity*>& entities)
+SceneReader::SceneReader(const JsonValue& fields, const std::vector<Entity*>& entities)
 	: mFields(fields), mEntities(entities)
 {
-}
-
-// Повертає рядок значення або nullptr, якщо поля немає
-const std::string* SceneReader::find(const char* key) const
-{
-	auto it = mFields.find(key);
-
-	if (it == mFields.end()) return nullptr;
-
-	return &it->second;
 }
 
 // Перевіряє, чи є таке поле у файлі: інакше компонент лишає своє значення за замовчуванням
 bool SceneReader::has(const char* key) const
 {
-	return find(key) != nullptr;
+	return mFields.has(key);
 }
 
 // Читає одне поле компонента, повертаючи запасне значення, якщо його немає у файлі
 float SceneReader::read(const char* key, float fallback) const
 {
-	const std::string* value = find(key);
-
-	if (value == nullptr) return fallback;
-
-	std::istringstream in(*value);
-	float result = fallback;
-	in >> result;
-
-	return result;
+	return mFields.get(key).asFloat(fallback);
 }
 
 // Читає одне поле компонента, повертаючи запасне значення, якщо його немає у файлі
 int SceneReader::read(const char* key, int fallback) const
 {
-	const std::string* value = find(key);
-
-	if (value == nullptr) return fallback;
-
-	std::istringstream in(*value);
-	int result = fallback;
-	in >> result;
-
-	return result;
+	return mFields.get(key).asInt(fallback);
 }
 
 // Читає одне поле компонента, повертаючи запасне значення, якщо його немає у файлі
 bool SceneReader::read(const char* key, bool fallback) const
 {
-	return read(key, fallback ? 1 : 0) != 0;
+	return mFields.get(key).asBool(fallback);
 }
 
 // Читає одне поле компонента, повертаючи запасне значення, якщо його немає у файлі
 Vector3 SceneReader::read(const char* key, const Vector3& fallback) const
 {
-	const std::string* value = find(key);
-
-	if (value == nullptr) return fallback;
-
-	std::istringstream in(*value);
-	Vector3 result = fallback;
-	in >> result.x >> result.y >> result.z;
-
-	return result;
+	return jsonToVector(mFields.get(key), fallback);
 }
 
 // Читає одне поле компонента, повертаючи запасне значення, якщо його немає у файлі
 std::string SceneReader::read(const char* key, const std::string& fallback) const
 {
-	const std::string* value = find(key);
-
-	if (value == nullptr) return fallback;
-
-	return *value;
+	return mFields.get(key).asString(fallback);
 }
 
 // Відновлює посилання на об'єкт сцени за збереженим номером

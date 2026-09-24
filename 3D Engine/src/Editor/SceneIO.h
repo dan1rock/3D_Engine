@@ -1,4 +1,5 @@
 #pragma once
+#include "Json.h"
 #include "Vector3.h"
 #include <string>
 #include <vector>
@@ -8,11 +9,11 @@ class Entity;
 class Prefab;
 class Transform;
 
-// Приймає поля компонента під час збереження сцени та перетворює їх на рядки файлу
+// Приймає поля компонента під час збереження сцени та складає з них об'єкт JSON
 class SceneWriter
 {
 public:
-	SceneWriter(std::string& out, const std::unordered_map<Entity*, int>& indices);
+	SceneWriter(JsonValue& out, const std::unordered_map<Entity*, int>& indices);
 
 	// Записує одне поле компонента під вказаним ключем
 	void write(const char* key, float value);
@@ -26,7 +27,7 @@ public:
 	void writeRef(const char* key, Transform* transform);
 
 private:
-	std::string& mOut;
+	JsonValue& mOut;
 	const std::unordered_map<Entity*, int>& mIndices;
 };
 
@@ -34,7 +35,7 @@ private:
 class SceneReader
 {
 public:
-	SceneReader(const std::unordered_map<std::string, std::string>& fields, const std::vector<Entity*>& entities);
+	SceneReader(const JsonValue& fields, const std::vector<Entity*>& entities);
 
 	// Перевіряє, чи є таке поле у файлі: інакше компонент лишає своє значення за замовчуванням
 	bool has(const char* key) const;
@@ -52,9 +53,10 @@ public:
 	Transform* readTransform(const char* key) const;
 
 private:
-	// Повертає рядок значення або nullptr, якщо поля немає
-	const std::string* find(const char* key) const;
-
-	const std::unordered_map<std::string, std::string>& mFields;
+	const JsonValue& mFields;
 	const std::vector<Entity*>& mEntities;
 };
+
+// Перетворює вектор на масив з трьох чисел і навпаки: так вектори лишаються в один рядок
+JsonValue vectorToJson(const Vector3& value);
+Vector3 jsonToVector(const JsonValue& value, const Vector3& fallback);

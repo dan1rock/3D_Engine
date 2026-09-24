@@ -39,11 +39,11 @@ void DemoPlayer::update()
 // Записує власні поля та посилання у файл сцени
 void DemoPlayer::serialize(SceneWriter& writer) const
 {
-	writer.writeRef("projectileprefab", projectilePrefab);
+	writer.writeRef("projectilePrefab", projectilePrefab);
 }
 
 // Відновлює власні поля та посилання з файлу сцени
 void DemoPlayer::deserialize(const SceneReader& reader)
 {
-	projectilePrefab = reader.readPrefab("projectileprefab");
+	projectilePrefab = reader.readPrefab("projectilePrefab");
 }

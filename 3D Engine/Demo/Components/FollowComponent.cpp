@@ -83,7 +83,7 @@ void FollowComponent::serialize(SceneWriter& writer) const
 {
 	writer.write("offset", mOffset);
 	writer.write("speed", mSpeed);
-	writer.write("mousespeed", mMouseSpeed);
+	writer.write("mouseSpeed", mMouseSpeed);
 
 	// Без цілі камера не має за чим слідувати і керування мишею теж не працює
 	writer.writeRef("target", mTarget);
@@ -94,7 +94,7 @@ void FollowComponent::deserialize(const SceneReader& reader)
 {
 	mOffset = reader.read("offset", mOffset);
 	mSpeed = reader.read("speed", mSpeed);
-	mMouseSpeed = reader.read("mousespeed", mMouseSpeed);
+	mMouseSpeed = reader.read("mouseSpeed", mMouseSpeed);
 
 	mTarget = reader.readTransform("target");
 }
