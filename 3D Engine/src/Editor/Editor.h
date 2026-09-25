@@ -49,6 +49,12 @@ private:
 
 	// Малює один вузол дерева разом з його дочірніми об'єктами
 	void drawEntityNode(Entity* entity);
+	// Приймає перетягнутий об'єкт на рядок дерева: над ним, під ним чи всередину
+	void drawDropTarget(Entity* target);
+	// Перевіряє, чи можна зробити об'єкт дочірнім для вказаного батька (nullptr — корінь)
+	bool canDrop(Entity* dragged, Entity* newParent) const;
+	// Виконує відкладене перетягування, коли дерево вже намальоване
+	void applyDrop();
 	// Малює поля трансформації об'єкта
 	void drawTransform(Entity* entity);
 	// Малює меню створення нового об'єкта
@@ -75,6 +81,29 @@ private:
 	void deleteSelected();
 
 	Entity* mSelected = nullptr;
+
+	// Куди відпустили перетягнутий об'єкт відносно рядка під курсором
+	enum class DropZone
+	{
+		Before,
+		Inside,
+		After,
+		Root
+	};
+
+	// Перетягування запам'ятовується і виконується після малювання дерева: зміна батьків
+	// посеред обходу списків дітей зламала б сам обхід
+	struct PendingDrop
+	{
+		Entity* dragged = nullptr;
+		Entity* target = nullptr;
+		DropZone zone = DropZone::Root;
+	};
+
+	PendingDrop mPendingDrop;
+
+	// Батько, який треба розгорнути в дереві, щоб щойно покладений у нього об'єкт було видно
+	Entity* mExpandEntity = nullptr;
 
 	bool mEnabled = true;
 	bool mPlaying = false;

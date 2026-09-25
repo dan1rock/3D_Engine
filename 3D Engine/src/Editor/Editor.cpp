@@ -24,11 +24,26 @@
 #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #include <experimental/filesystem>
 #include <iostream>
+#include <algorithm>
 
 namespace filesystem = std::experimental::filesystem;
 
 // Шлях, за яким редактор зберігає та завантажує сцену
 static const char* SCENE_PATH = "Assets\\Scenes\\Scene.json";
+
+// Тип вмісту, що переноситься мишею між рядками дерева сцени
+static const char* HIERARCHY_PAYLOAD = "HIERARCHY_ENTITY";
+
+// Перевіряє, чи об'єкт ще існує, не розіменовуючи вказівник
+static bool isAlive(Entity* entity)
+{
+	for (Entity* candidate : EntityManager::get()->getEntities())
+	{
+		if (candidate == entity) return true;
+	}
+
+	return false;
+}
 
 // Розставляє панель у типове місце, поки користувач не пересунув її сам
 static void placeWindow(float x, float y, float width, float height)
@@ -308,6 +323,25 @@ void Editor::drawHierarchy()
 		drawEntityNode(entity);
 	}
 
+	// Порожнє місце під деревом приймає об'єкт як кореневий, у кінець списку
+	ImVec2 space = ImGui::GetContentRegionAvail();
+
+	ImGui::InvisibleButton("##HierarchyEnd", ImVec2(space.x > 1.0f ? space.x : 1.0f, space.y > 24.0f ? space.y : 24.0f));
+
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(HIERARCHY_PAYLOAD))
+		{
+			Entity* dragged = *(Entity* const*)payload->Data;
+
+			mPendingDrop = { dragged, nullptr, DropZone::Root };
+		}
+
+		ImGui::EndDragDropTarget();
+	}
+
+	applyDrop();
+
 	ImGui::End();
 }
 
@@ -324,11 +358,28 @@ void Editor::drawEntityNode(Entity* entity)
 
 	if (!active) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.55f, 0.55f, 1.0f));
 
+	// Батько, у який щойно поклали об'єкт, розгортається, щоб цей об'єкт було видно
+	if (entity == mExpandEntity)
+	{
+		ImGui::SetNextItemOpen(true);
+		mExpandEntity = nullptr;
+	}
+
 	bool open = ImGui::TreeNodeEx((void*)entity, flags, "%s", entity->getName().c_str());
 
 	if (!active) ImGui::PopStyleColor();
 
 	if (ImGui::IsItemClicked()) mSelected = entity;
+
+	// Рядок можна тягнути мишею, щоб змінити місце об'єкта в дереві
+	if (ImGui::BeginDragDropSource())
+	{
+		ImGui::SetDragDropPayload(HIERARCHY_PAYLOAD, &entity, sizeof(Entity*));
+		ImGui::TextUnformatted(entity->getName().c_str());
+		ImGui::EndDragDropSource();
+	}
+
+	drawDropTarget(entity);
 
 	if (open)
 	{
@@ -341,6 +392,133 @@ void Editor::drawEntityNode(Entity* entity)
 
 		ImGui::TreePop();
 	}
+}
+
+// Приймає перетягнутий об'єкт на рядок дерева: над ним, під ним чи всередину
+void Editor::drawDropTarget(Entity* target)
+{
+	if (!ImGui::BeginDragDropTarget()) return;
+
+	ImVec2 min = ImGui::GetItemRectMin();
+	ImVec2 max = ImGui::GetItemRectMax();
+
+	float height = max.y - min.y;
+	float mouseY = ImGui::GetIO().MousePos.y;
+
+	// Як у Unity: верхня й нижня чверті рядка ставлять об'єкт поруч, а середина — всередину
+	DropZone zone = DropZone::Inside;
+
+	if (mouseY < min.y + height * 0.25f) zone = DropZone::Before;
+	else if (mouseY > max.y - height * 0.25f) zone = DropZone::After;
+
+	// Вміст приймається ще до того, як кнопку відпустили: так можна намалювати підказку,
+	// куди саме ляже об'єкт, а стандартну рамку ImGui замінюємо власною лінією
+	const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(HIERARCHY_PAYLOAD,
+		ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+
+	if (payload)
+	{
+		Entity* dragged = *(Entity* const*)payload->Data;
+		Entity* newParent = zone == DropZone::Inside ? target : target->getParent();
+
+		if (dragged != target && canDrop(dragged, newParent))
+		{
+			ImDrawList* draw = ImGui::GetWindowDrawList();
+			ImU32 color = ImGui::GetColorU32(ImGuiCol_DragDropTarget);
+
+			if (zone == DropZone::Inside)
+			{
+				draw->AddRect(min, max, color, 0.0f, 0, 2.0f);
+			}
+			else
+			{
+				float y = zone == DropZone::Before ? min.y : max.y;
+
+				draw->AddLine(ImVec2(min.x, y), ImVec2(max.x, y), color, 2.0f);
+			}
+
+			if (payload->IsDelivery()) mPendingDrop = { dragged, target, zone };
+		}
+	}
+
+	ImGui::EndDragDropTarget();
+}
+
+// Перевіряє, чи можна зробити об'єкт дочірнім для вказаного батька (nullptr - корінь)
+bool Editor::canDrop(Entity* dragged, Entity* newParent) const
+{
+	// Об'єкт, що переживає зміну сцени, мусить лишатися кореневим: інакше його знищив би батько
+	if (dragged->dontDestroyOnLoad && newParent != nullptr) return false;
+
+	for (Entity* ancestor = newParent; ancestor; ancestor = ancestor->getParent())
+	{
+		// Власний нащадок не може стати батьком: вийшов би цикл
+		if (ancestor == dragged) return false;
+
+		// Такий об'єкт не потрапляє у файл сцени, тож і покладені в нього діти зникли б із файлу
+		if (ancestor->dontDestroyOnLoad) return false;
+	}
+
+	return true;
+}
+
+// Виконує відкладене перетягування, коли дерево вже намальоване
+void Editor::applyDrop()
+{
+	PendingDrop drop = mPendingDrop;
+	mPendingDrop = PendingDrop();
+
+	if (drop.dragged == nullptr) return;
+
+	// Під час перетягування гра могла знищити будь-який з цих об'єктів
+	if (!isAlive(drop.dragged)) return;
+	if (drop.target && !isAlive(drop.target)) return;
+
+	Entity* newParent = nullptr;
+	Entity* before = nullptr;
+
+	if (drop.zone == DropZone::Inside)
+	{
+		newParent = drop.target;
+	}
+	else if (drop.zone != DropZone::Root)
+	{
+		newParent = drop.target->getParent();
+
+		// Сусіди за деревом: діти батька або кореневі об'єкти, вже без самого перетягнутого
+		std::vector<Entity*> siblings;
+
+		if (newParent)
+		{
+			siblings.assign(newParent->getChildren()->begin(), newParent->getChildren()->end());
+		}
+		else
+		{
+			for (Entity* entity : EntityManager::get()->getEntities())
+			{
+				if (entity->getParent() == nullptr) siblings.push_back(entity);
+			}
+		}
+
+		siblings.erase(std::remove(siblings.begin(), siblings.end(), drop.dragged), siblings.end());
+
+		auto position = std::find(siblings.begin(), siblings.end(), drop.target);
+
+		if (drop.zone == DropZone::Before) before = drop.target;
+		else if (position != siblings.end() && position + 1 != siblings.end()) before = *(position + 1);
+	}
+
+	if (!canDrop(drop.dragged, newParent)) return;
+
+	// Об'єкт лишається там, де був у світі, як у Unity, змінюється лише його батько
+	drop.dragged->setParent(newParent, true);
+
+	if (newParent) newParent->moveChildBefore(drop.dragged, before);
+	else EntityManager::get()->moveRootBefore(drop.dragged, before);
+
+	EntityManager::get()->sortByHierarchy();
+
+	if (drop.zone == DropZone::Inside) mExpandEntity = newParent;
 }
 
 // Малює меню створення нового об'єкта

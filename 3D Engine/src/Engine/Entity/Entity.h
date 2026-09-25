@@ -49,8 +49,12 @@ public:
 
 	// Повертає вказівник на батьківський об'єкт
 	Entity* getParent();
-	// Встановлює батьківський об'єкт для цього об'єкта
-	void setParent(Entity* parent);
+	// Встановлює батьківський об'єкт для цього об'єкта. Без keepWorldTransform поточна локальна
+	// трансформація відраховується вже від нового батька; з ним об'єкт лишається на тому ж місці
+	// у світі, як у редакторі. Власний нащадок батьком стати не може
+	void setParent(Entity* parent, bool keepWorldTransform = false);
+	// Переставляє дочірній об'єкт перед іншим дочірнім, а за nullptr — у кінець
+	void moveChildBefore(Entity* child, Entity* before);
 
 	// Повертає список дочірніх об'єктів
 	std::list<Entity*>* getChildren();

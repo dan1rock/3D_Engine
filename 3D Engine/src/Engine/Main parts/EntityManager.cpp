@@ -1,4 +1,5 @@
 #include "EntityManager.h"
+#include <algorithm>
 #include <vector>
 #include "Component.h"
 #include "Entity.h"
@@ -218,6 +219,45 @@ void EntityManager::updateLights()
 		if (!l->getOwner()->isActive()) continue;
 		l->updateLight();
 	}
+}
+
+// Ставить кореневий об'єкт перед іншим кореневим у порядку сцени, а за nullptr — у кінець
+void EntityManager::moveRootBefore(Entity* root, Entity* before)
+{
+	if (root == before) return;
+
+	mEntities.remove(root);
+
+	auto position = before ? std::find(mEntities.begin(), mEntities.end(), before) : mEntities.end();
+
+	mEntities.insert(position, root);
+}
+
+// Дописує об'єкт і всіх його нащадків у порядку дерева
+static void appendSubtree(Entity* entity, std::list<Entity*>& ordered)
+{
+	ordered.push_back(entity);
+
+	for (Entity* child : *entity->getChildren())
+	{
+		appendSubtree(child, ordered);
+	}
+}
+
+// Упорядковує список об'єктів так, як їх показує дерево сцени
+void EntityManager::sortByHierarchy()
+{
+	std::list<Entity*> ordered;
+
+	for (Entity* entity : mEntities)
+	{
+		if (entity->getParent() == nullptr) appendSubtree(entity, ordered);
+	}
+
+	// Розбіжність у кількості означала б зламане дерево, і тоді краще лишити порядок як був
+	if (ordered.size() != mEntities.size()) return;
+
+	mEntities = ordered;
 }
 
 // Викликається на початку завантаження сцени

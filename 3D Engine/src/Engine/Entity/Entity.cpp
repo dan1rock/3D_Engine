@@ -1,4 +1,5 @@
 #include "Entity.h"
+#include <algorithm>
 #include "EntityManager.h"
 #include "RigidBody.h"
 
@@ -145,18 +146,64 @@ Entity* Entity::getParent()
     return mParent;
 }
 
-void Entity::setParent(Entity* parent)
+void Entity::setParent(Entity* parent, bool keepWorldTransform)
 {
 	if (mParent == parent) return;
+
+	// Власний нащадок не може стати батьком: вийшов би цикл, і оновлення трансформацій не скінчилося б
+	for (Entity* ancestor = parent; ancestor; ancestor = ancestor->mParent)
+	{
+		if (ancestor == this) return;
+	}
+
+	// Світова матриця потрібна до зміни батька, бо після неї вона вже рахується від нового
+	Matrix world = *mTransform.getMatrix();
+
 	if (mParent) {
 		mParent->mChildren.remove(this);
 	}
 
 	mParent = parent;
+
 	if (mParent) {
 		mParent->mChildren.push_back(this);
-		mTransform.updateGlobalMatrix();
 	}
+
+	if (!keepWorldTransform)
+	{
+		if (mParent) mTransform.updateGlobalMatrix();
+		return;
+	}
+
+	// Об'єкт без батька і так зберігає саме світову трансформацію
+	if (mParent == nullptr) return;
+
+	// Світова матриця дочірнього — це локальна, помножена на батьківську, тож локальну дає
+	// множення на обернену батьківську. Через сетери, щоб узгодити й окремі значення
+	Matrix parentInverse = *mParent->getTransform()->getMatrix();
+	parentInverse.inverse();
+
+	Matrix local = world * parentInverse;
+
+	mTransform.setLocalScale(local.getScale());
+	mTransform.setLocalRotation(local.getRotation());
+	mTransform.setLocalPosition(local.getTranslation());
+}
+
+// Переставляє дочірній об'єкт перед іншим дочірнім, а за nullptr — у кінець
+void Entity::moveChildBefore(Entity* child, Entity* before)
+{
+	if (child == before) return;
+
+	auto it = std::find(mChildren.begin(), mChildren.end(), child);
+
+	if (it == mChildren.end()) return;
+
+	mChildren.erase(it);
+
+	auto position = before ? std::find(mChildren.begin(), mChildren.end(), before) : mChildren.end();
+
+	mChildren.insert(position, child);
 }
 
 std::list<Entity*>* Entity::getChildren()
