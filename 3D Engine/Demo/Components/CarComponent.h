@@ -58,6 +58,8 @@ private:
 
 	// Скидає стан, набутий під час гри, щоб наступний запуск створив колеса заново
 	void onEditorStop() override;
+	// Забуває фізичне тіло, якщо його прибрали з машини
+	void onComponentRemoved(Component* removed) override;
 
 	wheel mWheelFR = {};
 	wheel mWheelFL = {};

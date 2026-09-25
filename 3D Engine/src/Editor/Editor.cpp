@@ -470,9 +470,14 @@ void Editor::drawInspector()
 		ImGui::PushID(component);
 		ImGui::Separator();
 
-		bool open = ImGui::CollapsingHeader(component->getTypeName(), ImGuiTreeNodeFlags_DefaultOpen);
+		// Правий край рядка беремо до заголовка: після нього курсор уже на наступному рядку
+		float rightEdge = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x;
+		float buttonWidth = ImGui::CalcTextSize("Remove").x + ImGui::GetStyle().FramePadding.x * 2.0f;
 
-		ImGui::SameLine(ImGui::GetWindowWidth() - 60.0f);
+		// Заголовок займає весь рядок з AllowOverlap для кнопки видалення
+		bool open = ImGui::CollapsingHeader(component->getTypeName(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowOverlap);
+
+		ImGui::SameLine(rightEdge - buttonWidth);
 
 		if (ImGui::SmallButton("Remove"))
 		{

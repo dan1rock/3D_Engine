@@ -41,7 +41,7 @@ public:
 	template<typename T>
 	std::list<T*> getComponents();
 
-	// Видаляє компонент з об'єкта, якщо він існує
+	// Прибирає компонент з об'єкта та знищує його, якщо він існує
 	bool removeComponent(Component* component);
 
 	// Створює копію об'єкта разом з усіма його компонентами

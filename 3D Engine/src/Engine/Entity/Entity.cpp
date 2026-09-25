@@ -88,11 +88,26 @@ bool Entity::removeComponent(Component* component)
             return ptr == component;
         });
 
-    if (it != mComponents.end()) {
-        mComponents.erase(it);
-        return true;
-    }
-    return false;
+    if (it == mComponents.end()) return false;
+
+    mComponents.erase(it);
+
+	// Об'єкт тримає фізичне тіло окремо, і Transform передає в нього кожну зміну позиції,
+	// тож без цього наступне ж переміщення звернулося б до знищеного тіла
+	if (component == mRigidBody) mRigidBody = nullptr;
+
+	// Сусіди дізнаються про видалення, поки компонент ще живий: так вони можуть його порівняти
+	for (Component* other : mComponents)
+	{
+		other->onComponentRemoved(component);
+	}
+
+	// Лише прибрати вказівник зі списку замало: компонент лишився б зареєстрованим у менеджері
+	// і далі оновлювався, малювався та брав участь у фізиці. Деструктор знімає реєстрацію
+	// та звільняє ресурси. Викликати це під час обходу компонентів менеджером не можна
+	delete component;
+
+    return true;
 }
 
 // Створює копію об'єкта разом з усіма його компонентами

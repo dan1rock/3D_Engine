@@ -48,3 +48,8 @@ void Component::fixedUpdate()
 void Component::onEditorStop()
 {
 }
+
+// Викликається, коли з того самого об'єкта прибирають інший компонент, ще до його знищення
+void Component::onComponentRemoved(Component* removed)
+{
+}

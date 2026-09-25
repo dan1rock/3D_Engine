@@ -308,6 +308,23 @@ void RigidBody::updateGlobalPose()
 	mActor->setGlobalPose(pose, true);
 }
 
+// Забуває прибраний коллайдер і перебудовує форми без нього
+void RigidBody::onComponentRemoved(Component* removed)
+{
+	Collider* collider = dynamic_cast<Collider*>(removed);
+
+	if (collider == nullptr) return;
+
+	size_t before = mColliders.size();
+
+	mColliders.remove(collider);
+
+	if (mColliders.size() == before) return;
+
+	// Форма коллайдера досі прикріплена до актора і далі зіштовхувалася б з усім довкола
+	if (mActor) updateShape();
+}
+
 // Додає коллайдер до списку коллайдерів цього фізичного тіла
 void RigidBody::addCollider(Collider* collider)
 {

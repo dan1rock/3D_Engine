@@ -71,6 +71,9 @@ private:
 	// Оновлює глобальну позицію та обертання фізичного тіла згідно з Transform
 	void updateGlobalPose();
 
+	// Забуває прибраний коллайдер і перебудовує форми без нього
+	void onComponentRemoved(Component* removed) override;
+
 	// Додає коллайдер до списку коллайдерів цього фізичного тіла
 	void addCollider(Collider* collider);
 

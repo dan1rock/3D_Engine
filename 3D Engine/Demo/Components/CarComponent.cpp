@@ -39,6 +39,12 @@ void CarComponent::onEditorStop()
 	}
 }
 
+// Забуває фізичне тіло, якщо його прибрали з машини: далі fixedUpdate просто нічого не робить
+void CarComponent::onComponentRemoved(Component* removed)
+{
+	if (removed == mRigidBody) mRigidBody = nullptr;
+}
+
 void CarComponent::start()
 {
 	isStarted = true;

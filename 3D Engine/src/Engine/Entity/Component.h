@@ -45,6 +45,9 @@ private:
 	// Викликається після зупинки гри в редакторі: компонент має забути все, що створив під час неї,
 	// бо ці об'єкти вже знищено
 	virtual void onEditorStop();
+	// Викликається, коли з того самого об'єкта прибирають інший компонент, ще до його знищення:
+	// хто тримав на нього вказівник, має його забути
+	virtual void onComponentRemoved(Component* removed);
 
 	friend class Entity;
 	friend class EntityManager;
