@@ -44,11 +44,6 @@ void Component::fixedUpdate()
 {
 }
 
-// Викликається після зупинки гри в редакторі: компонент має забути все, що створив під час неї
-void Component::onEditorStop()
-{
-}
-
 // Викликається, коли з того самого об'єкта прибирають інший компонент, ще до його знищення
 void Component::onComponentRemoved(Component* removed)
 {

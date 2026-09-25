@@ -1,4 +1,5 @@
 #include "EntityManager.h"
+#include <vector>
 #include "Component.h"
 #include "Entity.h"
 #include "Renderer.h"
@@ -219,29 +220,23 @@ void EntityManager::updateLights()
 	}
 }
 
-// Повідомляє всі компоненти, що гру зупинено
-void EntityManager::notifyEditorStop()
-{
-	// Копія списку, бо компонент може знищити об'єкти під час скидання свого стану
-	std::list<Component*> components = mComponents;
-
-	for (auto* c : components) {
-		c->onEditorStop();
-	}
-}
-
 // Викликається на початку завантаження сцени
 void EntityManager::onSceneLoadStart()
 {
-	std::list<Entity*> toDestroy = mEntities;
+	// Знищуються лише кореневі об'єкти: destroy забирає з собою й нащадків, тож дочірній
+	// об'єкт зі списку інакше знищувався б удруге, коли його пам'ять уже звільнена.
+	// Нащадки об'єкта, що переживає зміну сцени, переживають її разом з ним
+	std::vector<Entity*> toDestroy;
 
-	auto it = toDestroy.begin();
-	while (it != toDestroy.end())
+	for (Entity* g : mEntities)
 	{
-		Entity* g = *it++;
-		if (g->dontDestroyOnLoad)
-			continue;
+		if (g->dontDestroyOnLoad || g->getParent() != nullptr) continue;
 
+		toDestroy.push_back(g);
+	}
+
+	for (Entity* g : toDestroy)
+	{
 		g->destroy();
 	}
 

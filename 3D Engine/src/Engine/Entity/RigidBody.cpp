@@ -339,6 +339,12 @@ void RigidBody::visitProperties(PropertyVisitor& visitor)
 	// Тип тіла міняє самого актора PhysX, тому його не можна просто привласнити полю
 	if (isStatic != mIsStatic) setStatic(isStatic);
 
+	// Безперервне виявлення зіткнень теж треба передати актору, а не лише записати в поле
+	bool ccd = mCcd;
+	visitor.property("continuousCollision", ccd);
+
+	if (ccd != mCcd) setContinousCollisionDetection(ccd);
+
 	float mass = mMass;
 
 	// Нерухоме тіло маси не має, тому показуємо її, але не даємо правити

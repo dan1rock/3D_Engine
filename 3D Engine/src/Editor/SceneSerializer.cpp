@@ -14,6 +14,7 @@
 #include "DirectionalLight.h"
 #include "RigidBody.h"
 #include "GraphicsEngine.h"
+#include "GlobalResources.h"
 
 #include <fstream>
 #include <sstream>
@@ -22,7 +23,7 @@
 #include <iostream>
 
 // Номер формату: змінюється, коли файли старих версій більше не читаються так само
-static const int SCENE_VERSION = 3;
+static const int SCENE_VERSION = 4;
 
 // Переводить вузький рядок у широкий, бо шляхи ресурсів рушій приймає як wchar_t
 static std::wstring toWide(const std::string& text)
@@ -53,12 +54,10 @@ static std::string toRelativePath(const std::wstring& fullPath)
 	return path;
 }
 
-// Складає опис одного матеріалу рендер-компонента
-static JsonValue writeMaterial(Material* material, int slot)
+// Складає опис одного матеріалу
+static JsonValue writeMaterial(Material* material)
 {
 	JsonValue out = JsonValue::object();
-
-	out.set("slot", slot);
 
 	JsonValue color = JsonValue::array();
 	color.push(material->color[0]);
@@ -88,7 +87,7 @@ static JsonValue writeMaterial(Material* material, int slot)
 }
 
 // Записує поточну сцену у текст
-std::string SceneSerializer::serialize()
+std::string SceneSerializer::serialize(bool includePersistent)
 {
 	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
 
@@ -100,16 +99,41 @@ std::string SceneSerializer::serialize()
 	for (Entity* entity : entities)
 	{
 		// Об'єкти, що переживають зміну сцени, не зберігаються: інакше завантаження створить їх копію
-		if (entity->dontDestroyOnLoad) continue;
+		if (entity->dontDestroyOnLoad && !includePersistent) continue;
 
 		indices[entity] = index++;
 	}
+
+	// Матеріали пишуться однією таблицею, а рендер-компоненти посилаються на них номером.
+	// Інакше спільний матеріал записався б окремо для кожного слота та об'єкта і після
+	// завантаження розпався б на копії: правка одного вже не змінювала б решту
+	Material* defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+
+	std::unordered_map<Material*, int> materialIndices;
+	JsonValue materialList = JsonValue::array();
+
+	// Повертає номер матеріалу в таблиці, а -1 означає спільний матеріал рушія за замовчуванням
+	auto materialIndex = [&](Material* material) -> int
+	{
+		if (material == defaultMaterial) return -1;
+
+		auto it = materialIndices.find(material);
+
+		if (it != materialIndices.end()) return it->second;
+
+		int newIndex = (int)materialList.size();
+
+		materialIndices[material] = newIndex;
+		materialList.push(writeMaterial(material));
+
+		return newIndex;
+	};
 
 	JsonValue entityList = JsonValue::array();
 
 	for (Entity* entity : entities)
 	{
-		if (entity->dontDestroyOnLoad) continue;
+		if (entity->dontDestroyOnLoad && !includePersistent) continue;
 
 		JsonValue entityValue = JsonValue::object();
 
@@ -120,6 +144,8 @@ std::string SceneSerializer::serialize()
 		// Образ треба відрізнити від звичайного об'єкта, бо інакше він оживе як окремий об'єкт сцени
 		// і водночас компоненти, що на нього посилаються, лишаться без образу для створення копій
 		if (dynamic_cast<Prefab*>(entity) != nullptr) entityValue.set("prefab", true);
+
+		if (entity->dontDestroyOnLoad) entityValue.set("persistent", true);
 
 		Entity* parent = entity->getParent();
 
@@ -156,19 +182,29 @@ std::string SceneSerializer::serialize()
 
 				componentValue.set("castShadows", renderer->castShadows);
 
-				JsonValue materialList = JsonValue::array();
-
-				unsigned int slots = renderer->getMaterialCount();
-
-				for (unsigned int slot = 0; slot < slots; slot++)
+				// Спільний матеріал і лише ті слоти, яким задано власний, як і в самому компоненті
+				if (Material* shared = renderer->getSharedMaterial())
 				{
-					if (Material* material = renderer->getMaterial(slot))
-					{
-						materialList.push(writeMaterial(material, (int)slot));
-					}
+					componentValue.set("material", materialIndex(shared));
 				}
 
-				if (materialList.size() > 0) componentValue.set("materials", materialList);
+				JsonValue slotList = JsonValue::array();
+
+				for (unsigned int slot = 0; slot < renderer->getSlotMaterialCount(); slot++)
+				{
+					Material* material = renderer->getSlotMaterial(slot);
+
+					if (material == nullptr) continue;
+
+					JsonValue slotValue = JsonValue::object();
+
+					slotValue.set("slot", (int)slot);
+					slotValue.set("material", materialIndex(material));
+
+					slotList.push(slotValue);
+				}
+
+				if (slotList.size() > 0) componentValue.set("slotMaterials", slotList);
 			}
 
 			// Решту полів компонент записує сам, бо лише він знає, що саме варто зберігати
@@ -186,15 +222,15 @@ std::string SceneSerializer::serialize()
 	JsonValue scene = JsonValue::object();
 
 	scene.set("version", SCENE_VERSION);
+	scene.set("materials", materialList);
 	scene.set("entities", entityList);
 
 	return scene.toString();
 }
 
-// Створює матеріал одного слота рендер-компонента
-static void buildMaterial(Renderer* renderer, const JsonValue& data)
+// Створює матеріал за його описом у файлі
+static Material* createMaterial(const JsonValue& data)
 {
-	// Кожен слот отримує власний матеріал, щоб правки не розповзалися між об'єктами
 	Material* material = new Material();
 
 	const JsonValue& color = data.get("color");
@@ -228,16 +264,21 @@ static void buildMaterial(Renderer* renderer, const JsonValue& data)
 		material->setPixelShader(GraphicsEngine::get()->getPixelShader(toWide(shader).c_str(), "main"));
 	}
 
-	unsigned int slot = (unsigned int)data.get("slot").asInt(0);
+	return material;
+}
 
-	renderer->setMaterial(slot, material);
+// Повертає матеріал з таблиці за номером; -1 означає спільний матеріал рушія за замовчуванням
+static Material* lookupMaterial(int index, const std::vector<Material*>& materials)
+{
+	if (index == -1) return GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
 
-	// Слот 0 стає і спільним матеріалом, щоб меші без поділу на частини теж малювалися ним
-	if (slot == 0) renderer->setMaterial(material);
+	if (index >= 0 && index < (int)materials.size()) return materials[index];
+
+	return nullptr;
 }
 
 // Створює один компонент об'єкта за прочитаними даними
-static void buildComponent(Entity* entity, const JsonValue& data, const std::vector<Entity*>& created)
+static void buildComponent(Entity* entity, const JsonValue& data, const std::vector<Entity*>& created, const std::vector<Material*>& materials)
 {
 	std::string type = data.get("type").asString();
 
@@ -278,11 +319,38 @@ static void buildComponent(Entity* entity, const JsonValue& data, const std::vec
 
 		renderer->castShadows = data.get("castShadows").asBool(renderer->castShadows);
 
-		const JsonValue& materials = data.get("materials");
-
-		for (size_t slot = 0; slot < materials.size(); slot++)
+		if (data.has("material"))
 		{
-			buildMaterial(renderer, materials.at(slot));
+			if (Material* shared = lookupMaterial(data.get("material").asInt(-2), materials))
+			{
+				renderer->setMaterial(shared);
+			}
+		}
+
+		const JsonValue& slotList = data.get("slotMaterials");
+
+		for (size_t i = 0; i < slotList.size(); i++)
+		{
+			const JsonValue& slotValue = slotList.at(i);
+
+			Material* material = lookupMaterial(slotValue.get("material").asInt(-2), materials);
+
+			if (material) renderer->setMaterial((unsigned int)slotValue.get("slot").asInt(0), material);
+		}
+
+		// Файли третьої версії тримали матеріали прямо в компоненті, окремо для кожного слота
+		const JsonValue& legacyMaterials = data.get("materials");
+
+		for (size_t i = 0; i < legacyMaterials.size(); i++)
+		{
+			const JsonValue& materialValue = legacyMaterials.at(i);
+
+			Material* material = createMaterial(materialValue);
+			unsigned int slot = (unsigned int)materialValue.get("slot").asInt(0);
+
+			renderer->setMaterial(slot, material);
+
+			if (slot == 0) renderer->setMaterial(material);
 		}
 	}
 
@@ -291,7 +359,7 @@ static void buildComponent(Entity* entity, const JsonValue& data, const std::vec
 }
 
 // Відновлює сцену з тексту, знищивши те, що було у сцені до цього
-void SceneSerializer::deserialize(const std::string& text)
+bool SceneSerializer::deserialize(const std::string& text, std::vector<Entity*>* createdOut, bool replacePersistent)
 {
 	std::string error;
 
@@ -300,7 +368,7 @@ void SceneSerializer::deserialize(const std::string& text)
 	if (!error.empty())
 	{
 		std::cout << "Scene is not valid JSON: " << error << std::endl;
-		return;
+		return false;
 	}
 
 	const JsonValue& parsed = scene.get("entities");
@@ -308,7 +376,7 @@ void SceneSerializer::deserialize(const std::string& text)
 	if (parsed.getType() != JsonValue::Type::Array)
 	{
 		std::cout << "Scene has no entity list" << std::endl;
-		return;
+		return false;
 	}
 
 	// Посилання між об'єктами зберігаються номером у цьому списку, тому пропустити зіпсований
@@ -318,13 +386,41 @@ void SceneSerializer::deserialize(const std::string& text)
 		if (parsed.at(i).getType() != JsonValue::Type::Object)
 		{
 			std::cout << "Scene entity " << i << " is not an object" << std::endl;
-			return;
+			return false;
 		}
 	}
 
 	// Сцена читається повністю до того, як щось буде знищено: інакше помилка у файлі
 	// лишила б редактор із порожнім світом замість попередньої сцени
+	if (replacePersistent)
+	{
+		// Старі екземпляри мають зникнути до створення нових: інакше їх стало б по два, а
+		// компоненти-одинаки на кшталт SceneChanger знищили б новий об'єкт просто під час читання
+		std::vector<Entity*> persistentRoots;
+
+		for (Entity* entity : EntityManager::get()->getEntities())
+		{
+			if (entity->dontDestroyOnLoad && entity->getParent() == nullptr) persistentRoots.push_back(entity);
+		}
+
+		for (Entity* entity : persistentRoots)
+		{
+			entity->destroy();
+		}
+	}
+
 	EntityManager::get()->onSceneLoadStart();
+
+	// Матеріали створюються лише тепер: onSceneLoadStart видаляє всі матеріали сцени,
+	// тож створені раніше зникли б разом зі старими
+	std::vector<Material*> materials;
+
+	const JsonValue& materialList = scene.get("materials");
+
+	for (size_t i = 0; i < materialList.size(); i++)
+	{
+		materials.push_back(createMaterial(materialList.at(i)));
+	}
 
 	// Спершу створюються всі об'єкти, щоб посилання компонентів було на що розв'язувати
 	std::vector<Entity*> created;
@@ -337,6 +433,7 @@ void SceneSerializer::deserialize(const std::string& text)
 
 		entity->setName(data.get("name").asString("Entity"));
 		entity->isActiveSelf = data.get("active").asBool(true);
+		entity->dontDestroyOnLoad = data.get("persistent").asBool(false);
 
 		created.push_back(entity);
 	}
@@ -385,11 +482,15 @@ void SceneSerializer::deserialize(const std::string& text)
 
 		for (size_t c = 0; c < components.size(); c++)
 		{
-			buildComponent(created[i], components.at(c), created);
+			buildComponent(created[i], components.at(c), created, materials);
 		}
 	}
 
 	EntityManager::get()->onSceneLoadFinished();
+
+	if (createdOut) *createdOut = created;
+
+	return true;
 }
 
 // Зберігає сцену у файл
@@ -414,7 +515,5 @@ bool SceneSerializer::loadFromFile(const std::string& path)
 	std::ostringstream buffer;
 	buffer << file.rdbuf();
 
-	deserialize(buffer.str());
-
-	return true;
+	return deserialize(buffer.str());
 }

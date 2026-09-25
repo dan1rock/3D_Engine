@@ -38,5 +38,8 @@ void DemoPlayer::update()
 // Перелічує власні поля для файлу сцени та інспектора
 void DemoPlayer::visitProperties(PropertyVisitor& visitor)
 {
+	// Швидкості камери належать базовому класу, тож їх перелічує він
+	FreelookCameraController::visitProperties(visitor);
+
 	visitor.reference("projectilePrefab", projectilePrefab);
 }

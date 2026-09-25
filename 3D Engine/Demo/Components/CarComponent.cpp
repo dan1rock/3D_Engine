@@ -23,22 +23,6 @@ void CarComponent::awake()
 	isStarted = false;
 }
 
-// Скидає стан, набутий під час гри, щоб наступний запуск створив колеса заново
-void CarComponent::onEditorStop()
-{
-	isStarted = false;
-	mRigidBody = nullptr;
-
-	// Колеса створювала сама гра, тож редактор їх уже знищив
-	wheel* wheels[] = { &mWheelFR, &mWheelFL, &mWheelBR, &mWheelBL };
-
-	for (wheel* w : wheels)
-	{
-		w->wheelTransform = nullptr;
-		w->positionTransform = nullptr;
-	}
-}
-
 // Забуває фізичне тіло, якщо його прибрали з машини: далі fixedUpdate просто нічого не робить
 void CarComponent::onComponentRemoved(Component* removed)
 {

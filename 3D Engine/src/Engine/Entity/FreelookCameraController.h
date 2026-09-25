@@ -11,6 +11,9 @@ public:
 	FreelookCameraController(float speed, float mouseSpeed);
 	~FreelookCameraController() override;
 
+	// Перелічує власні поля для файлу сцени та інспектора
+	void visitProperties(PropertyVisitor& visitor) override;
+
 protected:
 	// Оновлює стан камери в стилі "вільного погляду"
 	void update() override;

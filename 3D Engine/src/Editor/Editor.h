@@ -90,19 +90,14 @@ private:
 	std::vector<std::string> mMeshNames;
 	std::vector<std::string> mTextureNames;
 
-	// Знімок одного об'єкта, зроблений перед запуском гри
-	struct EntitySnapshot
-	{
-		Entity* entity = nullptr;
-		Vector3 position;
-		Vector3 rotation;
-		Vector3 scale;
-		bool active = true;
-		bool hasParent = false;
-	};
-
-	// Стан сцени, збережений перед запуском гри
-	std::vector<EntitySnapshot> mSnapshot;
+	// Уся сцена, записана перед запуском гри тим самим серіалізатором, що й файл сцени
+	std::string mPlayScene;
+	// Об'єкти у порядку знімка: за ним вибраний об'єкт знаходить свою відновлену копію.
+	// Вказівники лише порівнюються, бо гра могла будь-який з них знищити
+	std::vector<Entity*> mPlayOrder;
+	// Номер об'єкта, вибраного в момент запуску: до нього вибір повертається, якщо гра знищила
+	// вибраний об'єкт або вибрано щось, що вона сама створила
+	int mPlaySelectedIndex = -1;
 
 	// Буфер для поля імені об'єкта
 	char mNameBuffer[128] = {};

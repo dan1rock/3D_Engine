@@ -3,6 +3,7 @@
 #include "Input.h"
 #include "EngineTime.h"
 #include "Entity.h"
+#include "Properties.h"
 
 FreelookCameraController::FreelookCameraController()
 {
@@ -71,4 +72,12 @@ void FreelookCameraController::update()
 		mOwner->getTransform()->getMatrix()->getXDirection() * direction.y * Time::getDeltaTime() +
 		Vector3(0, direction.z * Time::getDeltaTime(), 0);
 	mOwner->getTransform()->setPosition(newPos);
+}
+
+// Перелічує власні поля для файлу сцени та інспектора
+void FreelookCameraController::visitProperties(PropertyVisitor& visitor)
+{
+	visitor.property("speed", speed, 0.1f);
+	visitor.property("speedIncrement", speedIncrement, 0.1f);
+	visitor.property("mouseSpeed", mouseSpeed, 0.0001f);
 }

@@ -139,3 +139,21 @@ unsigned int Renderer::getMaterialCount()
 {
 	return mMesh ? mMesh->getMaterialCount() : 1;
 }
+
+// Повертає спільний матеріал як є, без підстановки матеріалу за замовчуванням
+Material* Renderer::getSharedMaterial()
+{
+	return mSharedMaterial;
+}
+
+// Повертає матеріал, заданий саме для цього слота, або nullptr, якщо слот бере спільний
+Material* Renderer::getSlotMaterial(unsigned int slot)
+{
+	return slot < mMaterials.size() ? mMaterials[slot] : nullptr;
+}
+
+// Повертає кількість слотів, для яких матеріал може бути заданий окремо
+unsigned int Renderer::getSlotMaterialCount()
+{
+	return (unsigned int)mMaterials.size();
+}

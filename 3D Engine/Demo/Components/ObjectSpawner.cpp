@@ -54,13 +54,6 @@ void ObjectSpawner::update()
 	ImGui::End();
 }
 
-// Створені під час гри об'єкти вже знищено редактором, тому список слід очистити
-void ObjectSpawner::onEditorStop()
-{
-	mSpawnedObjects.clear();
-	mObjectCount = 0;
-}
-
 void ObjectSpawner::spawnObjects(int count, float range)
 {
 	for (int i = 0; i < count; ++i)

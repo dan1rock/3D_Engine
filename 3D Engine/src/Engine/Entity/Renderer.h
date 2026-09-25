@@ -35,6 +35,13 @@ public:
 	// Повертає кількість слотів матеріалів, які має меш рендер-компонента
 	unsigned int getMaterialCount();
 
+	// Повертає спільний матеріал як є, без підстановки матеріалу за замовчуванням
+	Material* getSharedMaterial();
+	// Повертає матеріал, заданий саме для цього слота, або nullptr, якщо слот бере спільний
+	Material* getSlotMaterial(unsigned int slot);
+	// Повертає кількість слотів, для яких матеріал може бути заданий окремо
+	unsigned int getSlotMaterialCount();
+
 	// Перевіряє, чи потрапляє об'єкт у піраміду видимості
 	bool isInsideFrustum(const Frustum& frustum, bool sidesOnly = false);
 

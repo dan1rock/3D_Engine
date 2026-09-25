@@ -27,9 +27,6 @@ private:
 
 	void spawnObjects(int count, float range);
 
-	// Створені під час гри об'єкти вже знищено редактором, тому список слід очистити
-	void onEditorStop() override;
-
 	Prefab* mPrefab = nullptr;
 	int mCount = 100;
 	int mObjectCount = 0;

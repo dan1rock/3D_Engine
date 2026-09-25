@@ -726,34 +726,21 @@ void Editor::drawAssets()
 // Переходить у режим гри, зберігши стан сцени
 void Editor::play()
 {
-	// Запам'ятовуються лише ті дані, які змінює гра. Перебудовувати сцену з файлу не можна:
-	// текстовий формат не зберігає посилань між об'єктами, і після відновлення вони були б порожні
-	mSnapshot.clear();
+	// Уся сцена записується тим самим серіалізатором, що й файл, і після зупинки відновлюється
+	// з цього знімка. Так назад повертається все, що гра могла змінити: поля компонентів, матеріали,
+	// імена, додані й прибрані компоненти, знищені об'єкти, а не лише трансформації.
+	// Об'єкти, що переживають зміну сцени, теж потрапляють у знімок: у редакторі вони частина сцени
+	mPlayScene = SceneSerializer::serialize(true);
 
-	for (Entity* entity : EntityManager::get()->getEntities())
+	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
+
+	mPlayOrder.assign(entities.begin(), entities.end());
+
+	mPlaySelectedIndex = -1;
+
+	for (size_t i = 0; i < mPlayOrder.size(); i++)
 	{
-		EntitySnapshot snapshot;
-
-		snapshot.entity = entity;
-		snapshot.active = entity->isActiveSelf;
-		snapshot.hasParent = entity->getParent() != nullptr;
-
-		Transform* transform = entity->getTransform();
-
-		if (snapshot.hasParent)
-		{
-			snapshot.position = transform->getLocalPosition();
-			snapshot.rotation = transform->getLocalRotation();
-			snapshot.scale = transform->getLocalScale();
-		}
-		else
-		{
-			snapshot.position = transform->getPosition();
-			snapshot.rotation = transform->getRotation();
-			snapshot.scale = transform->getScale();
-		}
-
-		mSnapshot.push_back(snapshot);
+		if (mPlayOrder[i] == mSelected) { mPlaySelectedIndex = (int)i; break; }
 	}
 
 	mPlaying = true;
@@ -764,78 +751,39 @@ void Editor::stop()
 {
 	mPlaying = false;
 
-	// Об'єкти, що існували до запуску гри
-	std::vector<Entity*> known;
+	// Гра могла знищити вибраний об'єкт, тому його вказівник лише порівнюємо, не розіменовуючи
+	int selectedIndex = -1;
 
-	for (const EntitySnapshot& snapshot : mSnapshot)
+	for (size_t i = 0; i < mPlayOrder.size(); i++)
 	{
-		known.push_back(snapshot.entity);
+		if (mPlayOrder[i] == mSelected) { selectedIndex = (int)i; break; }
 	}
 
-	auto isKnown = [&known](Entity* entity)
+	// Вибраний під час гри об'єкт існував і до неї — лишаємо його. Інакше повертаємо вибір,
+	// що був у момент запуску: після зупинки той об'єкт знову існує
+	if (selectedIndex < 0) selectedIndex = mPlaySelectedIndex;
+
+	// Після відновлення всі об'єкти будуть новими екземплярами, тож старий вказівник недійсний
+	mSelected = nullptr;
+
+	std::vector<Entity*> restored;
+
+	// Знімок записав цей самий рушій, тож прочитатися він має завжди; якщо ні, краще лишити
+	// сцену як є, ніж знищити її
+	if (!SceneSerializer::deserialize(mPlayScene, &restored, true))
 	{
-		for (Entity* candidate : known)
-		{
-			if (candidate == entity) return true;
-		}
-
-		return false;
-	};
-
-	// Усе, що гра створила, прибирається. Знищення забирає і нащадків, тому беремо лише
-	// верхні з нових об'єктів, інакше дочірні були б видалені двічі
-	std::vector<Entity*> spawned;
-
-	for (Entity* entity : EntityManager::get()->getEntities())
-	{
-		if (isKnown(entity)) continue;
-
-		Entity* parent = entity->getParent();
-
-		if (parent == nullptr || isKnown(parent)) spawned.push_back(entity);
+		std::cout << "Failed to restore the scene after play" << std::endl;
 	}
 
-	for (Entity* entity : spawned)
+	// Об'єкти створюються у порядку знімка, тож вибраний знаходиться за тим самим номером.
+	// Створене грою об'єктів у знімку немає, і вибір тоді просто знімається
+	if (selectedIndex >= 0 && selectedIndex < (int)restored.size())
 	{
-		if (entity == mSelected) mSelected = nullptr;
-
-		entity->destroy();
+		mSelected = restored[selectedIndex];
 	}
 
-	// Об'єктам, що пережили гру, повертається стан, який вони мали до її запуску
-	for (const EntitySnapshot& snapshot : mSnapshot)
-	{
-		bool alive = false;
-
-		for (Entity* entity : EntityManager::get()->getEntities())
-		{
-			if (entity == snapshot.entity) { alive = true; break; }
-		}
-
-		if (!alive) continue;
-
-		snapshot.entity->isActiveSelf = snapshot.active;
-
-		Transform* transform = snapshot.entity->getTransform();
-
-		if (snapshot.hasParent)
-		{
-			transform->setLocalScale(snapshot.scale);
-			transform->setLocalRotation(snapshot.rotation);
-			transform->setLocalPosition(snapshot.position);
-		}
-		else
-		{
-			transform->setScale(snapshot.scale);
-			transform->setRotation(snapshot.rotation);
-			transform->setPosition(snapshot.position);
-		}
-	}
-
-	// Компоненти, що пережили гру, ще пам'ятають знищені об'єкти, тому мають скинути свій стан
-	EntityManager::get()->notifyEditorStop();
-
-	mSnapshot.clear();
+	mPlayScene.clear();
+	mPlayOrder.clear();
 
 	Input::hideCursor(false);
 }
