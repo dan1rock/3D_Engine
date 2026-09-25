@@ -166,6 +166,7 @@
     <ClCompile Include="src\Editor\Json.cpp" />
     <ClCompile Include="src\Editor\Properties.cpp" />
     <ClCompile Include="src\Editor\InspectorVisitor.cpp" />
+    <ClCompile Include="src\Editor\Gizmo.cpp" />
     <ClCompile Include="src\Engine\Entity\Camera.cpp" />
     <ClCompile Include="src\Engine\Entity\Collider.cpp" />
     <ClCompile Include="src\Engine\Entity\Component.cpp" />
@@ -240,6 +241,7 @@
     <ClInclude Include="src\Editor\Json.h" />
     <ClInclude Include="src\Editor\Properties.h" />
     <ClInclude Include="src\Editor\InspectorVisitor.h" />
+    <ClInclude Include="src\Editor\Gizmo.h" />
     <ClInclude Include="src\Engine\Entity\Camera.h" />
     <ClInclude Include="src\Engine\Entity\Collider.h" />
     <ClInclude Include="src\Engine\Entity\Component.h" />

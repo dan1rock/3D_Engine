@@ -149,6 +149,8 @@ void Editor::update()
 	drawInspector();
 	drawAssets();
 
+	updateSelection();
+
 	// Гарячі клавіші працюють лише тоді, коли ввід не перехоплює поле тексту
 	ImGuiIO& io = ImGui::GetIO();
 
@@ -156,6 +158,16 @@ void Editor::update()
 	{
 		if (Input::getKeyDown('F')) focusSelected();
 		if (Input::getKeyDown(VK_DELETE)) deleteSelected();
+
+		// W, E, R перемикають режим маніпулятора, як у Unity. Поки тримають праву кнопку,
+		// ці ж клавіші ведуть камеру, тому режим тоді не міняється
+		if (!Input::getMouseButton(MB_Right))
+		{
+			if (Input::getKeyDown('W')) mGizmo.mode = GizmoMode::Translate;
+			if (Input::getKeyDown('E')) mGizmo.mode = GizmoMode::Rotate;
+			if (Input::getKeyDown('R')) mGizmo.mode = GizmoMode::Scale;
+			if (Input::getKeyDown('X')) mGizmo.local = !mGizmo.local;
+		}
 	}
 }
 
@@ -265,6 +277,7 @@ void Editor::drawToolbar()
 
 	ImGui::Separator();
 	ImGui::TextUnformatted("F1 hide editor, F focus, Del delete");
+	ImGui::TextUnformatted("Click to select, W/E/R move/rotate/scale, X local");
 	ImGui::TextUnformatted("Right mouse + WASDQE to fly");
 
 	ImGui::End();
@@ -820,6 +833,30 @@ void Editor::stop()
 	mSnapshot.clear();
 
 	Input::hideCursor(false);
+}
+
+// Обробляє вибір об'єкта мишею та малює маніпулятор
+void Editor::updateSelection()
+{
+	// У режимі гри сценою керує сама гра, тому маніпулятор не показуємо
+	if (mPlaying) return;
+
+	ImGuiIO& io = ImGui::GetIO();
+
+	// Поки камера обертається, вибір і маніпулятор лише заважали б
+	if (Input::getMouseButton(MB_Right)) return;
+
+	bool overGizmo = mGizmo.update(mSelected);
+
+	// Клік по панелі редактора не має міняти вибір у сцені
+	if (io.WantCaptureMouse) return;
+
+	if (overGizmo) return;
+
+	if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	{
+		mSelected = Gizmo::pick(io.MousePos.x, io.MousePos.y);
+	}
 }
 
 // Наводить камеру редактора на вибраний об'єкт

@@ -51,7 +51,7 @@ public:
 	}
 
 	// Обчислює векторний добуток з іншим вектором
-	Vector3 cross(const Vector3& vector) {
+	Vector3 cross(const Vector3& vector) const {
 		return Vector3(
 			y * vector.z - z * vector.y,
 			z * vector.x - x * vector.z,

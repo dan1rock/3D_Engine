@@ -1,5 +1,6 @@
 #pragma once
 #include "EditorCamera.h"
+#include "Gizmo.h"
 #include "Vector3.h"
 #include <string>
 #include <vector>
@@ -64,6 +65,9 @@ private:
 	// Повертається до редагування, відновивши збережений стан сцени
 	void stop();
 
+	// Обробляє вибір об'єкта мишею та малює маніпулятор
+	void updateSelection();
+
 	// Наводить камеру редактора на вибраний об'єкт
 	void focusSelected();
 
@@ -76,6 +80,9 @@ private:
 	bool mPlaying = false;
 
 	EditorCamera mCamera;
+
+	// Маніпулятор вибраного об'єкта та вибір мишею у вікні сцени
+	Gizmo mGizmo;
 
 	// Шляхи до знайдених ресурсів, які пропонує інспектор
 	std::vector<std::wstring> mMeshPaths;
