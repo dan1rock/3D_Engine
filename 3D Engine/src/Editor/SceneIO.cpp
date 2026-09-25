@@ -1,5 +1,7 @@
 #include "SceneIO.h"
 #include "Entity.h"
+#include "PrefabLibrary.h"
+#include "Prefab.h"
 
 // Перетворює вектор на масив з трьох чисел і навпаки: так вектори лишаються в один рядок
 JsonValue vectorToJson(const Vector3& value)
@@ -75,10 +77,17 @@ void SceneWriteVisitor::reference(const char* name, Entity*& value, ReferenceKin
 
 	auto it = mIndices.find(value);
 
-	// Об'єкт поза сценою зберегти нічим, тому посилання просто не записуємо
-	if (it == mIndices.end()) return;
+	if (it != mIndices.end())
+	{
+		mOut.set(name, it->second);
+		return;
+	}
 
-	mOut.set(name, it->second);
+	// Образ префаба не належить жодній сцені, тому на нього посилаються шляхом до файлу
+	std::string assetPath = PrefabLibrary::get()->getTemplatePath(value);
+
+	// Інший об'єкт поза записаним набором зберегти нічим, тому посилання просто не пишемо
+	if (!assetPath.empty()) mOut.set(name, assetPath);
 }
 
 SceneReadVisitor::SceneReadVisitor(const JsonValue& fields, const std::vector<Entity*>& entities)
@@ -128,7 +137,16 @@ void SceneReadVisitor::reference(const char* name, Entity*& value, ReferenceKind
 	// Поля немає у файлі: лишаємо те, що компонент поставив собі сам
 	if (!mFields.has(name)) return;
 
-	int index = mFields.get(name).asInt(-1);
+	const JsonValue& field = mFields.get(name);
+
+	// Рядок — це шлях до префаба-файлу, а число — номер об'єкта в тому самому описі
+	if (field.getType() == JsonValue::Type::String)
+	{
+		value = PrefabLibrary::get()->getTemplate(field.asString());
+		return;
+	}
+
+	int index = field.asInt(-1);
 
 	value = (index >= 0 && index < (int)mEntities.size()) ? mEntities[index] : nullptr;
 }

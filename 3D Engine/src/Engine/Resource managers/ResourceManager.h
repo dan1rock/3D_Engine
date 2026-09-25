@@ -17,6 +17,8 @@ public:
 	void markResourcesAsUnused();
 	// Позначає всі ресурси як невикористані
 	void unloadUnusedResources();
+	// Позначає ресурс як потрібний, щоб наступне вивантаження невикористаних його не зачепило
+	void keepResource(Resource* resource);
 
 protected:
 	// Видаляє всі невикористані ресурси з пам'яті та кешу

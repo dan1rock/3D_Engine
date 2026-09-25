@@ -67,6 +67,12 @@ void ResourceManager::markResourcesAsUnused()
 	}
 }
 
+// Позначає ресурс як потрібний, щоб наступне вивантаження невикористаних його не зачепило
+void ResourceManager::keepResource(Resource* resource)
+{
+	if (resource) resource->isUsed = true;
+}
+
 // Видаляє всі невикористані ресурси з пам'яті та кешу
 void ResourceManager::unloadUnusedResources()
 {

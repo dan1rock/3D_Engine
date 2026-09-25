@@ -170,6 +170,12 @@ unsigned int Material::getTextureCount() const
 	return (unsigned int)mTextures.size();
 }
 
+// Повертає текстуру за номером
+Texture* Material::getTexture(unsigned int index) const
+{
+	return index < mTextures.size() ? mTextures[index] : nullptr;
+}
+
 // Встановлює константний буфер для матеріалу у відповідний слот
 void Material::setConstantBuffer(ConstantBuffer* constantBuffer, int slot)
 {

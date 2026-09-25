@@ -48,6 +48,10 @@ public:
 
 	// Повертає всі зареєстровані об'єкти сцени для редактора та збереження
 	const std::list<Entity*>& getEntities() const;
+	// Повертає всі зареєстровані рендер-компоненти, зокрема приховані образи префабів
+	const std::list<Renderer*>& getRenderers() const;
+	// Перевіряє, чи об'єкт ще існує у сцені, не розіменовуючи вказівник
+	bool isAlive(Entity* entity) const;
 
 	// Оновлює всі компоненти
 	void updateComponents();

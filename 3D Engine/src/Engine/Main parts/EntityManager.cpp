@@ -221,6 +221,20 @@ void EntityManager::updateLights()
 	}
 }
 
+// Повертає всі зареєстровані рендер-компоненти, зокрема приховані образи префабів
+const std::list<Renderer*>& EntityManager::getRenderers() const
+{
+	return mRenderers;
+}
+
+// Перевіряє, чи об'єкт ще існує у сцені, не розіменовуючи вказівник
+bool EntityManager::isAlive(Entity* entity) const
+{
+	if (entity == nullptr) return false;
+
+	return std::find(mEntities.begin(), mEntities.end(), entity) != mEntities.end();
+}
+
 // Ставить кореневий об'єкт перед іншим кореневим у порядку сцени, а за nullptr — у кінець
 void EntityManager::moveRootBefore(Entity* root, Entity* before)
 {
@@ -297,6 +311,22 @@ void EntityManager::onSceneLoadStart()
 // Викликається після завершення завантаження сцени
 void EntityManager::onSceneLoadFinished()
 {
+	// Меші й текстури, якими досі користуються рендер-компоненти та матеріали, що пережили зміну
+	// сцени (об'єкти між сценами, приховані образи префабів), вивантажувати не можна: інакше вони
+	// лишилися б із вказівниками на звільнену пам'ять
+	for (Renderer* renderer : mRenderers)
+	{
+		GraphicsEngine::get()->getMeshManager()->keepResource(renderer->getMesh());
+	}
+
+	for (Material* material : mMaterials)
+	{
+		for (unsigned int i = 0; i < material->getTextureCount(); i++)
+		{
+			GraphicsEngine::get()->getTextureManager()->keepResource(material->getTexture(i));
+		}
+	}
+
 	GraphicsEngine::get()->getTextureManager()->unloadUnusedResources();
 	GraphicsEngine::get()->getMeshManager()->unloadUnusedResources();
 	PhysicsEngine::get()->getConvexMeshManager()->unloadUnusedResources();

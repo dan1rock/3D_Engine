@@ -1,6 +1,7 @@
 #include "SceneSerializer.h"
 #include "SceneIO.h"
 #include "Json.h"
+#include "PrefabLibrary.h"
 #include "ComponentRegistry.h"
 #include "EntityManager.h"
 #include "Entity.h"
@@ -20,6 +21,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <vector>
+#include <set>
 #include <iostream>
 
 // Номер формату: змінюється, коли файли старих версій більше не читаються так само
@@ -55,7 +57,7 @@ static std::string toRelativePath(const std::wstring& fullPath)
 }
 
 // Складає опис одного матеріалу
-static JsonValue writeMaterial(Material* material)
+JsonValue SceneSerializer::writeMaterial(Material* material)
 {
 	JsonValue out = JsonValue::object();
 
@@ -86,153 +88,9 @@ static JsonValue writeMaterial(Material* material)
 	return out;
 }
 
-// Записує поточну сцену у текст
-std::string SceneSerializer::serialize(bool includePersistent)
+// Переносить у матеріал поля з опису, замінюючи його текстури
+void SceneSerializer::readMaterial(Material* material, const JsonValue& data)
 {
-	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
-
-	// Індекс кожного об'єкта потрібен, щоб зберегти зв'язки батько-дитина та посилання компонентів
-	std::unordered_map<Entity*, int> indices;
-
-	int index = 0;
-
-	for (Entity* entity : entities)
-	{
-		// Об'єкти, що переживають зміну сцени, не зберігаються: інакше завантаження створить їх копію
-		if (entity->dontDestroyOnLoad && !includePersistent) continue;
-
-		indices[entity] = index++;
-	}
-
-	// Матеріали пишуться однією таблицею, а рендер-компоненти посилаються на них номером.
-	// Інакше спільний матеріал записався б окремо для кожного слота та об'єкта і після
-	// завантаження розпався б на копії: правка одного вже не змінювала б решту
-	Material* defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
-
-	std::unordered_map<Material*, int> materialIndices;
-	JsonValue materialList = JsonValue::array();
-
-	// Повертає номер матеріалу в таблиці, а -1 означає спільний матеріал рушія за замовчуванням
-	auto materialIndex = [&](Material* material) -> int
-	{
-		if (material == defaultMaterial) return -1;
-
-		auto it = materialIndices.find(material);
-
-		if (it != materialIndices.end()) return it->second;
-
-		int newIndex = (int)materialList.size();
-
-		materialIndices[material] = newIndex;
-		materialList.push(writeMaterial(material));
-
-		return newIndex;
-	};
-
-	JsonValue entityList = JsonValue::array();
-
-	for (Entity* entity : entities)
-	{
-		if (entity->dontDestroyOnLoad && !includePersistent) continue;
-
-		JsonValue entityValue = JsonValue::object();
-
-		entityValue.set("index", indices[entity]);
-		entityValue.set("name", entity->getName());
-		entityValue.set("active", entity->isActiveSelf);
-
-		// Образ треба відрізнити від звичайного об'єкта, бо інакше він оживе як окремий об'єкт сцени
-		// і водночас компоненти, що на нього посилаються, лишаться без образу для створення копій
-		if (dynamic_cast<Prefab*>(entity) != nullptr) entityValue.set("prefab", true);
-
-		if (entity->dontDestroyOnLoad) entityValue.set("persistent", true);
-
-		Entity* parent = entity->getParent();
-
-		// Кореневий об'єкт не має відносно чого зберігати локальні координати, тому пишемо світові
-		bool hasParent = parent != nullptr && indices.count(parent) > 0;
-
-		entityValue.set("parent", hasParent ? indices[parent] : -1);
-
-		Transform* transform = entity->getTransform();
-
-		JsonValue transformValue = JsonValue::object();
-
-		transformValue.set("position", vectorToJson(hasParent ? transform->getLocalPosition() : transform->getPosition()));
-		transformValue.set("rotation", vectorToJson(hasParent ? transform->getLocalRotation() : transform->getRotation()));
-		transformValue.set("scale", vectorToJson(hasParent ? transform->getLocalScale() : transform->getScale()));
-
-		entityValue.set("transform", transformValue);
-
-		JsonValue componentList = JsonValue::array();
-
-		for (Component* component : entity->getComponentList())
-		{
-			JsonValue componentValue = JsonValue::object();
-
-			componentValue.set("type", std::string(component->getTypeName()));
-
-			// Рендер-компонент зберігає свій меш та матеріали кожного слота
-			if (Renderer* renderer = dynamic_cast<Renderer*>(component))
-			{
-				if (renderer->getMesh())
-				{
-					componentValue.set("mesh", toRelativePath(renderer->getMesh()->getFullPath()));
-				}
-
-				componentValue.set("castShadows", renderer->castShadows);
-
-				// Спільний матеріал і лише ті слоти, яким задано власний, як і в самому компоненті
-				if (Material* shared = renderer->getSharedMaterial())
-				{
-					componentValue.set("material", materialIndex(shared));
-				}
-
-				JsonValue slotList = JsonValue::array();
-
-				for (unsigned int slot = 0; slot < renderer->getSlotMaterialCount(); slot++)
-				{
-					Material* material = renderer->getSlotMaterial(slot);
-
-					if (material == nullptr) continue;
-
-					JsonValue slotValue = JsonValue::object();
-
-					slotValue.set("slot", (int)slot);
-					slotValue.set("material", materialIndex(material));
-
-					slotList.push(slotValue);
-				}
-
-				if (slotList.size() > 0) componentValue.set("slotMaterials", slotList);
-			}
-
-			// Решту полів компонент записує сам, бо лише він знає, що саме варто зберігати
-			SceneWriteVisitor writer(componentValue, indices);
-			component->visitProperties(writer);
-
-			componentList.push(componentValue);
-		}
-
-		if (componentList.size() > 0) entityValue.set("components", componentList);
-
-		entityList.push(entityValue);
-	}
-
-	JsonValue scene = JsonValue::object();
-
-	scene.set("version", SCENE_VERSION);
-	scene.set("materials", materialList);
-	scene.set("entities", entityList);
-
-	return scene.toString();
-}
-
-// Створює матеріал за його описом у файлі
-static Material* createMaterial(const JsonValue& data)
-{
-	Material* material = new Material();
-
 	const JsonValue& color = data.get("color");
 
 	if (color.getType() == JsonValue::Type::Array && color.size() >= 4)
@@ -250,6 +108,12 @@ static Material* createMaterial(const JsonValue& data)
 	material->cullBack = data.get("cullBack").asBool(material->cullBack);
 	material->clampTexture = data.get("clampTexture").asBool(material->clampTexture);
 
+	// Матеріал можуть оновлювати на місці, тож старі текстури прибираються, а не доповнюються
+	while (material->getTextureCount() > 0)
+	{
+		material->removeTexture(0);
+	}
+
 	std::string texture = data.get("texture").asString();
 
 	if (!texture.empty())
@@ -263,8 +127,232 @@ static Material* createMaterial(const JsonValue& data)
 	{
 		material->setPixelShader(GraphicsEngine::get()->getPixelShader(toWide(shader).c_str(), "main"));
 	}
+}
 
-	return material;
+// Номери об'єктів і спільна таблиця матеріалів, які набираються під час запису
+struct WriteContext
+{
+	std::unordered_map<Entity*, int> indices;
+	std::unordered_map<Material*, int> materialIndices;
+	JsonValue materials = JsonValue::array();
+	Material* defaultMaterial = nullptr;
+
+	// Повертає номер матеріалу в таблиці, а -1 означає спільний матеріал рушія за замовчуванням
+	int materialIndex(Material* material)
+	{
+		if (material == defaultMaterial) return -1;
+
+		auto it = materialIndices.find(material);
+
+		if (it != materialIndices.end()) return it->second;
+
+		int newIndex = (int)materials.size();
+
+		materialIndices[material] = newIndex;
+		materials.push(SceneSerializer::writeMaterial(material));
+
+		return newIndex;
+	}
+};
+
+// Записує один об'єкт. Корінь префаба не має батька в описі, а його позиція й поворот обнуляються:
+// у кожного екземпляра вони свої. Лише сцена пише зв'язки з префабами та позначки образів
+static JsonValue writeEntity(Entity* entity, WriteContext& context, bool prefabRoot, bool sceneMode)
+{
+	JsonValue entityValue = JsonValue::object();
+
+	entityValue.set("index", context.indices[entity]);
+	entityValue.set("name", entity->getName());
+	entityValue.set("active", entity->isActiveSelf);
+
+	if (sceneMode)
+	{
+		// Образ треба відрізнити від звичайного об'єкта, бо інакше він оживе як окремий об'єкт сцени
+		// і водночас компоненти, що на нього посилаються, лишаться без образу для створення копій
+		if (dynamic_cast<Prefab*>(entity) != nullptr) entityValue.set("prefab", true);
+
+		if (entity->dontDestroyOnLoad) entityValue.set("persistent", true);
+
+		// Екземпляр зберігає і повні дані, і перелік змінених властивостей: після завантаження решта
+		// береться з файлу префаба, а якщо файл зник, об'єкт однаково відновиться з цих даних
+		if (!entity->prefabAsset.empty())
+		{
+			entityValue.set("prefabAsset", entity->prefabAsset);
+
+			JsonValue overrideList = JsonValue::array();
+
+			for (const std::string& key : PrefabLibrary::get()->computeOverrides(entity))
+			{
+				overrideList.push(key);
+			}
+
+			entityValue.set("prefabOverrides", overrideList);
+		}
+	}
+
+	Entity* parent = entity->getParent();
+
+	// Кореневий об'єкт не має відносно чого зберігати локальні координати, тому пишемо світові
+	bool hasParent = parent != nullptr && context.indices.count(parent) > 0;
+
+	entityValue.set("parent", hasParent ? context.indices[parent] : -1);
+
+	Transform* transform = entity->getTransform();
+
+	JsonValue transformValue = JsonValue::object();
+
+	if (prefabRoot)
+	{
+		// Масштаб беремо у тому просторі, де живе об'єкт: для дочірнього це простір батька
+		Vector3 scale = parent ? transform->getLocalScale() : transform->getScale();
+
+		transformValue.set("position", vectorToJson(Vector3(0.0f, 0.0f, 0.0f)));
+		transformValue.set("rotation", vectorToJson(Vector3(0.0f, 0.0f, 0.0f)));
+		transformValue.set("scale", vectorToJson(scale));
+	}
+	else
+	{
+		transformValue.set("position", vectorToJson(hasParent ? transform->getLocalPosition() : transform->getPosition()));
+		transformValue.set("rotation", vectorToJson(hasParent ? transform->getLocalRotation() : transform->getRotation()));
+		transformValue.set("scale", vectorToJson(hasParent ? transform->getLocalScale() : transform->getScale()));
+	}
+
+	entityValue.set("transform", transformValue);
+
+	JsonValue componentList = JsonValue::array();
+
+	for (Component* component : entity->getComponentList())
+	{
+		JsonValue componentValue = JsonValue::object();
+
+		componentValue.set("type", std::string(component->getTypeName()));
+
+		// Рендер-компонент зберігає свій меш та матеріали кожного слота
+		if (Renderer* renderer = dynamic_cast<Renderer*>(component))
+		{
+			if (renderer->getMesh())
+			{
+				componentValue.set("mesh", toRelativePath(renderer->getMesh()->getFullPath()));
+			}
+
+			componentValue.set("castShadows", renderer->castShadows);
+
+			// Спільний матеріал і лише ті слоти, яким задано власний, як і в самому компоненті
+			if (Material* shared = renderer->getSharedMaterial())
+			{
+				componentValue.set("material", context.materialIndex(shared));
+			}
+
+			JsonValue slotList = JsonValue::array();
+
+			for (unsigned int slot = 0; slot < renderer->getSlotMaterialCount(); slot++)
+			{
+				Material* material = renderer->getSlotMaterial(slot);
+
+				if (material == nullptr) continue;
+
+				JsonValue slotValue = JsonValue::object();
+
+				slotValue.set("slot", (int)slot);
+				slotValue.set("material", context.materialIndex(material));
+
+				slotList.push(slotValue);
+			}
+
+			if (slotList.size() > 0) componentValue.set("slotMaterials", slotList);
+		}
+
+		// Решту полів компонент записує сам, бо лише він знає, що саме варто зберігати
+		SceneWriteVisitor writer(componentValue, context.indices);
+		component->visitProperties(writer);
+
+		componentList.push(componentValue);
+	}
+
+	if (componentList.size() > 0) entityValue.set("components", componentList);
+
+	return entityValue;
+}
+
+// Записує поточну сцену у текст
+std::string SceneSerializer::serialize(bool includePersistent)
+{
+	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
+
+	WriteContext context;
+	context.defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+
+	// Індекс кожного об'єкта потрібен, щоб зберегти зв'язки батько-дитина та посилання компонентів
+	int index = 0;
+
+	for (Entity* entity : entities)
+	{
+		// Об'єкти, що переживають зміну сцени, не зберігаються: інакше завантаження створить їх копію
+		if (entity->dontDestroyOnLoad && !includePersistent) continue;
+
+		context.indices[entity] = index++;
+	}
+
+	JsonValue entityList = JsonValue::array();
+
+	for (Entity* entity : entities)
+	{
+		if (entity->dontDestroyOnLoad && !includePersistent) continue;
+
+		entityList.push(writeEntity(entity, context, false, true));
+	}
+
+	// Матеріали пишуться однією таблицею, а рендер-компоненти посилаються на них номером.
+	// Інакше спільний матеріал записався б окремо для кожного слота та об'єкта і після
+	// завантаження розпався б на копії: правка одного вже не змінювала б решту
+	JsonValue scene = JsonValue::object();
+
+	scene.set("version", SCENE_VERSION);
+	scene.set("materials", context.materials);
+	scene.set("entities", entityList);
+
+	return scene.toString();
+}
+
+// Дописує об'єкт і всіх його нащадків у порядку дерева
+static void collectSubtree(Entity* entity, std::vector<Entity*>& out)
+{
+	out.push_back(entity);
+
+	for (Entity* child : *entity->getChildren())
+	{
+		collectSubtree(child, out);
+	}
+}
+
+// Записує об'єкт разом з усіма нащадками у тому самому форматі, що й сцену
+JsonValue SceneSerializer::serializeSubtree(Entity* root)
+{
+	std::vector<Entity*> entities;
+	collectSubtree(root, entities);
+
+	WriteContext context;
+	context.defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+
+	for (size_t i = 0; i < entities.size(); i++)
+	{
+		context.indices[entities[i]] = (int)i;
+	}
+
+	JsonValue entityList = JsonValue::array();
+
+	for (Entity* entity : entities)
+	{
+		entityList.push(writeEntity(entity, context, entity == root, false));
+	}
+
+	JsonValue data = JsonValue::object();
+
+	data.set("version", SCENE_VERSION);
+	data.set("materials", context.materials);
+	data.set("entities", entityList);
+
+	return data;
 }
 
 // Повертає матеріал з таблиці за номером; -1 означає спільний матеріал рушія за замовчуванням
@@ -277,17 +365,17 @@ static Material* lookupMaterial(int index, const std::vector<Material*>& materia
 	return nullptr;
 }
 
-// Створює один компонент об'єкта за прочитаними даними
-static void buildComponent(Entity* entity, const JsonValue& data, const std::vector<Entity*>& created, const std::vector<Material*>& materials)
+// Створює компонент за описом; самі поля потім задають applyRenderer та applyProperties
+Component* SceneSerializer::createComponent(Entity* entity, const JsonValue& data)
 {
 	std::string type = data.get("type").asString();
 
-	if (type.empty()) return;
+	if (type.empty()) return nullptr;
 
 	Component* component = nullptr;
 
 	// Рухомість та маса фізичного тіла задаються лише конструктором, тому їх треба знати
-	// ще до створення компонента, а не привласнювати потім у deserialize
+	// ще до створення компонента, а не привласнювати потім
 	if (type == "RigidBody")
 	{
 		bool isStatic = data.get("static").asBool(true);
@@ -305,57 +393,198 @@ static void buildComponent(Entity* entity, const JsonValue& data, const std::vec
 	if (component == nullptr)
 	{
 		std::cout << "Unknown component type in scene: " << type << std::endl;
-		return;
 	}
 
-	if (Renderer* renderer = dynamic_cast<Renderer*>(component))
+	return component;
+}
+
+// Переносить у рендер-компонент меш і тіні з опису, якщо вони в ньому є
+void SceneSerializer::applyRenderer(Renderer* renderer, const JsonValue& data)
+{
+	if (data.has("mesh"))
 	{
 		std::string mesh = data.get("mesh").asString();
 
-		if (!mesh.empty())
+		renderer->setMesh(mesh.empty() ? nullptr : GraphicsEngine::get()->getMeshManager()->createMeshFromFile(toWide(mesh).c_str()));
+	}
+
+	renderer->castShadows = data.get("castShadows").asBool(renderer->castShadows);
+}
+
+// Переносить у компонент його власні поля з опису; посилання на об'єкти шукаються в entities
+void SceneSerializer::applyProperties(Component* component, const JsonValue& data, const std::vector<Entity*>& entities)
+{
+	SceneReadVisitor reader(data, entities);
+	component->visitProperties(reader);
+}
+
+// Призначає рендер-компоненту матеріали з таблиці, як їх записано в описі
+static void assignMaterials(Renderer* renderer, const JsonValue& data, const std::vector<Material*>& materials, bool asTemplate)
+{
+	if (data.has("material"))
+	{
+		if (Material* shared = lookupMaterial(data.get("material").asInt(-2), materials))
 		{
-			renderer->setMesh(GraphicsEngine::get()->getMeshManager()->createMeshFromFile(toWide(mesh).c_str()));
-		}
-
-		renderer->castShadows = data.get("castShadows").asBool(renderer->castShadows);
-
-		if (data.has("material"))
-		{
-			if (Material* shared = lookupMaterial(data.get("material").asInt(-2), materials))
-			{
-				renderer->setMaterial(shared);
-			}
-		}
-
-		const JsonValue& slotList = data.get("slotMaterials");
-
-		for (size_t i = 0; i < slotList.size(); i++)
-		{
-			const JsonValue& slotValue = slotList.at(i);
-
-			Material* material = lookupMaterial(slotValue.get("material").asInt(-2), materials);
-
-			if (material) renderer->setMaterial((unsigned int)slotValue.get("slot").asInt(0), material);
-		}
-
-		// Файли третьої версії тримали матеріали прямо в компоненті, окремо для кожного слота
-		const JsonValue& legacyMaterials = data.get("materials");
-
-		for (size_t i = 0; i < legacyMaterials.size(); i++)
-		{
-			const JsonValue& materialValue = legacyMaterials.at(i);
-
-			Material* material = createMaterial(materialValue);
-			unsigned int slot = (unsigned int)materialValue.get("slot").asInt(0);
-
-			renderer->setMaterial(slot, material);
-
-			if (slot == 0) renderer->setMaterial(material);
+			renderer->setMaterial(shared);
 		}
 	}
 
-	SceneReadVisitor reader(data, created);
-	component->visitProperties(reader);
+	const JsonValue& slotList = data.get("slotMaterials");
+
+	for (size_t i = 0; i < slotList.size(); i++)
+	{
+		const JsonValue& slotValue = slotList.at(i);
+
+		Material* material = lookupMaterial(slotValue.get("material").asInt(-2), materials);
+
+		if (material) renderer->setMaterial((unsigned int)slotValue.get("slot").asInt(0), material);
+	}
+
+	// Файли третьої версії тримали матеріали прямо в компоненті, окремо для кожного слота
+	const JsonValue& legacyMaterials = data.get("materials");
+
+	for (size_t i = 0; i < legacyMaterials.size(); i++)
+	{
+		const JsonValue& materialValue = legacyMaterials.at(i);
+
+		Material* material = new Material();
+		SceneSerializer::readMaterial(material, materialValue);
+
+		material->dontDeleteOnLoad = asTemplate;
+
+		unsigned int slot = (unsigned int)materialValue.get("slot").asInt(0);
+
+		renderer->setMaterial(slot, material);
+
+		if (slot == 0) renderer->setMaterial(material);
+	}
+}
+
+// Створює об'єкти з опису; кореневі стають дочірніми для parent
+static std::vector<Entity*> buildEntities(const JsonValue& data, Entity* parent, bool asTemplate)
+{
+	const JsonValue& parsed = data.get("entities");
+
+	// Матеріали створюються першими, щоб рендер-компоненти одразу могли на них посилатися.
+	// Образ префаба живе між сценами, тож і його матеріали не мають зникати при їх зміні
+	std::vector<Material*> materials;
+
+	const JsonValue& materialList = data.get("materials");
+
+	for (size_t i = 0; i < materialList.size(); i++)
+	{
+		Material* material = new Material();
+		SceneSerializer::readMaterial(material, materialList.at(i));
+
+		material->dontDeleteOnLoad = asTemplate;
+
+		materials.push_back(material);
+	}
+
+	// Спершу створюються всі об'єкти, щоб посилання компонентів було на що розв'язувати
+	std::vector<Entity*> created;
+
+	for (size_t i = 0; i < parsed.size(); i++)
+	{
+		const JsonValue& entityData = parsed.at(i);
+
+		// Частини образу теж образи: їхні компоненти не мають прокидатися і створювати фізику
+		bool makePrefab = asTemplate || entityData.get("prefab").asBool(false);
+
+		Entity* entity = makePrefab ? new Prefab() : new Entity();
+
+		entity->setName(entityData.get("name").asString("Entity"));
+		entity->isActiveSelf = entityData.get("active").asBool(true);
+		entity->dontDestroyOnLoad = entityData.get("persistent").asBool(false);
+		entity->prefabAsset = entityData.get("prefabAsset").asString();
+
+		created.push_back(entity);
+	}
+
+	// Корінь образу вимкнений: так увесь образ лишається поза оновленням і малюванням
+	if (asTemplate && !created.empty()) created[0]->isActiveSelf = false;
+
+	// Зв'язки батько-дитина встановлюються після створення всіх об'єктів
+	for (size_t i = 0; i < created.size(); i++)
+	{
+		int parentIndex = parsed.at(i).get("parent").asInt(-1);
+
+		if (parentIndex >= 0 && parentIndex < (int)created.size())
+		{
+			created[i]->setParent(created[parentIndex]);
+		}
+		else if (parent)
+		{
+			created[i]->setParent(parent);
+		}
+	}
+
+	// Тепер відомо, чи має об'єкт батька, тому трансформацію можна застосувати правильно.
+	// Зробити це треба до створення компонентів: коллайдер і фізичне тіло будуються за
+	// поточним масштабом, тож із одиничним масштабом фізика вийшла б зовсім іншого розміру
+	for (size_t i = 0; i < created.size(); i++)
+	{
+		const JsonValue& transformData = parsed.at(i).get("transform");
+
+		Vector3 position = jsonToVector(transformData.get("position"), Vector3(0.0f, 0.0f, 0.0f));
+		Vector3 rotation = jsonToVector(transformData.get("rotation"), Vector3(0.0f, 0.0f, 0.0f));
+		Vector3 scale = jsonToVector(transformData.get("scale"), Vector3(1.0f, 1.0f, 1.0f));
+
+		Transform* transform = created[i]->getTransform();
+
+		if (created[i]->getParent())
+		{
+			transform->setLocalScale(scale);
+			transform->setLocalRotation(rotation);
+			transform->setLocalPosition(position);
+		}
+		else
+		{
+			transform->setScale(scale);
+			transform->setRotation(rotation);
+			transform->setPosition(position);
+		}
+	}
+
+	for (size_t i = 0; i < created.size(); i++)
+	{
+		const JsonValue& components = parsed.at(i).get("components");
+
+		for (size_t c = 0; c < components.size(); c++)
+		{
+			const JsonValue& componentData = components.at(c);
+
+			Component* component = SceneSerializer::createComponent(created[i], componentData);
+
+			if (component == nullptr) continue;
+
+			if (Renderer* renderer = dynamic_cast<Renderer*>(component))
+			{
+				SceneSerializer::applyRenderer(renderer, componentData);
+				assignMaterials(renderer, componentData, materials, asTemplate);
+			}
+
+			SceneSerializer::applyProperties(component, componentData, created);
+		}
+	}
+
+	// Образ не є частиною сцени: без реєстрації його не видно в дереві, він не потрапляє у файл
+	// сцени і не знищується під час її зміни
+	if (asTemplate)
+	{
+		for (Entity* entity : created)
+		{
+			EntityManager::get()->unregisterEntity(entity);
+		}
+	}
+
+	return created;
+}
+
+// Створює об'єкти з опису, не чіпаючи решту сцени
+std::vector<Entity*> SceneSerializer::buildSubtree(const JsonValue& data, Entity* parent, bool asTemplate)
+{
+	return buildEntities(data, parent, asTemplate);
 }
 
 // Відновлює сцену з тексту, знищивши те, що було у сцені до цього
@@ -411,82 +640,57 @@ bool SceneSerializer::deserialize(const std::string& text, std::vector<Entity*>*
 
 	EntityManager::get()->onSceneLoadStart();
 
-	// Матеріали створюються лише тепер: onSceneLoadStart видаляє всі матеріали сцени,
+	// Матеріали створюються лише всередині: onSceneLoadStart видаляє всі матеріали сцени,
 	// тож створені раніше зникли б разом зі старими
-	std::vector<Material*> materials;
+	std::vector<Entity*> created = buildEntities(scene, nullptr, false);
 
-	const JsonValue& materialList = scene.get("materials");
-
-	for (size_t i = 0; i < materialList.size(); i++)
-	{
-		materials.push_back(createMaterial(materialList.at(i)));
-	}
-
-	// Спершу створюються всі об'єкти, щоб посилання компонентів було на що розв'язувати
-	std::vector<Entity*> created;
-
-	for (size_t i = 0; i < parsed.size(); i++)
-	{
-		const JsonValue& data = parsed.at(i);
-
-		Entity* entity = data.get("prefab").asBool(false) ? new Prefab() : new Entity();
-
-		entity->setName(data.get("name").asString("Entity"));
-		entity->isActiveSelf = data.get("active").asBool(true);
-		entity->dontDestroyOnLoad = data.get("persistent").asBool(false);
-
-		created.push_back(entity);
-	}
-
-	// Зв'язки батько-дитина встановлюються після створення всіх об'єктів
-	for (size_t i = 0; i < created.size(); i++)
-	{
-		int parent = parsed.at(i).get("parent").asInt(-1);
-
-		if (parent >= 0 && parent < (int)created.size())
-		{
-			created[i]->setParent(created[parent]);
-		}
-	}
-
-	// Тепер відомо, чи має об'єкт батька, тому трансформацію можна застосувати правильно.
-	// Зробити це треба до створення компонентів: коллайдер і фізичне тіло будуються за
-	// поточним масштабом, тож із одиничним масштабом фізика вийшла б зовсім іншого розміру
-	for (size_t i = 0; i < created.size(); i++)
-	{
-		const JsonValue& data = parsed.at(i).get("transform");
-
-		Vector3 position = jsonToVector(data.get("position"), Vector3(0.0f, 0.0f, 0.0f));
-		Vector3 rotation = jsonToVector(data.get("rotation"), Vector3(0.0f, 0.0f, 0.0f));
-		Vector3 scale = jsonToVector(data.get("scale"), Vector3(1.0f, 1.0f, 1.0f));
-
-		Transform* transform = created[i]->getTransform();
-
-		if (created[i]->getParent())
-		{
-			transform->setLocalScale(scale);
-			transform->setLocalRotation(rotation);
-			transform->setLocalPosition(position);
-		}
-		else
-		{
-			transform->setScale(scale);
-			transform->setRotation(rotation);
-			transform->setPosition(position);
-		}
-	}
+	// Екземпляри префабів доганяють свої файли: усе, що в екземплярі не змінювали, береться
+	// з префаба, тож правки файлу, зроблені поки сцена була закрита, теж з'являються
+	// Корені екземплярів збираються заздалегідь: синхронізація одного може прибрати дочірні
+	// об'єкти іншого, тож під час неї до списку створених об'єктів звертатися не можна
+	std::vector<std::pair<Entity*, std::set<std::string>>> instances;
 
 	for (size_t i = 0; i < created.size(); i++)
 	{
-		const JsonValue& components = parsed.at(i).get("components");
+		if (created[i]->prefabAsset.empty()) continue;
 
-		for (size_t c = 0; c < components.size(); c++)
+		std::set<std::string> overrides;
+
+		const JsonValue& overrideList = parsed.at(i).get("prefabOverrides");
+
+		for (size_t k = 0; k < overrideList.size(); k++)
 		{
-			buildComponent(created[i], components.at(c), created, materials);
+			overrides.insert(overrideList.at(k).asString());
 		}
+
+		instances.push_back(std::make_pair(created[i], overrides));
+	}
+
+	for (const auto& instance : instances)
+	{
+		if (!EntityManager::get()->isAlive(instance.first)) continue;
+
+		const JsonValue* prefab = PrefabLibrary::get()->getData(instance.first->prefabAsset);
+
+		if (prefab == nullptr)
+		{
+			std::cout << "Missing prefab asset " << instance.first->prefabAsset << ", keeping the saved copy" << std::endl;
+			continue;
+		}
+
+		PrefabLibrary::get()->sync(instance.first, *prefab, instance.second, false);
 	}
 
 	EntityManager::get()->onSceneLoadFinished();
+
+	// Об'єкти, які синхронізація прибрала, віддаються як порожні, щоб ніхто не звернувся до них
+	if (!instances.empty())
+	{
+		for (Entity*& entity : created)
+		{
+			if (!EntityManager::get()->isAlive(entity)) entity = nullptr;
+		}
+	}
 
 	if (createdOut) *createdOut = created;
 

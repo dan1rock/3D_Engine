@@ -37,6 +37,8 @@ public:
 	std::wstring getPixelShaderPath() const;
 	// Повертає кількість текстур матеріалу
 	unsigned int getTextureCount() const;
+	// Повертає текстуру за номером
+	Texture* getTexture(unsigned int index) const;
 
 	bool cullBack = true;
 	bool clampTexture = true;

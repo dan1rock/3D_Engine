@@ -4,6 +4,7 @@
 #include "Vector3.h"
 #include <string>
 #include <vector>
+#include <set>
 
 class Entity;
 class Component;
@@ -53,8 +54,17 @@ private:
 	void drawDropTarget(Entity* target);
 	// Перевіряє, чи можна зробити об'єкт дочірнім для вказаного батька (nullptr — корінь)
 	bool canDrop(Entity* dragged, Entity* newParent) const;
+	// Перевіряє, чи можна покласти новий екземпляр префаба під вказаного батька
+	bool canDropPrefab(Entity* newParent) const;
 	// Виконує відкладене перетягування, коли дерево вже намальоване
 	void applyDrop();
+
+	// Малює панель префаба у вибраного екземпляра: застосувати, скасувати зміни, розірвати зв'язок
+	void drawPrefabBar();
+	// Створює екземпляр префаба, відпущеного над самою сценою, у точці під курсором
+	void dropPrefabIntoScene();
+	// Перевіряє, чи поле вибраного об'єкта змінене відносно префаба
+	bool isOverridden(const std::string& key) const;
 	// Малює поля трансформації об'єкта
 	void drawTransform(Entity* entity);
 	// Малює меню створення нового об'єкта
@@ -63,8 +73,10 @@ private:
 	void drawAddComponentMenu(Entity* entity);
 	// Малює вибір меша та матеріалів для рендер-компонента
 	void drawRendererAssets(Renderer* renderer);
-	// Малює поля матеріалу
-	void drawMaterial(Material* material, int slot);
+	// Малює поля матеріалу вказаного слота рендер-компонента
+	void drawMaterial(Renderer* renderer, int slot);
+	// Повертає матеріал слота, яким користується лише цей рендер-компонент, за потреби зробивши копію
+	Material* ownMaterial(Renderer* renderer, int slot);
 
 	// Переходить у режим гри, зберігши стан сцени
 	void play();
@@ -98,9 +110,19 @@ private:
 		Entity* dragged = nullptr;
 		Entity* target = nullptr;
 		DropZone zone = DropZone::Root;
+		// Шлях префаба, якщо перетягнули не об'єкт, а префаб з панелі ресурсів
+		std::string prefab;
 	};
 
 	PendingDrop mPendingDrop;
+
+	// Для вибраного об'єкта: корінь його екземпляра префаба, шлях об'єкта в ньому та змінені поля.
+	// Рахуються раз на кадр, бо ними користуються і панель префаба, і підписи полів
+	Entity* mInstanceRoot = nullptr;
+	std::string mInstancePath;
+	std::set<std::string> mOverrides;
+	// Початок ключів полів компонента, що саме малюється в інспекторі
+	std::string mComponentKey;
 
 	// Батько, який треба розгорнути в дереві, щоб щойно покладений у нього об'єкт було видно
 	Entity* mExpandEntity = nullptr;

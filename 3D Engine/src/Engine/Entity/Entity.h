@@ -65,6 +65,9 @@ public:
 	bool dontDestroyOnLoad = false;
 	bool isActiveSelf = true;
 
+	// Шлях до файлу префаба, якщо об'єкт — корінь його екземпляра; інакше порожній
+	std::string prefabAsset;
+
 protected:
 	// Чи повинен об'єкт прокидати компоненти при створенні
 	virtual bool shouldAwakeComponents() const { return true; }

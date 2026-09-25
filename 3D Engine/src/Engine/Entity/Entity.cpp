@@ -116,6 +116,8 @@ Entity* Entity::instantiate()
 {  
    Entity* newObject = new Entity();
 
+   newObject->mName = mName;
+
    newObject->mTransform.setLocalPosition(mTransform.getLocalPosition());
    newObject->mTransform.setLocalScale(mTransform.getLocalScale());
    newObject->mTransform.setLocalRotation(mTransform.getLocalRotation());
@@ -135,6 +137,10 @@ Entity* Entity::instantiate()
 
    for (auto* child : mChildren) {
 	   Entity* newChild = child->instantiate();
+
+	   // Корінь копії завжди увімкнений, навіть коли вимкнено сам образ, а дочірні
+	   // зберігають свій стан: інакше вимкнена частина префаба в копії з'явилася б
+	   newChild->isActiveSelf = child->isActiveSelf;
 	   newChild->setParent(newObject);
    }
 

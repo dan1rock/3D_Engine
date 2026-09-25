@@ -164,6 +164,24 @@ void JsonValue::set(const char* key, const JsonValue& value)
 	mObject.push_back(std::make_pair(std::string(key), value));
 }
 
+// Повертає ім'я поля об'єкта за його номером
+const std::string& JsonValue::keyAt(size_t index) const
+{
+	static const std::string empty;
+
+	if (mType != Type::Object || index >= mObject.size()) return empty;
+
+	return mObject[index].first;
+}
+
+// Повертає значення поля об'єкта за його номером
+const JsonValue& JsonValue::valueAt(size_t index) const
+{
+	if (mType != Type::Object || index >= mObject.size()) return nullValue();
+
+	return mObject[index].second;
+}
+
 // Повертає кількість елементів масиву
 size_t JsonValue::size() const
 {

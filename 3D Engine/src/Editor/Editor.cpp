@@ -2,6 +2,7 @@
 #include "ComponentRegistry.h"
 #include "SceneSerializer.h"
 #include "InspectorVisitor.h"
+#include "PrefabLibrary.h"
 
 #include "EntityManager.h"
 #include "Entity.h"
@@ -15,6 +16,7 @@
 #include "MeshManager.h"
 #include "TextureManager.h"
 #include "GraphicsEngine.h"
+#include "GlobalResources.h"
 #include "ShadowMap.h"
 #include "PostProcessing.h"
 #include "Input.h"
@@ -33,6 +35,14 @@ static const char* SCENE_PATH = "Assets\\Scenes\\Scene.json";
 
 // Тип вмісту, що переноситься мишею між рядками дерева сцени
 static const char* HIERARCHY_PAYLOAD = "HIERARCHY_ENTITY";
+// Тип вмісту, що переносить шлях до префаба з панелі ресурсів
+static const char* PREFAB_PAYLOAD = "PREFAB_ASSET";
+
+// Колір префабів у вигляді, зручному для ImGui
+static ImVec4 prefabColor(float alpha = 1.0f)
+{
+	return ImVec4(PREFAB_COLOR[0], PREFAB_COLOR[1], PREFAB_COLOR[2], alpha);
+}
 
 // Перевіряє, чи об'єкт ще існує, не розіменовуючи вказівник
 static bool isAlive(Entity* entity)
@@ -165,6 +175,7 @@ void Editor::update()
 	drawAssets();
 
 	updateSelection();
+	dropPrefabIntoScene();
 
 	// Гарячі клавіші працюють лише тоді, коли ввід не перехоплює поле тексту
 	ImGuiIO& io = ImGui::GetIO();
@@ -334,7 +345,12 @@ void Editor::drawHierarchy()
 		{
 			Entity* dragged = *(Entity* const*)payload->Data;
 
-			mPendingDrop = { dragged, nullptr, DropZone::Root };
+			mPendingDrop = { dragged, nullptr, DropZone::Root, std::string() };
+		}
+
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(PREFAB_PAYLOAD))
+		{
+			mPendingDrop = { nullptr, nullptr, DropZone::Root, std::string((const char*)payload->Data) };
 		}
 
 		ImGui::EndDragDropTarget();
@@ -353,10 +369,13 @@ void Editor::drawEntityNode(Entity* entity)
 	if (entity == mSelected) flags |= ImGuiTreeNodeFlags_Selected;
 	if (entity->getChildren()->empty()) flags |= ImGuiTreeNodeFlags_Leaf;
 
-	// Неактивні об'єкти показуються приглушеним кольором
+	// Неактивні об'єкти показуються приглушеним кольором, а частини префабів — блакитним, як в Unity
 	bool active = entity->isActiveSelf;
+	bool inPrefab = PrefabLibrary::findInstanceRoot(entity) != nullptr;
+	bool colored = !active || inPrefab;
 
-	if (!active) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.55f, 0.55f, 1.0f));
+	if (inPrefab) ImGui::PushStyleColor(ImGuiCol_Text, prefabColor(active ? 1.0f : 0.5f));
+	else if (!active) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.55f, 0.55f, 0.55f, 1.0f));
 
 	// Батько, у який щойно поклали об'єкт, розгортається, щоб цей об'єкт було видно
 	if (entity == mExpandEntity)
@@ -367,7 +386,7 @@ void Editor::drawEntityNode(Entity* entity)
 
 	bool open = ImGui::TreeNodeEx((void*)entity, flags, "%s", entity->getName().c_str());
 
-	if (!active) ImGui::PopStyleColor();
+	if (colored) ImGui::PopStyleColor();
 
 	if (ImGui::IsItemClicked()) mSelected = entity;
 
@@ -437,7 +456,27 @@ void Editor::drawDropTarget(Entity* target)
 				draw->AddLine(ImVec2(min.x, y), ImVec2(max.x, y), color, 2.0f);
 			}
 
-			if (payload->IsDelivery()) mPendingDrop = { dragged, target, zone };
+			if (payload->IsDelivery()) mPendingDrop = { dragged, target, zone, std::string() };
+		}
+	}
+
+	// Префаб з панелі ресурсів кладеться тими самими зонами рядка, що й звичайний об'єкт
+	const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(PREFAB_PAYLOAD,
+		ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+
+	if (prefabPayload)
+	{
+		Entity* newParent = zone == DropZone::Inside ? target : target->getParent();
+
+		if (canDropPrefab(newParent))
+		{
+			ImDrawList* draw = ImGui::GetWindowDrawList();
+			ImU32 color = ImGui::GetColorU32(ImGuiCol_DragDropTarget);
+
+			if (zone == DropZone::Inside) draw->AddRect(min, max, color, 0.0f, 0, 2.0f);
+			else draw->AddLine(ImVec2(min.x, zone == DropZone::Before ? min.y : max.y), ImVec2(max.x, zone == DropZone::Before ? min.y : max.y), color, 2.0f);
+
+			if (prefabPayload->IsDelivery()) mPendingDrop = { nullptr, target, zone, std::string((const char*)prefabPayload->Data) };
 		}
 	}
 
@@ -462,16 +501,30 @@ bool Editor::canDrop(Entity* dragged, Entity* newParent) const
 	return true;
 }
 
+// Перевіряє, чи можна покласти новий екземпляр префаба під вказаного батька
+bool Editor::canDropPrefab(Entity* newParent) const
+{
+	// Такий об'єкт не потрапляє у файл сцени, тож і покладені в нього діти зникли б із файлу
+	for (Entity* ancestor = newParent; ancestor; ancestor = ancestor->getParent())
+	{
+		if (ancestor->dontDestroyOnLoad) return false;
+	}
+
+	return true;
+}
+
 // Виконує відкладене перетягування, коли дерево вже намальоване
 void Editor::applyDrop()
 {
 	PendingDrop drop = mPendingDrop;
 	mPendingDrop = PendingDrop();
 
-	if (drop.dragged == nullptr) return;
+	bool isPrefab = !drop.prefab.empty();
+
+	if (drop.dragged == nullptr && !isPrefab) return;
 
 	// Під час перетягування гра могла знищити будь-який з цих об'єктів
-	if (!isAlive(drop.dragged)) return;
+	if (drop.dragged && !isAlive(drop.dragged)) return;
 	if (drop.target && !isAlive(drop.target)) return;
 
 	Entity* newParent = nullptr;
@@ -508,7 +561,24 @@ void Editor::applyDrop()
 		else if (position != siblings.end() && position + 1 != siblings.end()) before = *(position + 1);
 	}
 
-	if (!canDrop(drop.dragged, newParent)) return;
+	if (isPrefab)
+	{
+		if (!canDropPrefab(newParent)) return;
+
+		// Новий екземпляр стає на місце перетягнутого об'єкта в дереві
+		drop.dragged = PrefabLibrary::get()->instantiate(drop.prefab, newParent);
+
+		if (drop.dragged == nullptr) return;
+
+		// Дочірній екземпляр стоїть у початку координат батька, а кореневий — перед камерою
+		if (newParent == nullptr) drop.dragged->getTransform()->setPosition(mCamera.getSpawnPoint());
+
+		mSelected = drop.dragged;
+	}
+	else if (!canDrop(drop.dragged, newParent))
+	{
+		return;
+	}
 
 	// Об'єкт лишається там, де був у світі, як у Unity, змінюється лише його батько
 	drop.dragged->setParent(newParent, true);
@@ -519,6 +589,154 @@ void Editor::applyDrop()
 	EntityManager::get()->sortByHierarchy();
 
 	if (drop.zone == DropZone::Inside) mExpandEntity = newParent;
+}
+
+// Повертає назву зміненої властивості для списку змін: об'єкт, компонент і поле
+static std::string describeOverride(const std::string& key, Entity* instanceRoot)
+{
+	size_t bar = key.find('|');
+
+	std::string path = key.substr(0, bar);
+	std::string field = bar == std::string::npos ? key : key.substr(bar + 1);
+
+	// Шлях — номери дочірніх від кореня, тож за ним можна знайти сам об'єкт і показати його ім'я
+	Entity* entity = instanceRoot;
+	size_t position = 0;
+
+	while (entity && position < path.size())
+	{
+		size_t next = path.find('/', position + 1);
+		int ordinal = atoi(path.substr(position + 1, next == std::string::npos ? std::string::npos : next - position - 1).c_str());
+
+		Entity* child = nullptr;
+		int index = 0;
+
+		for (Entity* candidate : *entity->getChildren())
+		{
+			if (index++ == ordinal) { child = candidate; break; }
+		}
+
+		entity = child;
+		position = next == std::string::npos ? path.size() : next;
+	}
+
+	// Номер компонента показуємо, лише коли однотипних кілька
+	size_t hash = field.find("#0.");
+
+	if (hash != std::string::npos) field.erase(hash, 2);
+
+	std::string owner = entity ? entity->getName() : std::string("(removed object)");
+
+	return path.empty() ? field : owner + " / " + field;
+}
+
+// Малює панель префаба у вибраного екземпляра: застосувати, скасувати зміни, розірвати зв'язок
+void Editor::drawPrefabBar()
+{
+	if (mInstanceRoot == nullptr) return;
+
+	PrefabLibrary* library = PrefabLibrary::get();
+
+	std::string name = PrefabLibrary::getName(mInstanceRoot->prefabAsset);
+
+	ImGui::Separator();
+
+	// Керувати префабом можна лише з кореня екземпляра, як і в Unity
+	if (mInstanceRoot != mSelected)
+	{
+		ImGui::TextColored(prefabColor(), "Part of prefab %s", name.c_str());
+		ImGui::TextDisabled("Select '%s' to apply or revert", mInstanceRoot->getName().c_str());
+		return;
+	}
+
+	// Файл префаба зник: з'єднати нічого, але об'єкт однаково відновився зі збережених даних
+	if (library->getData(mInstanceRoot->prefabAsset) == nullptr)
+	{
+		ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.45f, 1.0f), "Missing prefab: %s", mInstanceRoot->prefabAsset.c_str());
+
+		if (ImGui::Button("Unpack")) library->unpack(mInstanceRoot);
+
+		return;
+	}
+
+	ImGui::TextColored(prefabColor(), "Prefab: %s", name.c_str());
+	ImGui::SameLine();
+
+	if (mOverrides.empty()) ImGui::TextDisabled("(no overrides)");
+	else ImGui::TextDisabled("(%d overrides)", (int)mOverrides.size());
+
+	// Під час гри файл префаба не змінюється: після зупинки сцена повернеться, а файл лишився б новим
+	ImGui::BeginDisabled(mPlaying || mOverrides.empty());
+	bool apply = ImGui::Button("Apply");
+	ImGui::EndDisabled();
+
+	ImGui::SameLine();
+
+	ImGui::BeginDisabled(mOverrides.empty());
+	bool revert = ImGui::Button("Revert");
+	ImGui::EndDisabled();
+
+	ImGui::SameLine();
+
+	bool unpack = ImGui::Button("Unpack");
+
+	// Перелік змін, як меню Overrides в Unity
+	if (!mOverrides.empty() && ImGui::TreeNode("Overrides"))
+	{
+		for (const std::string& key : mOverrides)
+		{
+			ImGui::BulletText("%s", describeOverride(key, mInstanceRoot).c_str());
+		}
+
+		ImGui::TreePop();
+	}
+
+	// Дії виконуються після малювання: вони змінюють сам об'єкт, поля якого щойно показано
+	if (apply) library->apply(mInstanceRoot);
+	else if (revert) library->revert(mInstanceRoot);
+	else if (unpack) library->unpack(mInstanceRoot);
+}
+
+// Створює екземпляр префаба, відпущеного над самою сценою, у точці під курсором
+void Editor::dropPrefabIntoScene()
+{
+	const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+
+	if (payload == nullptr || !payload->IsDataType(PREFAB_PAYLOAD)) return;
+
+	// Кнопку відпустили саме зараз і не над панеллю редактора: інакше це не скидання на сцену
+	if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left)) return;
+	if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) return;
+
+	std::string path((const char*)payload->Data);
+
+	ImVec2 mouse = ImGui::GetIO().MousePos;
+
+	// Екземпляр стає туди, куди вказує курсор, а якщо там порожньо — перед камерою
+	Vector3 position = mCamera.getSpawnPoint();
+
+	float distance = 0.0f;
+
+	if (Gizmo::pick(mouse.x, mouse.y, &distance))
+	{
+		Ray ray = Gizmo::screenPointToRay(mouse.x, mouse.y);
+
+		position = ray.origin + ray.direction * distance;
+	}
+
+	Entity* instance = PrefabLibrary::get()->instantiate(path, nullptr);
+
+	if (instance == nullptr) return;
+
+	instance->getTransform()->setPosition(position);
+
+	mSelected = instance;
+}
+
+// Перевіряє, чи поле вибраного об'єкта змінене відносно префаба
+bool Editor::isOverridden(const std::string& key) const
+{
+	return mInstanceRoot != nullptr && mOverrides.count(key) > 0;
 }
 
 // Малює меню створення нового об'єкта
@@ -621,20 +839,33 @@ void Editor::drawInspector()
 		return;
 	}
 
+	// Зв'язок вибраного об'єкта з префабом і змінені поля рахуються раз на кадр
+	mInstanceRoot = PrefabLibrary::findInstanceRoot(mSelected);
+	mInstancePath.clear();
+	mOverrides.clear();
+
+	if (mInstanceRoot)
+	{
+		mInstancePath = PrefabLibrary::pathInInstance(mSelected, mInstanceRoot);
+		mOverrides = PrefabLibrary::get()->computeOverrides(mInstanceRoot);
+	}
+
 	// Поле імені заповнюється лише тоді, коли воно не редагується
 	if (!ImGui::IsAnyItemActive())
 	{
 		strncpy_s(mNameBuffer, sizeof(mNameBuffer), mSelected->getName().c_str(), _TRUNCATE);
 	}
 
-	inspectorLabel("Name");
+	inspectorLabel("Name", isOverridden(PrefabLibrary::entityKey(mInstancePath, "name")));
 	if (ImGui::InputText("##name", mNameBuffer, sizeof(mNameBuffer)))
 	{
 		mSelected->setName(mNameBuffer);
 	}
 
-	inspectorLabel("Active");
+	inspectorLabel("Active", isOverridden(PrefabLibrary::entityKey(mInstancePath, "active")));
 	ImGui::Checkbox("##active", &mSelected->isActiveSelf);
+
+	drawPrefabBar();
 
 	ImGui::Separator();
 
@@ -666,7 +897,13 @@ void Editor::drawInspector()
 
 		if (open)
 		{
+			// Поля компонента мають ключі, за якими видно, чи змінені вони відносно префаба
+			mComponentKey = PrefabLibrary::componentKey(mInstancePath, component->getTypeName(), PrefabLibrary::componentOccurrence(component), "");
+
 			InspectorVisitor inspector;
+
+			if (mInstanceRoot) inspector.setOverrides(&mOverrides, mComponentKey);
+
 			component->visitProperties(inspector);
 
 			if (Renderer* renderer = dynamic_cast<Renderer*>(component))
@@ -700,21 +937,21 @@ void Editor::drawTransform(Entity* entity)
 	Vector3 rotation = hasParent ? transform->getLocalRotation() : transform->getRotation();
 	Vector3 scale = hasParent ? transform->getLocalScale() : transform->getScale();
 
-	inspectorLabel("Position");
+	inspectorLabel("Position", isOverridden(PrefabLibrary::entityKey(mInstancePath, "position")));
 	if (ImGui::DragFloat3("##position", &position.x, 0.05f))
 	{
 		if (hasParent) transform->setLocalPosition(position);
 		else transform->setPosition(position);
 	}
 
-	inspectorLabel("Rotation");
+	inspectorLabel("Rotation", isOverridden(PrefabLibrary::entityKey(mInstancePath, "rotation")));
 	if (ImGui::DragFloat3("##rotation", &rotation.x, 0.01f))
 	{
 		if (hasParent) transform->setLocalRotation(rotation);
 		else transform->setRotation(rotation);
 	}
 
-	inspectorLabel("Scale");
+	inspectorLabel("Scale", isOverridden(PrefabLibrary::entityKey(mInstancePath, "scale")));
 	if (ImGui::DragFloat3("##scale", &scale.x, 0.02f))
 	{
 		if (hasParent) transform->setLocalScale(scale);
@@ -760,7 +997,7 @@ void Editor::drawRendererAssets(Renderer* renderer)
 		if (slash != std::string::npos) current = current.substr(slash + 1);
 	}
 
-	inspectorLabel("Mesh");
+	inspectorLabel("Mesh", isOverridden(mComponentKey + "mesh"));
 	if (ImGui::BeginCombo("##mesh", current.c_str()))
 	{
 		for (size_t i = 0; i < mMeshPaths.size(); i++)
@@ -779,7 +1016,7 @@ void Editor::drawRendererAssets(Renderer* renderer)
 		ImGui::EndCombo();
 	}
 
-	inspectorLabel("Cast Shadows");
+	inspectorLabel("Cast Shadows", isOverridden(mComponentKey + "castShadows"));
 	ImGui::Checkbox("##castShadows", &renderer->castShadows);
 
 	// Кожен слот матеріалу редагується окремо
@@ -787,13 +1024,55 @@ void Editor::drawRendererAssets(Renderer* renderer)
 
 	for (unsigned int slot = 0; slot < slots; slot++)
 	{
-		drawMaterial(renderer->getMaterial(slot), (int)slot);
+		drawMaterial(renderer, (int)slot);
 	}
 }
 
-// Малює поля матеріалу
-void Editor::drawMaterial(Material* material, int slot)
+// Перевіряє, чи матеріалом користується ще хтось, крім вказаного рендер-компонента
+static bool isMaterialShared(Material* material, Renderer* owner)
 {
+	// Матеріал рушія за замовчуванням спільний для всіх об'єктів без власного
+	if (material == GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial()) return true;
+
+	for (Renderer* other : EntityManager::get()->getRenderers())
+	{
+		if (other == owner) continue;
+
+		if (other->getSharedMaterial() == material) return true;
+
+		for (unsigned int slot = 0; slot < other->getSlotMaterialCount(); slot++)
+		{
+			if (other->getSlotMaterial(slot) == material) return true;
+		}
+	}
+
+	return false;
+}
+
+// Повертає матеріал слота, яким користується лише цей рендер-компонент, за потреби зробивши копію.
+// Інакше правка в інспекторі змінила б усі об'єкти зі спільним матеріалом, зокрема й матеріал рушія
+// за замовчуванням, а в екземплярі префаба не стала б його власною зміною
+Material* Editor::ownMaterial(Renderer* renderer, int slot)
+{
+	Material* material = renderer->getMaterial((unsigned int)slot);
+
+	if (!isMaterialShared(material, renderer)) return material;
+
+	Material* copy = new Material(*material);
+
+	// Слот із власним матеріалом отримує копію сам; інакше він бере спільний матеріал об'єкта,
+	// і копія стає спільною для всіх таких його слотів, як і було до правки
+	if (renderer->getSlotMaterial((unsigned int)slot) == material) renderer->setMaterial((unsigned int)slot, copy);
+	else renderer->setMaterial(copy);
+
+	return copy;
+}
+
+// Малює поля матеріалу
+void Editor::drawMaterial(Renderer* renderer, int slot)
+{
+	Material* material = renderer->getMaterial((unsigned int)slot);
+
 	if (material == nullptr) return;
 
 	ImGui::PushID(slot);
@@ -801,23 +1080,45 @@ void Editor::drawMaterial(Material* material, int slot)
 	char label[64] = {};
 	sprintf_s(label, sizeof(label), "Material %d", slot);
 
-	if (ImGui::TreeNode(label))
+	// Матеріал порівнюється з префабом цілим, тож і позначається цілим вузлом
+	bool overridden = isOverridden(mComponentKey + "material") || isOverridden(mComponentKey + "slotMaterials");
+
+	if (overridden) ImGui::PushStyleColor(ImGuiCol_Text, prefabColor());
+
+	bool open = ImGui::TreeNode(label);
+
+	if (overridden) ImGui::PopStyleColor();
+
+	if (open)
 	{
+		// Поля правляться на копії значень і переносяться в матеріал лише після зміни: спільний
+		// матеріал перед цим замінюється власною копією, щоб правка не зачепила інших
+		float color[4] = { material->color[0], material->color[1], material->color[2], material->color[3] };
+		float ambient = material->ambient;
+		float smoothness = material->smoothness;
+		float shininess = material->shininess;
+		float textureScale = material->textureScale;
+		bool cullBack = material->cullBack;
+		bool clampTexture = material->clampTexture;
+
+		bool changed = false;
+
 		inspectorLabel("Color");
-		ImGui::ColorEdit4("##color", material->color);
+		changed |= ImGui::ColorEdit4("##color", color);
 		inspectorLabel("Ambient");
-		ImGui::DragFloat("##ambient", &material->ambient, 0.01f, 0.0f, 2.0f);
+		changed |= ImGui::DragFloat("##ambient", &ambient, 0.01f, 0.0f, 2.0f);
 		inspectorLabel("Smoothness");
-		ImGui::DragFloat("##smoothness", &material->smoothness, 0.01f, 0.0f, 1.0f);
+		changed |= ImGui::DragFloat("##smoothness", &smoothness, 0.01f, 0.0f, 1.0f);
 		inspectorLabel("Shininess");
-		ImGui::DragFloat("##shininess", &material->shininess, 0.5f, 1.0f, 256.0f);
+		changed |= ImGui::DragFloat("##shininess", &shininess, 0.5f, 1.0f, 256.0f);
 		inspectorLabel("Texture Scale");
-		ImGui::DragFloat("##textureScale", &material->textureScale, 0.1f, 0.01f, 200.0f);
+		changed |= ImGui::DragFloat("##textureScale", &textureScale, 0.1f, 0.01f, 200.0f);
 		inspectorLabel("Cull Back");
-		ImGui::Checkbox("##cullBack", &material->cullBack);
-		ImGui::SameLine();
+		changed |= ImGui::Checkbox("##cullBack", &cullBack);
 		inspectorLabel("Clamp");
-		ImGui::Checkbox("##clamp", &material->clampTexture);
+		changed |= ImGui::Checkbox("##clamp", &clampTexture);
+
+		int chosenTexture = -1;
 
 		std::wstring texture = material->getTexturePath();
 		std::string current = texture.empty() ? "none" : std::string(texture.begin(), texture.end());
@@ -835,16 +1136,35 @@ void Editor::drawMaterial(Material* material, int slot)
 				size_t nameSlash = name.find_last_of("\\/");
 				if (nameSlash != std::string::npos) name = name.substr(nameSlash + 1);
 
-				if (ImGui::Selectable(name.c_str()))
-				{
-					// Матеріал показує лише першу текстуру, тому стару треба прибрати
-					while (material->getTextureCount() > 0) material->removeTexture(0);
-
-					material->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(mTexturePaths[i].c_str()));
-				}
+				if (ImGui::Selectable(name.c_str())) chosenTexture = (int)i;
 			}
 
 			ImGui::EndCombo();
+		}
+
+		if (changed || chosenTexture >= 0)
+		{
+			material = ownMaterial(renderer, slot);
+
+			for (int channel = 0; channel < 4; channel++)
+			{
+				material->color[channel] = color[channel];
+			}
+
+			material->ambient = ambient;
+			material->smoothness = smoothness;
+			material->shininess = shininess;
+			material->textureScale = textureScale;
+			material->cullBack = cullBack;
+			material->clampTexture = clampTexture;
+
+			if (chosenTexture >= 0)
+			{
+				// Матеріал показує лише першу текстуру, тому стару треба прибрати
+				while (material->getTextureCount() > 0) material->removeTexture(0);
+
+				material->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(mTexturePaths[(size_t)chosenTexture].c_str()));
+			}
 		}
 
 		ImGui::TreePop();
@@ -861,6 +1181,55 @@ void Editor::drawAssets()
 	ImGui::Begin("Assets");
 	keepWindowOnScreen();
 
+	if (ImGui::CollapsingHeader("Prefabs", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		PrefabLibrary* library = PrefabLibrary::get();
+
+		for (const std::string& path : library->getPaths())
+		{
+			std::string name = PrefabLibrary::getName(path);
+
+			ImGui::PushID(path.c_str());
+			ImGui::PushStyleColor(ImGuiCol_Text, prefabColor());
+
+			// Екземпляр створюється перетягуванням, як в Unity. Подвійного кліку тут немає: другий клік
+			// одразу перед перетягуванням зараховувався б як подвійний і ставив би зайвий екземпляр
+			ImGui::Selectable(name.c_str());
+
+			ImGui::PopStyleColor();
+
+			// Префаб перетягують у дерево сцени або просто на сцену
+			if (ImGui::BeginDragDropSource())
+			{
+				ImGui::SetDragDropPayload(PREFAB_PAYLOAD, path.c_str(), path.size() + 1);
+				ImGui::TextColored(prefabColor(), "%s", name.c_str());
+				ImGui::EndDragDropSource();
+			}
+
+			ImGui::PopID();
+		}
+
+		if (library->getPaths().empty()) ImGui::TextDisabled("No prefabs yet");
+
+		// Об'єкт із дерева сцени, покладений сюди, стає новим префабом. Під час гри файли префабів
+		// не змінюються: після зупинки сцена повернеться до колишнього стану, а файл лишився б новим
+		ImGui::BeginDisabled(mPlaying);
+		ImGui::Button(mPlaying ? "Prefabs can't be created in play mode" : "Drop an object here to create a prefab", ImVec2(-1.0f, 32.0f));
+		ImGui::EndDisabled();
+
+		if (!mPlaying && ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(HIERARCHY_PAYLOAD))
+			{
+				Entity* entity = *(Entity* const*)payload->Data;
+
+				if (isAlive(entity)) library->createAsset(entity);
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+	}
+
 	if (ImGui::CollapsingHeader("Meshes", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		for (size_t i = 0; i < mMeshNames.size(); i++)
@@ -874,7 +1243,7 @@ void Editor::drawAssets()
 			if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick)
 				&& ImGui::IsMouseDoubleClicked(0))
 			{
-				Entity* entity = new Entity(mCamera.getPosition());
+				Entity* entity = new Entity(mCamera.getSpawnPoint());
 				entity->setName(name);
 
 				MeshRenderer* renderer = entity->addComponent<MeshRenderer>();

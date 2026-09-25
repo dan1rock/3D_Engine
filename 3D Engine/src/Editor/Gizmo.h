@@ -29,7 +29,7 @@ public:
 	static bool projectToScreen(const Vector3& world, float& screenX, float& screenY);
 
 	// Шукає найближчий видимий об'єкт під вказаною точкою екрана
-	static Entity* pick(float screenX, float screenY);
+	static Entity* pick(float screenX, float screenY, float* hitDistance = nullptr);
 
 	// Малює маніпулятор вибраного об'єкта та обробляє перетягування. Повертає true, поки миша
 	// зайнята маніпулятором: тоді клік не повинен міняти вибір

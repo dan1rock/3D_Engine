@@ -215,7 +215,7 @@ static float distanceToSegment(float px, float py, float ax, float ay, float bx,
 }
 
 // Шукає найближчий видимий об'єкт під вказаною точкою екрана
-Entity* Gizmo::pick(float screenX, float screenY)
+Entity* Gizmo::pick(float screenX, float screenY, float* hitDistance)
 {
 	Ray ray = screenPointToRay(screenX, screenY);
 
@@ -302,6 +302,9 @@ Entity* Gizmo::pick(float screenX, float screenY)
 			}
 		}
 	}
+
+	// Відстань потрібна, щоб поставити щось саме в ту точку, куди влучив промінь
+	if (hitDistance && closest) *hitDistance = closestDistance;
 
 	return closest;
 }
