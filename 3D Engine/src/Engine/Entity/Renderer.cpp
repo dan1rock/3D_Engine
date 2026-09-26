@@ -72,8 +72,16 @@ bool Renderer::isInsideFrustum(const Frustum& frustum, bool sidesOnly)
 // Викликається під час проходу карти тіней: рендерить лише глибину меша
 void Renderer::renderDepth()
 {
-	// Меш без буферів не має що записати у карту тіней
-	if (!castShadows || mMesh == nullptr || mMesh->getIndexBuffer() == nullptr) return;
+	if (!castShadows) return;
+
+	renderGeometry();
+}
+
+// Малює весь меш одним викликом тими шейдерами, що вже встановлені, без матеріалу
+void Renderer::renderGeometry()
+{
+	// Меш без буферів не має що малювати
+	if (mMesh == nullptr || mMesh->getIndexBuffer() == nullptr) return;
 
 	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
 	constantData->model = *mOwner->getTransform()->getMatrix();

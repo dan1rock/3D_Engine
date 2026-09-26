@@ -2,6 +2,7 @@
 #include "EditorCamera.h"
 #include "Gizmo.h"
 #include "EditorGrid.h"
+#include "SelectionOutline.h"
 #include "Vector3.h"
 #include <string>
 #include <vector>
@@ -26,8 +27,9 @@ public:
 
 	// Малює інтерфейс редактора та оновлює його камеру
 	void update();
-	// Малює допоміжну геометрію редактора, як-от сітку, поверх готового кадру, але під інтерфейсом
-	void renderOverlay(SwapChain* swapChain);
+	// Малює допоміжну геометрію редактора, як-от сітку й обведення вибраного, поверх готового кадру,
+	// але під інтерфейсом; width і height - розмір вікна
+	void renderOverlay(SwapChain* swapChain, unsigned int width, unsigned int height);
 
 	// Перевіряє, чи сцена зараз програється, а не редагується
 	bool isPlaying() const;
@@ -176,6 +178,8 @@ private:
 	Gizmo mGizmo;
 	// Сітка площини XZ, яку показує режим редагування префаба
 	EditorGrid mGrid;
+	// Обведення вибраного об'єкта у вікні сцени
+	SelectionOutline mOutline;
 
 	// Шляхи до знайдених ресурсів, які пропонує інспектор
 	std::vector<std::wstring> mMeshPaths;

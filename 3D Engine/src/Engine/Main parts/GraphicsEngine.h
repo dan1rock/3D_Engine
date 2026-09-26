@@ -138,4 +138,5 @@ private:
 	friend class ShadowMap;
 	friend class PostProcessing;
 	friend class EditorGrid;
+	friend class SelectionOutline;
 };

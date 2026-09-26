@@ -31,6 +31,14 @@ void DeviceContext::clearRenderTarget(ID3D11RenderTargetView* renderTargetView, 
 	mDeviceContext->OMSetRenderTargets(1, &renderTargetView, swapChain->mDepthStencilView);
 }
 
+// Очищає вказану ціль рендеру та робить її єдиною активною, без буфера глибини
+void DeviceContext::clearRenderTarget(ID3D11RenderTargetView* renderTargetView, float r, float g, float b, float a)
+{
+	FLOAT color[] = { r,g,b,a };
+	mDeviceContext->ClearRenderTargetView(renderTargetView, color);
+	mDeviceContext->OMSetRenderTargets(1, &renderTargetView, nullptr);
+}
+
 // Повертає ціль рендеру вказаного SwapChain без очищення його буферів
 void DeviceContext::setRenderTarget(SwapChain* swapChain, bool withDepthBuffer)
 {

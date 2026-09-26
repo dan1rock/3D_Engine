@@ -113,6 +113,7 @@ void Editor::init()
 	ComponentRegistry::registerEngineTypes();
 
 	mGrid.init();
+	mOutline.init();
 
 	// Перелік ресурсів читається один раз під час запуску
 	struct Folder { const wchar_t* path; std::vector<std::wstring>* paths; std::vector<std::string>* names; };
@@ -1638,13 +1639,17 @@ void Editor::updateSelection()
 	}
 }
 
-// Малює допоміжну геометрію редактора, як-от сітку, поверх готового кадру, але під інтерфейсом
-void Editor::renderOverlay(SwapChain* swapChain)
+// Малює допоміжну геометрію редактора, як-от сітку й обведення вибраного, поверх готового кадру,
+// але під інтерфейсом; width і height - розмір вікна
+void Editor::renderOverlay(SwapChain* swapChain, unsigned int width, unsigned int height)
 {
 	if (!mEnabled || mPlaying) return;
 
 	// Префаб показується без сцени навколо, тож сітка дає відчуття землі та масштабу, як у Unity
 	if (isPrefabMode()) mGrid.render(swapChain);
+
+	// Обведення малюється після сітки, щоб лежати поверх неї
+	mOutline.render(swapChain, width, height, mSelected);
 }
 
 // Наводить камеру редактора на вибраний об'єкт

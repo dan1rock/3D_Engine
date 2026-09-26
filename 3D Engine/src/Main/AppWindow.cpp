@@ -132,7 +132,7 @@ void AppWindow::onUpdate()
 	GraphicsEngine::get()->getPostProcessing()->apply(mSwapChain);
 
 	// Допоміжна геометрія редактора малюється поверх ефектів, але під інтерфейсом
-	Editor::get()->renderOverlay(mSwapChain);
+	Editor::get()->renderOverlay(mSwapChain, windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
 
 	// Інтерфейс користувача малюється поверх ефектів, тому не потрапляє під них
 	GraphicsEngine::get()->renderUI();

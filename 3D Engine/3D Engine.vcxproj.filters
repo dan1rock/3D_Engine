@@ -444,6 +444,12 @@
     <FxCompile Include="src\Shaders\GridPixelShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="src\Shaders\OutlineMaskPixelShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\OutlinePixelShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
     <FxCompile Include="src\Shaders\BloomExtractPixelShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
