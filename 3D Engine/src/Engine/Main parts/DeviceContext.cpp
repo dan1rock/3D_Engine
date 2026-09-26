@@ -73,6 +73,18 @@ void DeviceContext::setRasterizer(ID3D11RasterizerState* rasterState)
 	mDeviceContext->RSSetState(rasterState);
 }
 
+// Встановлює стан змішування кольорів (nullptr - стандартний, без змішування)
+void DeviceContext::setBlendState(ID3D11BlendState* blendState)
+{
+	mDeviceContext->OMSetBlendState(blendState, nullptr, 0xffffffff);
+}
+
+// Встановлює стан перевірки глибини (nullptr - стандартний, з перевіркою та записом)
+void DeviceContext::setDepthStencilState(ID3D11DepthStencilState* depthStencilState)
+{
+	mDeviceContext->OMSetDepthStencilState(depthStencilState, 0);
+}
+
 // Встановлює вершинний буфер
 void DeviceContext::setVertexBuffer(VertexBuffer* vertexBuffer)
 {

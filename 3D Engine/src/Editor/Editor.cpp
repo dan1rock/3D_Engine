@@ -112,6 +112,8 @@ void Editor::init()
 {
 	ComponentRegistry::registerEngineTypes();
 
+	mGrid.init();
+
 	// Перелік ресурсів читається один раз під час запуску
 	struct Folder { const wchar_t* path; std::vector<std::wstring>* paths; std::vector<std::string>* names; };
 
@@ -1634,6 +1636,15 @@ void Editor::updateSelection()
 	{
 		mSelected = Gizmo::pick(io.MousePos.x, io.MousePos.y);
 	}
+}
+
+// Малює допоміжну геометрію редактора, як-от сітку, поверх готового кадру, але під інтерфейсом
+void Editor::renderOverlay(SwapChain* swapChain)
+{
+	if (!mEnabled || mPlaying) return;
+
+	// Префаб показується без сцени навколо, тож сітка дає відчуття землі та масштабу, як у Unity
+	if (isPrefabMode()) mGrid.render(swapChain);
 }
 
 // Наводить камеру редактора на вибраний об'єкт

@@ -438,6 +438,12 @@
     <FxCompile Include="src\Shaders\PostProcessVertexShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="src\Shaders\GridVertexShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\GridPixelShader.hlsl">
+      <Filter>Engine\Shaders</Filter>
+    </FxCompile>
     <FxCompile Include="src\Shaders\BloomExtractPixelShader.hlsl">
       <Filter>Engine\Shaders</Filter>
     </FxCompile>

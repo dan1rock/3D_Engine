@@ -1,6 +1,7 @@
 #pragma once
 #include "EditorCamera.h"
 #include "Gizmo.h"
+#include "EditorGrid.h"
 #include "Vector3.h"
 #include <string>
 #include <vector>
@@ -11,6 +12,7 @@ class Component;
 class Transform;
 class Renderer;
 class Material;
+class SwapChain;
 
 // Редактор сцени: показує дерево об'єктів, інспектор вибраного об'єкта та керує режимом гри
 class Editor
@@ -24,6 +26,8 @@ public:
 
 	// Малює інтерфейс редактора та оновлює його камеру
 	void update();
+	// Малює допоміжну геометрію редактора, як-от сітку, поверх готового кадру, але під інтерфейсом
+	void renderOverlay(SwapChain* swapChain);
 
 	// Перевіряє, чи сцена зараз програється, а не редагується
 	bool isPlaying() const;
@@ -170,6 +174,8 @@ private:
 
 	// Маніпулятор вибраного об'єкта та вибір мишею у вікні сцени
 	Gizmo mGizmo;
+	// Сітка площини XZ, яку показує режим редагування префаба
+	EditorGrid mGrid;
 
 	// Шляхи до знайдених ресурсів, які пропонує інспектор
 	std::vector<std::wstring> mMeshPaths;

@@ -137,4 +137,5 @@ private:
 	friend class Mesh;
 	friend class ShadowMap;
 	friend class PostProcessing;
+	friend class EditorGrid;
 };

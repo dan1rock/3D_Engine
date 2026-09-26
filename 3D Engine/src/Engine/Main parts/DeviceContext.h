@@ -32,6 +32,10 @@ public:
 	void setSamplerState(ID3D11SamplerState* samplerState, UINT slot = 0);
 	// Встановлює стан растеризатора
 	void setRasterizer(ID3D11RasterizerState* rasterState);
+	// Встановлює стан змішування кольорів (nullptr - стандартний, без змішування)
+	void setBlendState(ID3D11BlendState* blendState);
+	// Встановлює стан перевірки глибини (nullptr - стандартний, з перевіркою та записом)
+	void setDepthStencilState(ID3D11DepthStencilState* depthStencilState);
 	// Встановлює вершинний буфер
 	void setVertexBuffer(VertexBuffer* vertexBuffer);
 	// Встановлює індексний буфер

@@ -131,6 +131,9 @@ void AppWindow::onUpdate()
 	// Застосовує ефекти постобробки та виводить результат у вікно
 	GraphicsEngine::get()->getPostProcessing()->apply(mSwapChain);
 
+	// Допоміжна геометрія редактора малюється поверх ефектів, але під інтерфейсом
+	Editor::get()->renderOverlay(mSwapChain);
+
 	// Інтерфейс користувача малюється поверх ефектів, тому не потрапляє під них
 	GraphicsEngine::get()->renderUI();
 
