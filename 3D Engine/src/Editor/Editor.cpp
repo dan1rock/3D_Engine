@@ -163,8 +163,8 @@ void Editor::update()
 
 	if (!mEnabled) return;
 
-	// Поза режимом гри сценою керує камера редактора
-	if (!mPlaying)
+	// Поза режимом гри та на паузі сценою керує камера редактора
+	if (!mPlaying || mPaused)
 	{
 		if (!Input::getMouseButton(MB_Right) && Input::isCursorHidden())
 		{
@@ -341,6 +341,40 @@ bool Editor::isPlaying() const
 	return mPlaying;
 }
 
+// Перевіряє, чи гру поставлено на паузу
+bool Editor::isPaused() const
+{
+	return mPaused;
+}
+
+// Перевіряє, чи цього кадру сцена оновлюється: гра йде без паузи, або редактор сховано
+bool Editor::isSimulating() const
+{
+	// Пауза тримає гру і тоді, коли редактор сховано: інакше F1 непомітно зняв би її
+	if (mPlaying) return !mPaused;
+
+	return !mEnabled;
+}
+
+// Ставить гру на паузу або знімає з неї; на паузі сцену знову можна редагувати
+void Editor::setPaused(bool paused)
+{
+	if (!mPlaying || paused == mPaused) return;
+
+	mPaused = paused;
+
+	if (mPaused)
+	{
+		// Камера редактора стає туди, звідки дивилася гра, щоб зображення не стрибнуло
+		constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
+
+		mCamera.setFromViewMatrix(constantData->view);
+
+		// Гра могла сховати курсор, а на паузі ним вибирають і тягнуть об'єкти
+		Input::hideCursor(false);
+	}
+}
+
 // Перевіряє, чи показано інтерфейс редактора
 bool Editor::isEnabled() const
 {
@@ -380,7 +414,23 @@ void Editor::drawToolbar()
 	}
 
 	ImGui::SameLine();
-	ImGui::TextUnformatted(mPlaying ? "Playing" : isPrefabMode() ? "Prefab Mode" : "Editing");
+
+	// Пауза має зміст лише під час гри, тож поза нею кнопка сіра. Натиснута пауза підсвічена,
+	// як кнопка-перемикач у Unity
+	ImGui::BeginDisabled(!mPlaying);
+
+	if (mPaused) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+
+	bool togglePause = ImGui::Button(mPaused ? "Resume" : "Pause", ImVec2(70, 0));
+
+	if (mPaused) ImGui::PopStyleColor();
+
+	if (togglePause) setPaused(!mPaused);
+
+	ImGui::EndDisabled();
+
+	ImGui::SameLine();
+	ImGui::TextUnformatted(mPlaying ? (mPaused ? "Paused" : "Playing") : isPrefabMode() ? "Prefab Mode" : "Editing");
 
 	ImGui::Separator();
 
@@ -1725,13 +1775,20 @@ void Editor::play()
 		if (mPlayOrder[i] == mSelected) { mPlaySelectedIndex = (int)i; break; }
 	}
 
+	mPlayView = mCamera.getView();
+
 	mPlaying = true;
+	mPaused = false;
 }
 
 // Повертається до редагування, відновивши збережений стан сцени
 void Editor::stop()
 {
 	mPlaying = false;
+	mPaused = false;
+
+	// На паузі камеру редактора могли відвести; редагування продовжується з того місця, де його лишили
+	mCamera.setView(mPlayView);
 
 	// Гра могла знищити вибраний об'єкт, тому його вказівник лише порівнюємо, не розіменовуючи
 	int selectedIndex = -1;
@@ -1779,8 +1836,8 @@ void Editor::stop()
 // Обробляє вибір об'єкта мишею та малює маніпулятор
 void Editor::updateSelection()
 {
-	// У режимі гри сценою керує сама гра, тому маніпулятор не показуємо
-	if (mPlaying) return;
+	// Поки гра йде, сценою керує вона сама, тому маніпулятор не показуємо. На паузі - показуємо
+	if (mPlaying && !mPaused) return;
 
 	ImGuiIO& io = ImGui::GetIO();
 
@@ -1804,7 +1861,8 @@ void Editor::updateSelection()
 // але під інтерфейсом; width і height - розмір вікна
 void Editor::renderOverlay(SwapChain* swapChain, unsigned int width, unsigned int height)
 {
-	if (!mEnabled || mPlaying) return;
+	// Поки гра йде, допоміжна геометрія заважала б; на паузі редагують, тож вона потрібна
+	if (!mEnabled || (mPlaying && !mPaused)) return;
 
 	// Префаб показується без сцени навколо, тож сітка дає відчуття землі та масштабу, як у Unity
 	if (isPrefabMode()) mGrid.render(swapChain);

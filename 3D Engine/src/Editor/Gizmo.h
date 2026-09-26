@@ -46,10 +46,13 @@ public:
 private:
 	// Обробляє перетягування вздовж осі та повертає true, поки воно триває
 	bool dragTranslate(Entity* entity);
+	// Переміщує об'єкт у площині двох осей за курсором
+	bool dragPlane(Entity* entity);
 	bool dragScale(Entity* entity, float size);
 	bool dragRotate(Entity* entity);
 
-	// Вісь, за яку тягнуть (0 = X, 1 = Y, 2 = Z), або -1
+	// Вісь, за яку тягнуть (0 = X, 1 = Y, 2 = Z), площина (3 + номер осі, що є її нормаллю:
+	// 3 = YZ, 4 = XZ, 5 = XY) або -1
 	int mAxis = -1;
 	bool mDragging = false;
 
@@ -64,5 +67,7 @@ private:
 	Vector3 mDragFirst;
 	Vector3 mDragSecond;
 	float mStartOffset = 0.0f;
+	// Зсув точки площини, за яку вхопили, від центру об'єкта: об'єкт не перескакує центром під курсор
+	Vector3 mStartPlaneOffset;
 	float mStartAngle = 0.0f;
 };

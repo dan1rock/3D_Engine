@@ -27,6 +27,44 @@ static const ImU32 AXIS_COLORS[3] = {
 
 static const ImU32 HIGHLIGHT_COLOR = IM_COL32(255, 220, 60, 255);
 
+// Квадрат площини займає цю частку довжини осі, відступивши від центру, як у Unity
+static const float PLANE_START = 0.15f;
+static const float PLANE_END = 0.4f;
+// Площину, що стоїть до камери майже ребром, не показуємо: вона стиснулась би в риску,
+// а перетягування в ній кидало б об'єкт на величезні відстані
+static const float PLANE_MIN_FACING = 0.12f;
+// Непрозорість заливки квадрата площини: звичайна та під курсором
+static const int PLANE_FILL_ALPHA = 70;
+static const int PLANE_ACTIVE_FILL_ALPHA = 120;
+
+// Повертає той самий колір з іншою непрозорістю
+static ImU32 withAlpha(ImU32 color, int alpha)
+{
+	return (color & ~IM_COL32_A_MASK) | ((ImU32)alpha << IM_COL32_A_SHIFT);
+}
+
+// Перевіряє, чи точка екрана лежить усередині опуклого чотирикутника
+static bool insideQuad(const ImVec2& point, const ImVec2 corners[4])
+{
+	bool hasPositive = false;
+	bool hasNegative = false;
+
+	for (int i = 0; i < 4; i++)
+	{
+		const ImVec2& a = corners[i];
+		const ImVec2& b = corners[(i + 1) % 4];
+
+		float cross = (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);
+
+		if (cross > 0.0f) hasPositive = true;
+		if (cross < 0.0f) hasNegative = true;
+	}
+
+	// Точка всередині, якщо лежить з одного боку від усіх ребер, хоч би яким був обхід
+	return !(hasPositive && hasNegative);
+}
+
+
 // Переводить бажану світову матрицю дочірнього об'єкта у локальну відносно його батька.
 // Дочірній зберігає саме локальну трансформацію: її серіалізують і показує інспектор, а світову
 // перераховують з неї щоразу, як рухається батько, тож змінювати треба локальну
@@ -36,6 +74,25 @@ static Matrix worldToLocal(Entity* entity, const Matrix& world)
 	parentInverse.inverse();
 
 	return world * parentInverse;
+}
+
+// Ставить об'єкт у вказану світову позицію. Дочірній зберігає саме локальну позицію, тож її
+// виводять зі світової через обернену батьківську матрицю
+static void setWorldPosition(Entity* entity, const Vector3& position)
+{
+	Transform* transform = entity->getTransform();
+
+	if (entity->getParent())
+	{
+		Matrix world = *transform->getMatrix();
+		world.setTranslation(position);
+
+		transform->setLocalPosition(worldToLocal(entity, world).getTranslation());
+	}
+	else
+	{
+		transform->setPosition(position);
+	}
 }
 
 // Повертає глобальні константи кадру, де лежать матриці камери
@@ -375,7 +432,8 @@ bool Gizmo::update(Entity* entity)
 			return true;
 		}
 
-		if (mode == GizmoMode::Translate) dragTranslate(entity);
+		if (mode == GizmoMode::Translate && mAxis >= 3) dragPlane(entity);
+		else if (mode == GizmoMode::Translate) dragTranslate(entity);
 		else if (mode == GizmoMode::Scale) dragScale(entity, size);
 		else dragRotate(entity);
 	}
@@ -416,6 +474,58 @@ bool Gizmo::update(Entity* entity)
 		}
 	}
 
+	// Квадрати площин, як у Unity: кожен лежить між двома осями й тягне об'єкт у їхній площині.
+	// Номер площини - це номер осі, що є її нормаллю, тож і колір у неї від цієї осі
+	ImVec2 planeCorners[3][4];
+	bool planeVisible[3] = {};
+
+	if (mode == GizmoMode::Translate)
+	{
+		Vector3 viewDirection = (cameraPosition - origin).normalized();
+
+		for (int plane = 0; plane < 3; plane++)
+		{
+			if (fabsf(axes[plane] * viewDirection) < PLANE_MIN_FACING) continue;
+
+			// Квадрат завжди лежить між стрілками двох своїх осей, звідки б не дивилася камера
+			Vector3 first = axes[(plane + 1) % 3];
+			Vector3 second = axes[(plane + 2) % 3];
+
+			float nearEdge = size * PLANE_START;
+			float farEdge = size * PLANE_END;
+
+			Vector3 corners[4] = {
+				origin + first * nearEdge + second * nearEdge,
+				origin + first * farEdge + second * nearEdge,
+				origin + first * farEdge + second * farEdge,
+				origin + first * nearEdge + second * farEdge,
+			};
+
+			bool onScreen = true;
+
+			for (int corner = 0; corner < 4; corner++)
+			{
+				float x = 0.0f;
+				float y = 0.0f;
+
+				if (!projectToScreen(corners[corner], x, y)) onScreen = false;
+
+				planeCorners[plane][corner] = ImVec2(x, y);
+			}
+
+			if (!onScreen) continue;
+
+			planeVisible[plane] = true;
+
+			// Квадрат під курсором важливіший за вісь поруч: схопити його інакше було б важко
+			if (insideQuad(mouse, planeCorners[plane]))
+			{
+				hovered = 3 + plane;
+				hoveredDistance = 0.0f;
+			}
+		}
+	}
+
 	// Коло обертання перевіряється окремо: курсор має бути біля самого кола, а не всередині
 	if (mode == GizmoMode::Rotate)
 	{
@@ -448,6 +558,19 @@ bool Gizmo::update(Entity* entity)
 				hovered = axis;
 			}
 		}
+	}
+
+	// Квадрати площин малюються першими, щоб осі лежали поверх них
+	for (int plane = 0; plane < 3; plane++)
+	{
+		if (!planeVisible[plane]) continue;
+
+		bool active = mDragging ? mAxis == 3 + plane : hovered == 3 + plane;
+
+		ImU32 color = active ? HIGHLIGHT_COLOR : AXIS_COLORS[plane];
+
+		draw->AddConvexPolyFilled(planeCorners[plane], 4, withAlpha(color, active ? PLANE_ACTIVE_FILL_ALPHA : PLANE_FILL_ALPHA));
+		draw->AddPolyline(planeCorners[plane], 4, color, ImDrawFlags_Closed, active ? 2.0f : 1.5f);
 	}
 
 	// Малюємо маніпулятор у поточному режимі
@@ -526,9 +649,12 @@ bool Gizmo::update(Entity* entity)
 		mDragging = true;
 		mAxis = hovered;
 
-		mDragAxis = axes[mAxis];
-		mDragFirst = axes[(mAxis + 1) % 3];
-		mDragSecond = axes[(mAxis + 2) % 3];
+		// Для площини це її нормаль: від неї і рахуються дві осі, що площину утворюють
+		int axisIndex = mAxis % 3;
+
+		mDragAxis = axes[axisIndex];
+		mDragFirst = axes[(axisIndex + 1) % 3];
+		mDragSecond = axes[(axisIndex + 2) % 3];
 
 		mStartPosition = transform->getPosition();
 		mStartRotation = transform->getRotation();
@@ -536,7 +662,22 @@ bool Gizmo::update(Entity* entity)
 
 		Ray ray = screenPointToRay(mouse.x, mouse.y);
 
-		if (mode == GizmoMode::Rotate)
+		if (mAxis >= 3)
+		{
+			Vector3 hit;
+
+			// Площина вислизнула з-під променя: тягнути нема за що
+			if (rayPlane(ray, origin, mDragAxis, hit))
+			{
+				mStartPlaneOffset = hit - origin;
+			}
+			else
+			{
+				mDragging = false;
+				mAxis = -1;
+			}
+		}
+		else if (mode == GizmoMode::Rotate)
 		{
 			Vector3 hit;
 
@@ -565,21 +706,24 @@ bool Gizmo::dragTranslate(Entity* entity)
 
 	if (!axisOffsetUnderMouse(mStartPosition, mDragAxis, offset)) return false;
 
-	Vector3 position = mStartPosition + mDragAxis * (offset - mStartOffset);
+	setWorldPosition(entity, mStartPosition + mDragAxis * (offset - mStartOffset));
 
-	Transform* transform = entity->getTransform();
+	return true;
+}
 
-	if (entity->getParent())
-	{
-		Matrix world = *transform->getMatrix();
-		world.setTranslation(position);
+// Переміщує об'єкт у площині двох осей за курсором
+bool Gizmo::dragPlane(Entity* entity)
+{
+	ImVec2 mouse = ImGui::GetIO().MousePos;
 
-		transform->setLocalPosition(worldToLocal(entity, world).getTranslation());
-	}
-	else
-	{
-		transform->setPosition(position);
-	}
+	Ray ray = screenPointToRay(mouse.x, mouse.y);
+
+	Vector3 hit;
+
+	// Площина проходить через початкове положення, тож уздовж її нормалі об'єкт не зсувається
+	if (!rayPlane(ray, mStartPosition, mDragAxis, hit)) return false;
+
+	setWorldPosition(entity, hit - mStartPlaneOffset);
 
 	return true;
 }

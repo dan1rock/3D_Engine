@@ -29,6 +29,8 @@ public:
 	View getView() const;
 	// Ставить камеру у збережене положення
 	void setView(const View& view);
+	// Ставить камеру туди, звідки дивиться вказана матриця виду, щоб зображення не стрибнуло
+	void setFromViewMatrix(const Matrix& viewMatrix);
 
 	// Повертає точку перед камерою, у якій редактор створює нові об'єкти
 	Vector3 getSpawnPoint(float distance = 8.0f) const;

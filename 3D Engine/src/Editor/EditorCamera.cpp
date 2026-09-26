@@ -113,6 +113,34 @@ void EditorCamera::setView(const View& view)
 	updateViewMatrix();
 }
 
+// Ставить камеру туди, звідки дивиться вказана матриця виду, щоб зображення не стрибнуло
+void EditorCamera::setFromViewMatrix(const Matrix& viewMatrix)
+{
+	// Матриця виду обернена до матриці самої камери
+	Matrix world = viewMatrix;
+	world.inverse();
+
+	Vector3 forward = world.getZDirection().normalized();
+
+	mPosition = world.getTranslation();
+
+	// Поворот (нахил, розворот, 0) дає напрямок погляду (cos p * sin y, -sin p, cos p * cos y),
+	// звідки кути й відновлюються. Крен камера редактора не підтримує, тож він відкидається
+	float sinPitch = -forward.y;
+	if (sinPitch > 1.0f) sinPitch = 1.0f;
+	if (sinPitch < -1.0f) sinPitch = -1.0f;
+
+	mPitch = asinf(sinPitch);
+	mYaw = atan2f(forward.x, forward.z);
+
+	// Те саме обмеження нахилу, що й під час огляду мишею
+	const float limit = 1.5533f;
+	if (mPitch > limit) mPitch = limit;
+	if (mPitch < -limit) mPitch = -limit;
+
+	updateViewMatrix();
+}
+
 // Повертає точку перед камерою, у якій редактор створює нові об'єкти
 Vector3 EditorCamera::getSpawnPoint(float distance) const
 {
