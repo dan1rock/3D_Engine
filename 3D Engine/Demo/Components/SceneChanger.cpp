@@ -1,8 +1,5 @@
 #include "SceneChanger.h"
 #include "Entity.h"
-#include "MainScene.h"
-#include "Scene1.h"
-#include "ScenePerformanceTest.h"
 #include "SceneManager.h"
 #include "Input.h"
 #include "imgui.h"
@@ -50,15 +47,15 @@ void SceneChanger::drawUI()
 	ImGui::Begin("Scene Changer", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 	if (ImGui::Button("Car Test", ImVec2(150, 0)))
 	{
-		SceneManager::get()->loadScene(new MainScene());
+		SceneManager::get()->loadScene("Car Test");
 	}
 	if (ImGui::Button("Collision Test", ImVec2(150, 0)))
 	{
-		SceneManager::get()->loadScene(new Scene1());
+		SceneManager::get()->loadScene("Collision Test");
 	}
 	if (ImGui::Button("Performance Test", ImVec2(150, 0)))
 	{
-		SceneManager::get()->loadScene(new ScenePerformanceTest());
+		SceneManager::get()->loadScene("Performance Test");
 	}
 	if (ImGui::Button("Exit", ImVec2(150, 0)))
 	{

@@ -28,6 +28,13 @@ void EntityManager::registerEntity(Entity* gameObject)
 void EntityManager::unregisterEntity(Entity* gameObject)
 {
 	mEntities.remove(gameObject);
+	mRemovalCount++;
+}
+
+// Скільки разів об'єкти прибирали з менеджера від запуску
+unsigned int EntityManager::getRemovalCount() const
+{
+	return mRemovalCount;
 }
 
 // Реєструє компонент у менеджері

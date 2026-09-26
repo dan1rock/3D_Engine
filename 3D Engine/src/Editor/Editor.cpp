@@ -3,6 +3,7 @@
 #include "SceneSerializer.h"
 #include "InspectorVisitor.h"
 #include "PrefabLibrary.h"
+#include "SceneManager.h"
 
 #include "EntityManager.h"
 #include "Entity.h"
@@ -29,9 +30,6 @@
 #include <algorithm>
 
 namespace filesystem = std::experimental::filesystem;
-
-// Шлях, за яким редактор зберігає та завантажує сцену
-static const char* SCENE_PATH = "Assets\\Scenes\\Scene.json";
 
 // Тип вмісту, що переноситься мишею між рядками дерева сцени
 static const char* HIERARCHY_PAYLOAD = "HIERARCHY_ENTITY";
@@ -160,6 +158,9 @@ void Editor::update()
 	// У режимі префаба сховати редактор не можна: тоді сцена почала б грати, а в ній лише префаб
 	if (Input::getKeyDown(VK_F1) && !isPrefabMode()) mEnabled = !mEnabled;
 
+	// Сцену можуть замінити й тоді, коли редактор сховано, тож це відстежується завжди
+	trackSceneLoads();
+
 	if (!mEnabled) return;
 
 	// Поза режимом гри сценою керує камера редактора
@@ -202,6 +203,136 @@ void Editor::update()
 	}
 
 	applyPrefabModeRequests();
+	applySceneRequests();
+}
+
+// Помічає, що сцену замінили, і забуває вибір, якщо вибраний об'єкт знищено
+void Editor::trackSceneLoads()
+{
+	unsigned int loadCount = SceneManager::get()->getLoadCount();
+
+	if (loadCount != mSeenLoadCount)
+	{
+		mSeenLoadCount = loadCount;
+
+		// Під час гри сцени перемикають компоненти, а зупинка однаково поверне знімок, тож
+		// збереженим стає лише те, що відкрили для редагування
+		if (!mPlaying) markSceneSaved();
+	}
+
+	// Гра чи перемикання сцени могли знищити вибраний об'єкт
+	if (mSelected && !isAlive(mSelected)) mSelected = nullptr;
+}
+
+// Просить відкрити сцену з файлу або, з createNew, створити нову
+void Editor::requestScene(const std::string& path, bool createNew)
+{
+	mSceneRequest = path;
+	mNewSceneRequest = createNew;
+
+	// Без змін питати нема про що, і перехід відбувається одразу
+	if (isSceneDirty())
+	{
+		mSceneDecision = 0;
+		mShowScenePrompt = true;
+	}
+	else
+	{
+		mSceneDecision = 1;
+	}
+}
+
+// Виконує відкладене відкриття чи створення сцени, коли всі панелі вже намальовано
+void Editor::applySceneRequests()
+{
+	if (mSceneRequest.empty() && !mNewSceneRequest) return;
+
+	// Рішення про незбережені зміни ще не прийняте
+	if (mSceneDecision == 0) return;
+
+	std::string path = mSceneRequest;
+	bool createNew = mNewSceneRequest;
+	int decision = mSceneDecision;
+
+	mSceneRequest.clear();
+	mNewSceneRequest = false;
+	mSceneDecision = 0;
+
+	// Сцену не міняють під час гри та в режимі префаба, навіть якщо запит лишився з раніше
+	if (decision < 0 || mPlaying || isPrefabMode()) return;
+
+	if (decision == 2) saveScene();
+
+	// Старі об'єкти зараз зникнуть разом з вибором
+	mSelected = nullptr;
+
+	if (createNew) SceneManager::get()->createScene("New Scene");
+	else SceneManager::get()->openScene(path);
+
+	// Навіть якщо файл не прочитався, відкритою лишається попередня сцена, тож рахунок узгоджуємо
+	mSeenLoadCount = SceneManager::get()->getLoadCount();
+
+	markSceneSaved();
+}
+
+// Малює питання про збереження сцени перед переходом до іншої
+void Editor::drawScenePrompt()
+{
+	if (mShowScenePrompt)
+	{
+		ImGui::OpenPopup("Save Scene");
+		mShowScenePrompt = false;
+	}
+
+	if (ImGui::BeginPopupModal("Save Scene", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text("Scene '%s' has unsaved changes.", SceneManager::get()->getActiveSceneName().c_str());
+
+		if (ImGui::Button("Save")) { mSceneDecision = 2; ImGui::CloseCurrentPopup(); }
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Don't Save")) { mSceneDecision = 1; ImGui::CloseCurrentPopup(); }
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Cancel")) { mSceneDecision = -1; ImGui::CloseCurrentPopup(); }
+
+		ImGui::EndPopup();
+	}
+}
+
+// Перевіряє, чи сцена змінилася від останнього відкриття чи збереження
+bool Editor::isSceneDirty()
+{
+	// Під час гри та в режимі префаба у світі не та сцена, що у файлі, тож лишається остання оцінка
+	if (mPlaying || isPrefabMode()) return mSceneDirty;
+
+	mSceneDirty = SceneSerializer::serialize(true) != mSavedScene;
+
+	return mSceneDirty;
+}
+
+// Запам'ятовує поточний стан сцени як збережений
+void Editor::markSceneSaved()
+{
+	mSavedScene = SceneSerializer::serialize(true);
+	mSceneDirty = false;
+	mDirtyCheckFrame = 0;
+}
+
+// Зберігає відкриту сцену у її файл
+void Editor::saveScene()
+{
+	if (SceneManager::get()->saveScene())
+	{
+		std::cout << "Scene saved to " << SceneManager::get()->getActiveScenePath() << std::endl;
+		markSceneSaved();
+	}
+	else
+	{
+		std::cout << "Failed to save scene" << std::endl;
+	}
 }
 
 // Перевіряє, чи сцена зараз програється, а не редагується
@@ -253,31 +384,28 @@ void Editor::drawToolbar()
 
 	ImGui::Separator();
 
-	// У режимі префаба зберегти можна лише сам префаб: інакше у файл сцени потрапив би він один
-	ImGui::BeginDisabled(isPrefabMode());
-
-	if (ImGui::Button("Save Scene"))
+	// Зірочка позначає незбережені зміни, як у заголовку сцени в Unity
+	if (!mPlaying && !isPrefabMode() && ++mDirtyCheckFrame >= 15)
 	{
-		std::error_code error;
-		filesystem::create_directories("Assets\\Scenes", error);
-
-		if (SceneSerializer::saveToFile(SCENE_PATH))
-			std::cout << "Scene saved to " << SCENE_PATH << std::endl;
-		else
-			std::cout << "Failed to save scene" << std::endl;
+		mDirtyCheckFrame = 0;
+		isSceneDirty();
 	}
+
+	ImGui::Text("Scene: %s%s", SceneManager::get()->getActiveSceneName().c_str(), mSceneDirty ? " *" : "");
+
+	// У режимі префаба зберегти можна лише сам префаб: інакше у файл сцени потрапив би він один.
+	// Під час гри теж: у файл потрапив би стан гри, а не відредагована сцена
+	ImGui::BeginDisabled(isPrefabMode() || mPlaying);
+
+	if (ImGui::Button("Save Scene")) saveScene();
 
 	ImGui::SameLine();
 
-	if (ImGui::Button("Load Scene"))
-	{
-		mSelected = nullptr;
-
-		if (!SceneSerializer::loadFromFile(SCENE_PATH))
-			std::cout << "No saved scene at " << SCENE_PATH << std::endl;
-	}
+	if (ImGui::Button("New Scene")) requestScene(std::string(), true);
 
 	ImGui::EndDisabled();
+
+	drawScenePrompt();
 
 	ImGui::Separator();
 
@@ -1449,6 +1577,32 @@ void Editor::drawAssets()
 	ImGui::Begin("Assets");
 	keepWindowOnScreen();
 
+	if (ImGui::CollapsingHeader("Scenes", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		SceneManager* scenes = SceneManager::get();
+
+		// Під час гри сцени перемикає сама гра, а в режимі префаба сцени немає взагалі
+		ImGui::BeginDisabled(mPlaying || isPrefabMode());
+
+		for (const std::string& path : scenes->getScenePaths())
+		{
+			ImGui::PushID(path.c_str());
+
+			// Подвійний клік відкриває сцену, як в Unity; відкрита сцена підсвічена
+			if (ImGui::Selectable(SceneManager::getSceneName(path).c_str(), path == scenes->getActiveScenePath(), ImGuiSelectableFlags_AllowDoubleClick)
+				&& ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+			{
+				requestScene(path, false);
+			}
+
+			ImGui::PopID();
+		}
+
+		if (scenes->getScenePaths().empty()) ImGui::TextDisabled("No scenes yet");
+
+		ImGui::EndDisabled();
+	}
+
 	if (ImGui::CollapsingHeader("Prefabs", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		PrefabLibrary* library = PrefabLibrary::get();
@@ -1558,6 +1712,7 @@ void Editor::play()
 	// імена, додані й прибрані компоненти, знищені об'єкти, а не лише трансформації.
 	// Об'єкти, що переживають зміну сцени, теж потрапляють у знімок: у редакторі вони частина сцени
 	mPlayScene = SceneSerializer::serialize(true);
+	mPlayScenePath = SceneManager::get()->getActiveScenePath();
 
 	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
 
@@ -1609,7 +1764,13 @@ void Editor::stop()
 		mSelected = restored[selectedIndex];
 	}
 
+	// Гра могла перемкнути сцену, а відновлено ту, що була відкрита до неї. Власного завантаження
+	// тут немає, тож рахунок узгоджується, щоб незбережені до гри зміни не вважались збереженими
+	SceneManager::get()->setActiveScenePath(mPlayScenePath);
+	mSeenLoadCount = SceneManager::get()->getLoadCount();
+
 	mPlayScene.clear();
+	mPlayScenePath.clear();
 	mPlayOrder.clear();
 
 	Input::hideCursor(false);

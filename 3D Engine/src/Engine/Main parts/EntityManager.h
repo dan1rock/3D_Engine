@@ -52,6 +52,9 @@ public:
 	const std::list<Renderer*>& getRenderers() const;
 	// Перевіряє, чи об'єкт ще існує у сцені, не розіменовуючи вказівник
 	bool isAlive(Entity* entity) const;
+	// Скільки разів об'єкти прибирали з менеджера від запуску. Дешевий спосіб помітити, що
+	// якийсь виклик знищив об'єкти, не перевіряючи кожен вказівник окремо
+	unsigned int getRemovalCount() const;
 
 	// Оновлює всі компоненти
 	void updateComponents();
@@ -92,6 +95,7 @@ public:
 
 private:
 	std::list<Entity*> mEntities = {};
+	unsigned int mRemovalCount = 0;
 	std::list<Component*> mComponents = {};
 	std::list<Renderer*> mRenderers = {};
 	std::list<Camera*> mCameras = {};

@@ -7,7 +7,6 @@
 #include "EntityManager.h"
 #include "EngineTime.h"
 #include "SceneManager.h"
-#include "MainScene.h"
 #include "PostProcessing.h"
 #include "Editor.h"
 #include "DemoComponentTypes.h"
@@ -60,11 +59,11 @@ void AppWindow::onCreate()
 
 	Time::init();
 
-	// Ініціалізує редактор та завантажує головну сцену
+	// Ініціалізує редактор та завантажує першу сцену проєкту; якщо сцен ще немає, створюється стандартна
 	Editor::get()->init();
 	registerDemoComponentTypes();
 
-	SceneManager::get()->loadScene(new MainScene());
+	SceneManager::get()->loadStartupScene();
 }
 
 // Основний цикл оновлення: обробляє ввід, оновлює компоненти, фізику, рендеринг та сцену

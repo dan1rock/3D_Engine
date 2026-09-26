@@ -43,9 +43,6 @@
     <Filter Include="Application\Components">
       <UniqueIdentifier>{7bffffb7-dfe8-49f0-985d-e905a824e73f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Application\Scenes">
-      <UniqueIdentifier>{31700bce-ca91-4d64-9c28-2834930cc99a}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main\Main.cpp">
@@ -171,20 +168,11 @@
     <ClCompile Include="src\Engine\Entity\SkySphere.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\Scene\Scene.cpp">
-      <Filter>Engine\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="src\Engine\Scene\SceneManager.cpp">
       <Filter>Engine\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Demo\Components\SceneChanger.cpp">
       <Filter>Application\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="Demo\Scenes\MainScene.cpp">
-      <Filter>Application\Scenes</Filter>
-    </ClCompile>
-    <ClCompile Include="Demo\Scenes\Scene1.cpp">
-      <Filter>Application\Scenes</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine\Entity\Prefab.cpp">
       <Filter>Engine\Component</Filter>
@@ -215,7 +203,6 @@
     </ClCompile>
     <ClCompile Include="Demo\Components\FollowComponent.cpp" />
     <ClCompile Include="Demo\Components\FrameCounter.cpp" />
-    <ClCompile Include="Demo\Scenes\ScenePerformanceTest.cpp" />
     <ClCompile Include="Demo\Components\ObjectSpawner.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_impl_dx11.cpp" />
@@ -364,20 +351,11 @@
     <ClInclude Include="src\Engine\Entity\SkySphere.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\Scene\Scene.h">
-      <Filter>Engine\Scene</Filter>
-    </ClInclude>
     <ClInclude Include="src\Engine\Scene\SceneManager.h">
       <Filter>Engine\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Demo\Components\SceneChanger.h">
       <Filter>Application\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="Demo\Scenes\MainScene.h">
-      <Filter>Application\Scenes</Filter>
-    </ClInclude>
-    <ClInclude Include="Demo\Scenes\Scene1.h">
-      <Filter>Application\Scenes</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Entity\Prefab.h">
       <Filter>Engine\Component</Filter>
@@ -408,7 +386,6 @@
     </ClInclude>
     <ClInclude Include="Demo\Components\FollowComponent.h" />
     <ClInclude Include="Demo\Components\FrameCounter.h" />
-    <ClInclude Include="Demo\Scenes\ScenePerformanceTest.h" />
     <ClInclude Include="Demo\Components\ObjectSpawner.h" />
     <ClInclude Include="src\imgui\imgui.h" />
     <ClInclude Include="src\imgui\imgui_impl_dx11.h" />

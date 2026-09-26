@@ -548,13 +548,31 @@ static std::vector<Entity*> buildEntities(const JsonValue& data, Entity* parent,
 
 	for (size_t i = 0; i < created.size(); i++)
 	{
+		// Об'єкт уже знищено прокиданням компонента - його власного або предка
+		if (created[i] == nullptr) continue;
+
 		const JsonValue& components = parsed.at(i).get("components");
 
 		for (size_t c = 0; c < components.size(); c++)
 		{
 			const JsonValue& componentData = components.at(c);
 
+			unsigned int removals = EntityManager::get()->getRemovalCount();
+
 			Component* component = SceneSerializer::createComponent(created[i], componentData);
+
+			// Компонент прокидається вже під час створення і може знищити свій об'єкт, як копія
+			// одинака на кшталт SceneChanger, коли такий уже пережив зміну сцени. Тоді разом з
+			// об'єктом звільнено і сам компонент, і нащадків, тож їхні вказівники забуваємо
+			if (EntityManager::get()->getRemovalCount() != removals)
+			{
+				for (Entity*& entity : created)
+				{
+					if (entity && !EntityManager::get()->isAlive(entity)) entity = nullptr;
+				}
+
+				if (created[i] == nullptr) break;
+			}
 
 			if (component == nullptr) continue;
 
@@ -574,7 +592,7 @@ static std::vector<Entity*> buildEntities(const JsonValue& data, Entity* parent,
 	{
 		for (Entity* entity : created)
 		{
-			EntityManager::get()->unregisterEntity(entity);
+			if (entity) EntityManager::get()->unregisterEntity(entity);
 		}
 	}
 
@@ -652,7 +670,7 @@ bool SceneSerializer::deserialize(const std::string& text, std::vector<Entity*>*
 
 	for (size_t i = 0; i < created.size(); i++)
 	{
-		if (created[i]->prefabAsset.empty()) continue;
+		if (created[i] == nullptr || created[i]->prefabAsset.empty()) continue;
 
 		std::set<std::string> overrides;
 
@@ -697,27 +715,16 @@ bool SceneSerializer::deserialize(const std::string& text, std::vector<Entity*>*
 	return true;
 }
 
-// Зберігає сцену у файл
+// Зберігає сцену у файл разом з об'єктами, що переживають зміну сцени
 bool SceneSerializer::saveToFile(const std::string& path)
 {
 	std::ofstream file(path);
 
 	if (!file.is_open()) return false;
 
-	file << serialize();
+	// Під час гри такий об'єкт з файлу, завантаженого вдруге, стає копією вже наявного; компоненти-
+	// одинаки на кшталт SceneChanger прибирають свою копію самі, як DontDestroyOnLoad у Unity
+	file << serialize(true);
 
 	return true;
-}
-
-// Завантажує сцену з файлу
-bool SceneSerializer::loadFromFile(const std::string& path)
-{
-	std::ifstream file(path);
-
-	if (!file.is_open()) return false;
-
-	std::ostringstream buffer;
-	buffer << file.rdbuf();
-
-	return deserialize(buffer.str());
 }

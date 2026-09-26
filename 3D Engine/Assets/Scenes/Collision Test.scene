@@ -2,17 +2,6 @@
   "version": 4,
   "materials": [
     {
-      "color": [0.5, 0.5, 0.5, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 40,
-      "cullBack": true,
-      "clampTexture": false,
-      "texture": "Assets\\Textures\\1x1_grid_quarter_lines_numbered.png",
-      "shader": "src\\Shaders\\PrototypePixelShader.hlsl"
-    },
-    {
       "color": [1, 1, 1, 1],
       "ambient": 0.4,
       "smoothness": 0.5,
@@ -24,13 +13,13 @@
       "shader": "src\\Shaders\\UnlitPixelShader.hlsl"
     },
     {
-      "color": [0.7, 0.7, 0.1, 1],
+      "color": [0, 0.5, 0.5, 1],
       "ambient": 0.4,
       "smoothness": 0.5,
       "shininess": 32,
-      "textureScale": 1,
+      "textureScale": 2,
       "cullBack": true,
-      "clampTexture": true,
+      "clampTexture": false,
       "texture": "Assets\\Textures\\1x1_grid_quarter_lines_numbered.png",
       "shader": "src\\Shaders\\PrototypePixelShader.hlsl"
     },
@@ -42,7 +31,7 @@
       "textureScale": 1,
       "cullBack": true,
       "clampTexture": true,
-      "texture": "Assets\\Textures\\wheel.png",
+      "texture": "Assets\\Textures\\city_shadows.png",
       "shader": "src\\Shaders\\PixelShader.hlsl"
     },
     {
@@ -53,80 +42,32 @@
       "textureScale": 1,
       "cullBack": true,
       "clampTexture": true,
-      "texture": "Assets\\Textures\\car.png",
-      "shader": "src\\Shaders\\PixelShader.hlsl"
-    },
-    {
-      "color": [1, 1, 1, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 1,
-      "cullBack": true,
-      "clampTexture": true,
-      "texture": "Assets\\Textures\\car.png",
       "shader": "src\\Shaders\\PixelShader.hlsl"
     }
   ],
   "entities": [
     {
       "index": 0,
-      "name": "Offroad",
+      "name": "Scene Changer",
       "active": true,
+      "persistent": true,
       "parent": -1,
       "transform": {
-        "position": [100, -2, 0],
+        "position": [0, 0, 0],
         "rotation": [0, 0, 0],
-        "scale": [2, 0.3, 2]
+        "scale": [1, 1, 1]
       },
       "components": [
         {
-          "type": "MeshRenderer",
-          "mesh": "Assets\\Meshes\\offroad.obj",
-          "castShadows": true,
-          "material": -1
+          "type": "FrameCounter"
         },
         {
-          "type": "MeshCollider"
-        },
-        {
-          "type": "RigidBody",
-          "static": true,
-          "continuousCollision": false,
-          "mass": 1
+          "type": "SceneChanger"
         }
       ]
     },
     {
       "index": 1,
-      "name": "Ground",
-      "active": true,
-      "parent": -1,
-      "transform": {
-        "position": [0, -2.01, 0],
-        "rotation": [0, 0, 0],
-        "scale": [80, 1, 80]
-      },
-      "components": [
-        {
-          "type": "MeshRenderer",
-          "mesh": "Assets\\Meshes\\plane.obj",
-          "castShadows": true,
-          "material": 0
-        },
-        {
-          "type": "MeshCollider"
-        },
-        {
-          "type": "RigidBody",
-          "static": true,
-          "continuousCollision": false,
-          "mass": 1
-        }
-      ]
-    },
-    {
-      "index": 2,
       "name": "Sky",
       "active": true,
       "parent": -1,
@@ -140,12 +81,12 @@
           "type": "SkySphere",
           "mesh": "Assets\\Meshes\\sphere.obj",
           "castShadows": false,
-          "material": 1
+          "material": 0
         }
       ]
     },
     {
-      "index": 3,
+      "index": 2,
       "name": "Sun",
       "active": true,
       "parent": -1,
@@ -163,22 +104,22 @@
       ]
     },
     {
-      "index": 4,
-      "name": "Entity",
+      "index": 3,
+      "name": "Projectile",
       "active": false,
       "prefab": true,
       "parent": -1,
       "transform": {
         "position": [0, 0, 0],
         "rotation": [0, 0, 0],
-        "scale": [0.15, 0.15, 0.15]
+        "scale": [0.5, 0.5, 0.5]
       },
       "components": [
         {
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\sphere.obj",
           "castShadows": true,
-          "material": 2
+          "material": 1
         },
         {
           "type": "SphereCollider",
@@ -187,13 +128,13 @@
         {
           "type": "RigidBody",
           "static": false,
-          "continuousCollision": true,
+          "continuousCollision": false,
           "mass": 1
         }
       ]
     },
     {
-      "index": 5,
+      "index": 4,
       "name": "Camera",
       "active": true,
       "parent": -1,
@@ -207,20 +148,47 @@
           "type": "Camera"
         },
         {
-          "type": "FollowComponent",
-          "offset": 5,
-          "speed": 5,
-          "mouseSpeed": 0.005,
-          "target": 8
+          "type": "DemoPlayer",
+          "speed": 2,
+          "speedIncrement": 1,
+          "mouseSpeed": 0.002,
+          "projectilePrefab": 3
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "City Base",
+      "active": true,
+      "parent": -1,
+      "transform": {
+        "position": [0, -10, -10],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": [
+        {
+          "type": "MeshRenderer",
+          "mesh": "Assets\\Meshes\\city_base.obj",
+          "castShadows": true,
+          "material": 2
+        },
+        {
+          "type": "MeshCollider"
+        },
+        {
+          "type": "RigidBody",
+          "static": true,
+          "continuousCollision": false,
+          "mass": 1
         }
       ]
     },
     {
       "index": 6,
-      "name": "Entity",
-      "active": false,
-      "prefab": true,
-      "parent": -1,
+      "name": "City",
+      "active": true,
+      "parent": 5,
       "transform": {
         "position": [0, 0, 0],
         "rotation": [0, 0, 0],
@@ -229,89 +197,40 @@
       "components": [
         {
           "type": "MeshRenderer",
-          "mesh": "Assets\\Meshes\\wheel.obj",
+          "mesh": "Assets\\Meshes\\city.obj",
           "castShadows": true,
           "material": 3
+        },
+        {
+          "type": "MeshCollider"
+        },
+        {
+          "type": "RigidBody",
+          "static": true,
+          "continuousCollision": false,
+          "mass": 1
         }
       ]
     },
     {
       "index": 7,
-      "name": "Entity",
-      "active": false,
-      "prefab": true,
-      "parent": -1,
-      "transform": {
-        "position": [0, 0, 0],
-        "rotation": [0, 0, 0],
-        "scale": [1, 1, 1]
-      },
-      "components": [
-        {
-          "type": "MeshRenderer",
-          "mesh": "Assets\\Meshes\\car.obj",
-          "castShadows": true,
-          "material": 4
-        },
-        {
-          "type": "MeshCollider"
-        },
-        {
-          "type": "RigidBody",
-          "static": false,
-          "continuousCollision": false,
-          "mass": 1
-        },
-        {
-          "type": "CarComponent",
-          "id": 0,
-          "force": 30,
-          "damping": 10,
-          "maxDistance": 0.15,
-          "maxSpeed": 70,
-          "maxSteering": 0.3,
-          "gripRatio": 0.5,
-          "wheelPrefab": 6
-        }
-      ]
-    },
-    {
-      "index": 8,
-      "name": "Player Car",
+      "name": "Ground",
       "active": true,
-      "prefabAsset": "Assets\\Prefabs\\Player Car.prefab",
-      "prefabOverrides": [],
-      "parent": -1,
+      "parent": 5,
       "transform": {
-        "position": [0, 0, 0],
-        "rotation": [0, 0, 0],
+        "position": [0, 0.02, 0],
+        "rotation": [0, 0, -1.5708],
         "scale": [1, 1, 1]
       },
       "components": [
         {
-          "type": "MeshRenderer",
-          "mesh": "Assets\\Meshes\\car.obj",
-          "castShadows": true,
-          "material": 5
-        },
-        {
-          "type": "MeshCollider"
+          "type": "PlaneCollider"
         },
         {
           "type": "RigidBody",
-          "static": false,
+          "static": true,
           "continuousCollision": false,
           "mass": 1
-        },
-        {
-          "type": "CarComponent",
-          "id": 0,
-          "force": 30,
-          "damping": 10,
-          "maxDistance": 0.15,
-          "maxSpeed": 70,
-          "maxSteering": 0.3,
-          "gripRatio": 0.5
         }
       ]
     }

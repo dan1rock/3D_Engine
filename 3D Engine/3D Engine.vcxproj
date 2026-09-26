@@ -120,7 +120,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)src\Editor;$(ProjectDir)Demo\Scenes;$(ProjectDir)Demo\Components;$(ProjectDir)src\imgui;$(ProjectDir)src\Math;$(ProjectDir)src\Main;$(ProjectDir)src\Engine\Shader managers;$(ProjectDir)src\Engine\Scene;$(ProjectDir)src\Engine\Resource managers;$(ProjectDir)src\Engine\Physics;$(ProjectDir)src\Engine\Main parts;$(ProjectDir)src\Engine\Entity;$(ProjectDir)src\Engine\Buffer managers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\Editor;$(ProjectDir)Demo\Components;$(ProjectDir)src\imgui;$(ProjectDir)src\Math;$(ProjectDir)src\Main;$(ProjectDir)src\Engine\Shader managers;$(ProjectDir)src\Engine\Scene;$(ProjectDir)src\Engine\Resource managers;$(ProjectDir)src\Engine\Physics;$(ProjectDir)src\Engine\Main parts;$(ProjectDir)src\Engine\Entity;$(ProjectDir)src\Engine\Buffer managers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -148,7 +148,6 @@
     <ClCompile Include="Demo\Components\FollowComponent.cpp" />
     <ClCompile Include="Demo\Components\FrameCounter.cpp" />
     <ClCompile Include="Demo\Components\DemoComponentTypes.cpp" />
-    <ClCompile Include="Demo\Scenes\ScenePerformanceTest.cpp" />
     <ClCompile Include="Demo\Components\ObjectSpawner.cpp" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_demo.cpp" />
@@ -188,7 +187,6 @@
     <ClCompile Include="Demo\Components\InstantiationTest.cpp" />
     <ClCompile Include="Demo\Components\CarComponent.cpp" />
     <ClCompile Include="src\Main\Main.cpp" />
-    <ClCompile Include="Demo\Scenes\MainScene.cpp" />
     <ClCompile Include="src\Engine\Resource managers\Material.cpp" />
     <ClCompile Include="src\Engine\Resource managers\Mesh.cpp" />
     <ClCompile Include="src\Engine\Entity\MeshCollider.cpp" />
@@ -204,8 +202,6 @@
     <ClCompile Include="src\Engine\Resource managers\ResourceManager.cpp" />
     <ClCompile Include="src\Engine\Resource managers\GlobalResources.cpp" />
     <ClCompile Include="src\Engine\Entity\RigidBody.cpp" />
-    <ClCompile Include="src\Engine\Scene\Scene.cpp" />
-    <ClCompile Include="Demo\Scenes\Scene1.cpp" />
     <ClCompile Include="Demo\Components\SceneChanger.cpp" />
     <ClCompile Include="src\Engine\Scene\SceneManager.cpp" />
     <ClCompile Include="src\Engine\Main parts\ShadowMap.cpp" />
@@ -225,7 +221,6 @@
     <ClInclude Include="Demo\Components\FollowComponent.h" />
     <ClInclude Include="Demo\Components\FrameCounter.h" />
     <ClInclude Include="Demo\Components\DemoComponentTypes.h" />
-    <ClInclude Include="Demo\Scenes\ScenePerformanceTest.h" />
     <ClInclude Include="Demo\Components\ObjectSpawner.h" />
     <ClInclude Include="src\imgui\imconfig.h" />
     <ClInclude Include="src\imgui\imgui.h" />
@@ -265,7 +260,6 @@
     <ClInclude Include="src\Engine\Main parts\Input.h" />
     <ClInclude Include="Demo\Components\InstantiationTest.h" />
     <ClInclude Include="Demo\Components\CarComponent.h" />
-    <ClInclude Include="Demo\Scenes\MainScene.h" />
     <ClInclude Include="src\Engine\Resource managers\Material.h" />
     <ClInclude Include="src\Math\Matrix.h" />
     <ClInclude Include="src\Math\Frustum.h" />
@@ -284,8 +278,6 @@
     <ClInclude Include="src\Engine\Resource managers\ResourceManager.h" />
     <ClInclude Include="src\Engine\Resource managers\GlobalResources.h" />
     <ClInclude Include="src\Engine\Entity\RigidBody.h" />
-    <ClInclude Include="src\Engine\Scene\Scene.h" />
-    <ClInclude Include="Demo\Scenes\Scene1.h" />
     <ClInclude Include="Demo\Components\SceneChanger.h" />
     <ClInclude Include="src\Engine\Scene\SceneManager.h" />
     <ClInclude Include="src\Engine\Main parts\ShadowMap.h" />
