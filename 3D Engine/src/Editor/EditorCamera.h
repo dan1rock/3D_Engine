@@ -17,6 +17,19 @@ public:
 	// Повертає позицію камери у світі
 	const Vector3& getPosition() const;
 
+	// Положення й поворот камери, щоб після режиму префаба повернутися туди, де була
+	struct View
+	{
+		Vector3 position;
+		float pitch = 0.0f;
+		float yaw = 0.0f;
+	};
+
+	// Повертає поточне положення камери
+	View getView() const;
+	// Ставить камеру у збережене положення
+	void setView(const View& view);
+
 	// Повертає точку перед камерою, у якій редактор створює нові об'єкти
 	Vector3 getSpawnPoint(float distance = 8.0f) const;
 

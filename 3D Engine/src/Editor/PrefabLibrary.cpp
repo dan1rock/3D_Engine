@@ -876,6 +876,23 @@ void PrefabLibrary::unpack(Entity* instanceRoot)
 	instanceRoot->prefabAsset.clear();
 }
 
+// Записує вміст префаба з об'єкта в режимі редагування префаба
+bool PrefabLibrary::saveAsset(const std::string& path, Entity* root)
+{
+	JsonValue data = SceneSerializer::serializeSubtree(root);
+
+	if (!writeFile(path, data)) return false;
+
+	mData[path] = data;
+
+	// Образ, яким користуються поля компонентів гри, теж має стати новим
+	auto templateEntry = mTemplates.find(path);
+
+	if (templateEntry != mTemplates.end()) sync(templateEntry->second, data, std::set<std::string>(), true);
+
+	return true;
+}
+
 // Ключ властивості об'єкта; path — шлях об'єкта всередині префаба
 std::string PrefabLibrary::entityKey(const std::string& path, const char* field)
 {

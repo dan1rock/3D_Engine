@@ -91,6 +91,28 @@ const Vector3& EditorCamera::getPosition() const
 	return mPosition;
 }
 
+// Повертає поточне положення камери
+EditorCamera::View EditorCamera::getView() const
+{
+	View view;
+
+	view.position = mPosition;
+	view.pitch = mPitch;
+	view.yaw = mYaw;
+
+	return view;
+}
+
+// Ставить камеру у збережене положення
+void EditorCamera::setView(const View& view)
+{
+	mPosition = view.position;
+	mPitch = view.pitch;
+	mYaw = view.yaw;
+
+	updateViewMatrix();
+}
+
 // Повертає точку перед камерою, у якій редактор створює нові об'єкти
 Vector3 EditorCamera::getSpawnPoint(float distance) const
 {

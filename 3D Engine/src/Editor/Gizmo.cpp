@@ -27,6 +27,17 @@ static const ImU32 AXIS_COLORS[3] = {
 
 static const ImU32 HIGHLIGHT_COLOR = IM_COL32(255, 220, 60, 255);
 
+// Переводить бажану світову матрицю дочірнього об'єкта у локальну відносно його батька.
+// Дочірній зберігає саме локальну трансформацію: її серіалізують і показує інспектор, а світову
+// перераховують з неї щоразу, як рухається батько, тож змінювати треба локальну
+static Matrix worldToLocal(Entity* entity, const Matrix& world)
+{
+	Matrix parentInverse = *entity->getParent()->getTransform()->getMatrix();
+	parentInverse.inverse();
+
+	return world * parentInverse;
+}
+
 // Повертає глобальні константи кадру, де лежать матриці камери
 static constant* frameConstants()
 {
@@ -554,7 +565,21 @@ bool Gizmo::dragTranslate(Entity* entity)
 
 	if (!axisOffsetUnderMouse(mStartPosition, mDragAxis, offset)) return false;
 
-	entity->getTransform()->setPosition(mStartPosition + mDragAxis * (offset - mStartOffset));
+	Vector3 position = mStartPosition + mDragAxis * (offset - mStartOffset);
+
+	Transform* transform = entity->getTransform();
+
+	if (entity->getParent())
+	{
+		Matrix world = *transform->getMatrix();
+		world.setTranslation(position);
+
+		transform->setLocalPosition(worldToLocal(entity, world).getTranslation());
+	}
+	else
+	{
+		transform->setPosition(position);
+	}
 
 	return true;
 }
@@ -577,7 +602,19 @@ bool Gizmo::dragScale(Entity* entity, float size)
 	else if (mAxis == 1) scale.y = mStartScale.y * factor;
 	else scale.z = mStartScale.z * factor;
 
-	entity->getTransform()->setScale(scale);
+	Transform* transform = entity->getTransform();
+
+	if (entity->getParent())
+	{
+		Matrix world = *transform->getMatrix();
+		world.setScale(scale);
+
+		transform->setLocalScale(worldToLocal(entity, world).getScale());
+	}
+	else
+	{
+		transform->setScale(scale);
+	}
 
 	return true;
 }
@@ -614,7 +651,20 @@ bool Gizmo::dragRotate(Entity* entity)
 	// У локальному режимі поворот застосовується до осей об'єкта, тобто перед його власним
 	Matrix result = local ? delta * start : start * delta;
 
-	entity->getTransform()->setRotation(result.getRotation());
+	Transform* transform = entity->getTransform();
+
+	if (entity->getParent())
+	{
+		// Масштаб і позиція світової матриці лишаються, змінюється лише поворот
+		Matrix world = *transform->getMatrix();
+		world.setRotation(result.getRotation());
+
+		transform->setLocalRotation(worldToLocal(entity, world).getRotation());
+	}
+	else
+	{
+		transform->setRotation(result.getRotation());
+	}
 
 	return true;
 }

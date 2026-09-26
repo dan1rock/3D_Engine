@@ -29,6 +29,8 @@ public:
 	bool isPlaying() const;
 	// Перевіряє, чи показано інтерфейс редактора
 	bool isEnabled() const;
+	// Перевіряє, чи редактор зараз у режимі редагування префаба
+	bool isPrefabMode() const;
 
 	// Вмикає або вимикає інтерфейс редактора
 	void setEnabled(bool enabled);
@@ -65,6 +67,22 @@ private:
 	void dropPrefabIntoScene();
 	// Перевіряє, чи поле вибраного об'єкта змінене відносно префаба
 	bool isOverridden(const std::string& key) const;
+
+	// Відкриває префаб в ізольованій сцені, де є лише він сам
+	void openPrefab(const std::string& path);
+	// Повертає сцену, з якої відкривали префаб; save спершу записує зміни у файл префаба
+	void closePrefab(bool save);
+	// Просить закрити префаб: із незбереженими змінами спершу питає, чи їх зберегти
+	void requestClosePrefab();
+	// Перевіряє, чи вміст префаба в редакторі відрізняється від файлу
+	bool isPrefabDirty();
+	// Малює смугу режиму префаба зверху та вікно з питанням про збереження
+	void drawPrefabModeBar();
+	// Виконує відкладені відкриття та закриття префаба, коли всі панелі вже намальовано
+	void applyPrefabModeRequests();
+	// У режимі префаба робить новий кореневий об'єкт дочірнім для кореня префаба, бо в префабі
+	// корінь лише один і все інше мусить лежати під ним
+	void adoptIntoPrefab(Entity* entity);
 	// Малює поля трансформації об'єкта
 	void drawTransform(Entity* entity);
 	// Малює меню створення нового об'єкта
@@ -126,6 +144,24 @@ private:
 
 	// Батько, який треба розгорнути в дереві, щоб щойно покладений у нього об'єкт було видно
 	Entity* mExpandEntity = nullptr;
+
+	// Режим префаба: шлях до файлу (порожній поза режимом) та корінь префаба в ізольованій сцені
+	std::string mPrefabModePath;
+	Entity* mPrefabRoot = nullptr;
+	// Сцена, до якої треба повернутися, вибраний у ній об'єкт і положення камери
+	std::string mPrefabModeScene;
+	int mPrefabModeSelected = -1;
+	EditorCamera::View mPrefabModeView;
+
+	// Префаб, двічі клікнутий у панелі ресурсів: відкривається, лише коли кнопку відпустили без
+	// перетягування, інакше другий клік перед перетягуванням відкривав би префаб
+	std::string mPendingPrefabOpen;
+	// Відкладені дії: відкрити префаб, закрити поточний (1 — без збереження, 2 — зі збереженням)
+	std::string mOpenPrefabRequest;
+	int mClosePrefabRequest = 0;
+	// Показати питання про збереження та префаб, який відкрити після закриття поточного
+	bool mShowSavePrompt = false;
+	std::string mAfterClose;
 
 	bool mEnabled = true;
 	bool mPlaying = false;

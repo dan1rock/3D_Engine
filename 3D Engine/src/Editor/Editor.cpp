@@ -154,7 +154,8 @@ void Editor::init()
 // Малює інтерфейс редактора та оновлює його камеру
 void Editor::update()
 {
-	if (Input::getKeyDown(VK_F1)) mEnabled = !mEnabled;
+	// У режимі префаба сховати редактор не можна: тоді сцена почала б грати, а в ній лише префаб
+	if (Input::getKeyDown(VK_F1) && !isPrefabMode()) mEnabled = !mEnabled;
 
 	if (!mEnabled) return;
 
@@ -173,6 +174,7 @@ void Editor::update()
 	drawHierarchy();
 	drawInspector();
 	drawAssets();
+	drawPrefabModeBar();
 
 	updateSelection();
 	dropPrefabIntoScene();
@@ -195,6 +197,8 @@ void Editor::update()
 			if (Input::getKeyDown('X')) mGizmo.local = !mGizmo.local;
 		}
 	}
+
+	applyPrefabModeRequests();
 }
 
 // Перевіряє, чи сцена зараз програється, а не редагується
@@ -235,13 +239,19 @@ void Editor::drawToolbar()
 	}
 	else
 	{
+		// Гра запускає сцену, а в режимі префаба сцени немає — лише сам префаб
+		ImGui::BeginDisabled(isPrefabMode());
 		if (ImGui::Button("Play", ImVec2(70, 0))) play();
+		ImGui::EndDisabled();
 	}
 
 	ImGui::SameLine();
-	ImGui::TextUnformatted(mPlaying ? "Playing" : "Editing");
+	ImGui::TextUnformatted(mPlaying ? "Playing" : isPrefabMode() ? "Prefab Mode" : "Editing");
 
 	ImGui::Separator();
+
+	// У режимі префаба зберегти можна лише сам префаб: інакше у файл сцени потрапив би він один
+	ImGui::BeginDisabled(isPrefabMode());
 
 	if (ImGui::Button("Save Scene"))
 	{
@@ -263,6 +273,8 @@ void Editor::drawToolbar()
 		if (!SceneSerializer::loadFromFile(SCENE_PATH))
 			std::cout << "No saved scene at " << SCENE_PATH << std::endl;
 	}
+
+	ImGui::EndDisabled();
 
 	ImGui::Separator();
 
@@ -486,6 +498,9 @@ void Editor::drawDropTarget(Entity* target)
 // Перевіряє, чи можна зробити об'єкт дочірнім для вказаного батька (nullptr - корінь)
 bool Editor::canDrop(Entity* dragged, Entity* newParent) const
 {
+	// У префабі корінь один: він не переїжджає, а все інше лишається під ним
+	if (isPrefabMode() && (dragged == mPrefabRoot || newParent == nullptr)) return false;
+
 	// Об'єкт, що переживає зміну сцени, мусить лишатися кореневим: інакше його знищив би батько
 	if (dragged->dontDestroyOnLoad && newParent != nullptr) return false;
 
@@ -504,6 +519,9 @@ bool Editor::canDrop(Entity* dragged, Entity* newParent) const
 // Перевіряє, чи можна покласти новий екземпляр префаба під вказаного батька
 bool Editor::canDropPrefab(Entity* newParent) const
 {
+	// Вкладених префабів немає, тож у режимі префаба інші префаби не кладуться
+	if (isPrefabMode()) return false;
+
 	// Такий об'єкт не потрапляє у файл сцени, тож і покладені в нього діти зникли б із файлу
 	for (Entity* ancestor = newParent; ancestor; ancestor = ancestor->getParent())
 	{
@@ -680,6 +698,13 @@ void Editor::drawPrefabBar()
 
 	bool unpack = ImGui::Button("Unpack");
 
+	ImGui::SameLine();
+
+	// Відкриває сам префаб для редагування, як кнопка Open в Unity
+	ImGui::BeginDisabled(mPlaying);
+	if (ImGui::Button("Open")) mOpenPrefabRequest = mInstanceRoot->prefabAsset;
+	ImGui::EndDisabled();
+
 	// Перелік змін, як меню Overrides в Unity
 	if (!mOverrides.empty() && ImGui::TreeNode("Overrides"))
 	{
@@ -700,6 +725,9 @@ void Editor::drawPrefabBar()
 // Створює екземпляр префаба, відпущеного над самою сценою, у точці під курсором
 void Editor::dropPrefabIntoScene()
 {
+	// Вкладених префабів немає, тож у режимі префаба інші префаби не кладуться
+	if (isPrefabMode()) return;
+
 	const ImGuiPayload* payload = ImGui::GetDragDropPayload();
 
 	if (payload == nullptr || !payload->IsDataType(PREFAB_PAYLOAD)) return;
@@ -739,6 +767,238 @@ bool Editor::isOverridden(const std::string& key) const
 	return mInstanceRoot != nullptr && mOverrides.count(key) > 0;
 }
 
+// Перевіряє, чи редактор зараз у режимі редагування префаба
+bool Editor::isPrefabMode() const
+{
+	return !mPrefabModePath.empty();
+}
+
+// У режимі префаба робить новий кореневий об'єкт дочірнім для кореня префаба
+void Editor::adoptIntoPrefab(Entity* entity)
+{
+	if (!isPrefabMode() || entity == nullptr || entity == mPrefabRoot || entity->getParent() != nullptr) return;
+
+	entity->setParent(mPrefabRoot, true);
+	EntityManager::get()->sortByHierarchy();
+
+	mExpandEntity = mPrefabRoot;
+}
+
+// Відкриває префаб в ізольованій сцені, де є лише він сам
+void Editor::openPrefab(const std::string& path)
+{
+	if (mPlaying) return;
+
+	// Інший префаб відкривається лише після того, як закрито поточний, спитавши про збереження
+	if (isPrefabMode())
+	{
+		if (path == mPrefabModePath) return;
+
+		mAfterClose = path;
+		requestClosePrefab();
+
+		return;
+	}
+
+	const JsonValue* data = PrefabLibrary::get()->getData(path);
+
+	if (data == nullptr) return;
+
+	// Сцена зберігається так само, як перед грою, і після виходу відновлюється з цього знімка.
+	// Екземпляри в ньому пам'ятають свої зміни, тож правки префаба дістануться їм при відновленні
+	mPrefabModeScene = SceneSerializer::serialize(true);
+
+	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
+
+	mPrefabModeSelected = -1;
+
+	int index = 0;
+
+	for (Entity* entity : entities)
+	{
+		if (entity == mSelected) mPrefabModeSelected = index;
+		index++;
+	}
+
+	mPrefabModeView = mCamera.getView();
+
+	// Об'єкти сцени знищуються напряму, а не завантаженням порожньої сцени: так її меші, текстури
+	// та приготовані фізичні форми лишаються в пам'яті, і повернення не перечитує їх заново
+	std::vector<Entity*> roots;
+
+	for (Entity* entity : entities)
+	{
+		if (entity->getParent() == nullptr) roots.push_back(entity);
+	}
+
+	for (Entity* root : roots)
+	{
+		root->destroy();
+	}
+
+	std::vector<Entity*> built = SceneSerializer::buildSubtree(*data, nullptr, false);
+
+	mPrefabRoot = built.empty() ? nullptr : built[0];
+	mPrefabModePath = path;
+
+	mSelected = mPrefabRoot;
+	mExpandEntity = mPrefabRoot;
+
+	focusSelected();
+}
+
+// Повертає сцену, з якої відкривали префаб; save спершу записує зміни у файл префаба
+void Editor::closePrefab(bool save)
+{
+	if (!isPrefabMode()) return;
+
+	if (save && mPrefabRoot) PrefabLibrary::get()->saveAsset(mPrefabModePath, mPrefabRoot);
+
+	mPrefabRoot = nullptr;
+	mPrefabModePath.clear();
+	mSelected = nullptr;
+
+	// Відновлення знищує об'єкти префаба й будує сцену назад, а її екземпляри при цьому
+	// наздоганяють файл префаба, зберігаючи власні зміни
+	std::vector<Entity*> restored;
+
+	if (!SceneSerializer::deserialize(mPrefabModeScene, &restored, true))
+	{
+		std::cout << "Failed to restore the scene after prefab mode" << std::endl;
+	}
+
+	if (mPrefabModeSelected >= 0 && mPrefabModeSelected < (int)restored.size())
+	{
+		mSelected = restored[mPrefabModeSelected];
+	}
+
+	mCamera.setView(mPrefabModeView);
+
+	mPrefabModeScene.clear();
+
+	// Об'єкти сцени, створені заново, можуть сховати курсор, як SceneChanger при прокиданні
+	Input::hideCursor(false);
+}
+
+// Просить закрити префаб: із незбереженими змінами спершу питає, чи їх зберегти
+void Editor::requestClosePrefab()
+{
+	if (isPrefabDirty()) mShowSavePrompt = true;
+	else mClosePrefabRequest = 1;
+}
+
+// Перевіряє, чи вміст префаба в редакторі відрізняється від файлу
+bool Editor::isPrefabDirty()
+{
+	if (!isPrefabMode() || mPrefabRoot == nullptr) return false;
+
+	const JsonValue* data = PrefabLibrary::get()->getData(mPrefabModePath);
+
+	if (data == nullptr) return true;
+
+	return SceneSerializer::serializeSubtree(mPrefabRoot).toString() != data->toString();
+}
+
+// Малює смугу режиму префаба зверху та вікно з питанням про збереження
+void Editor::drawPrefabModeBar()
+{
+	if (!isPrefabMode()) return;
+
+	ImVec2 display = ImGui::GetIO().DisplaySize;
+
+	// Смуга стоїть угорі посередині сцени, як смуга режиму префаба в Unity
+	ImGui::SetNextWindowPos(ImVec2(display.x * 0.5f, 10.0f), ImGuiCond_Always, ImVec2(0.5f, 0.0f));
+	ImGui::Begin("Prefab Mode", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize
+		| ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse);
+
+	bool dirty = isPrefabDirty();
+
+	std::string name = PrefabLibrary::getName(mPrefabModePath);
+
+	if (ImGui::Button("< Scene")) requestClosePrefab();
+
+	ImGui::SameLine();
+	ImGui::TextColored(prefabColor(), "Prefab Mode: %s%s", name.c_str(), dirty ? " *" : "");
+	ImGui::SameLine();
+
+	ImGui::BeginDisabled(!dirty);
+	if (ImGui::Button("Save")) PrefabLibrary::get()->saveAsset(mPrefabModePath, mPrefabRoot);
+	ImGui::EndDisabled();
+
+	// Питання про збереження, коли з префаба виходять із незбереженими змінами
+	if (mShowSavePrompt)
+	{
+		ImGui::OpenPopup("Save Prefab");
+		mShowSavePrompt = false;
+	}
+
+	if (ImGui::BeginPopupModal("Save Prefab", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text("Prefab '%s' has unsaved changes.", name.c_str());
+
+		if (ImGui::Button("Save")) { mClosePrefabRequest = 2; ImGui::CloseCurrentPopup(); }
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Don't Save")) { mClosePrefabRequest = 1; ImGui::CloseCurrentPopup(); }
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Cancel")) { mAfterClose.clear(); ImGui::CloseCurrentPopup(); }
+
+		ImGui::EndPopup();
+	}
+
+	ImGui::End();
+}
+
+// Виконує відкладені відкриття та закриття префаба, коли всі панелі вже намальовано
+void Editor::applyPrefabModeRequests()
+{
+	// Подвійний клік відкриває префаб, лише коли кнопку відпустили без перетягування. Перетягування
+	// ловимо, поки кнопку ще тримають: на кадрі відпускання вміст уже прийнято й очищено
+	if (!mPendingPrefabOpen.empty())
+	{
+		ImGuiIO& io = ImGui::GetIO();
+
+		bool dragged = ImGui::GetDragDropPayload() != nullptr
+			|| io.MouseDragMaxDistanceSqr[ImGuiMouseButton_Left] > io.MouseDragThreshold * io.MouseDragThreshold;
+
+		if (dragged)
+		{
+			mPendingPrefabOpen.clear();
+		}
+		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+		{
+			mOpenPrefabRequest = mPendingPrefabOpen;
+			mPendingPrefabOpen.clear();
+		}
+	}
+
+	if (mClosePrefabRequest != 0)
+	{
+		bool save = mClosePrefabRequest == 2;
+
+		mClosePrefabRequest = 0;
+		closePrefab(save);
+
+		// Якщо закривали, щоб відкрити інший префаб, відкриваємо його тепер
+		if (!mAfterClose.empty())
+		{
+			mOpenPrefabRequest = mAfterClose;
+			mAfterClose.clear();
+		}
+	}
+
+	if (!mOpenPrefabRequest.empty())
+	{
+		std::string path = mOpenPrefabRequest;
+
+		mOpenPrefabRequest.clear();
+		openPrefab(path);
+	}
+}
+
 // Малює меню створення нового об'єкта
 void Editor::drawCreateMenu()
 {
@@ -751,6 +1011,8 @@ void Editor::drawCreateMenu()
 
 	// Нові об'єкти з'являються перед камерою редактора, щоб їх одразу було видно
 	Vector3 spawn = mCamera.getSpawnPoint();
+
+	Entity* previous = mSelected;
 
 	if (ImGui::Selectable("Empty"))
 	{
@@ -804,6 +1066,9 @@ void Editor::drawCreateMenu()
 		entity->addComponent<DirectionalLight>();
 		mSelected = entity;
 	}
+
+	// Щойно створений об'єкт стає вибраним, тож за цим видно, що меню щось створило
+	if (mSelected != previous) adoptIntoPrefab(mSelected);
 
 	ImGui::EndPopup();
 }
@@ -1196,6 +1461,10 @@ void Editor::drawAssets()
 			// одразу перед перетягуванням зараховувався б як подвійний і ставив би зайвий екземпляр
 			ImGui::Selectable(name.c_str());
 
+			// Подвійний клік відкриває префаб для редагування, як в Unity; сам перехід чекає,
+			// поки кнопку відпустять, щоб не спрацювати на початку перетягування
+			if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) mPendingPrefabOpen = path;
+
 			ImGui::PopStyleColor();
 
 			// Префаб перетягують у дерево сцени або просто на сцену
@@ -1213,11 +1482,14 @@ void Editor::drawAssets()
 
 		// Об'єкт із дерева сцени, покладений сюди, стає новим префабом. Під час гри файли префабів
 		// не змінюються: після зупинки сцена повернеться до колишнього стану, а файл лишився б новим
-		ImGui::BeginDisabled(mPlaying);
-		ImGui::Button(mPlaying ? "Prefabs can't be created in play mode" : "Drop an object here to create a prefab", ImVec2(-1.0f, 32.0f));
+		// У режимі префаба нові префаби теж не створюються: вкладених префабів немає
+		bool canCreate = !mPlaying && !isPrefabMode();
+
+		ImGui::BeginDisabled(!canCreate);
+		ImGui::Button(mPlaying ? "Prefabs can't be created in play mode" : isPrefabMode() ? "Not available in Prefab Mode" : "Drop an object here to create a prefab", ImVec2(-1.0f, 32.0f));
 		ImGui::EndDisabled();
 
-		if (!mPlaying && ImGui::BeginDragDropTarget())
+		if (canCreate && ImGui::BeginDragDropTarget())
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(HIERARCHY_PAYLOAD))
 			{
@@ -1249,6 +1521,8 @@ void Editor::drawAssets()
 				MeshRenderer* renderer = entity->addComponent<MeshRenderer>();
 				renderer->setMesh(GraphicsEngine::get()->getMeshManager()->createMeshFromFile(mMeshPaths[i].c_str()));
 
+				adoptIntoPrefab(entity);
+
 				mSelected = entity;
 			}
 		}
@@ -1273,6 +1547,9 @@ void Editor::drawAssets()
 // Переходить у режим гри, зберігши стан сцени
 void Editor::play()
 {
+	// Гра запускає сцену, а в режимі префаба сцени немає — лише сам префаб
+	if (isPrefabMode()) return;
+
 	// Уся сцена записується тим самим серіалізатором, що й файл, і після зупинки відновлюється
 	// з цього знімка. Так назад повертається все, що гра могла змінити: поля компонентів, матеріали,
 	// імена, додані й прибрані компоненти, знищені об'єкти, а не лише трансформації.
@@ -1387,6 +1664,9 @@ void Editor::focusSelected()
 void Editor::deleteSelected()
 {
 	if (mSelected == nullptr) return;
+
+	// Без кореня префаба не лишилося б чого зберігати
+	if (isPrefabMode() && mSelected == mPrefabRoot) return;
 
 	mSelected->destroy();
 	mSelected = nullptr;
