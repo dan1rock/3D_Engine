@@ -135,10 +135,28 @@ float calculateShadow(float3 worldPos, float3 normal, float3 lightDir)
     return lerp(1.0f, lit * selfShadow, strength);
 }
 
+// Частка навколишнього світла на поверхні, оберненій донизу; обернена догори отримує його повністю
+static const float AMBIENT_GROUND = 0.45f;
+// Сила світла, відбитого освітленою землею на стіни, відвернуті від сонця
+static const float AMBIENT_BOUNCE = 0.3f;
+
+// Навколишнє світло залежить від напрямку поверхні, тож форма видно і в тіні
+float ambientShape(float3 normal, float3 lightDir)
+{
+	// Згори світить небо, знизу лише темніша земля
+    float hemisphere = lerp(AMBIENT_GROUND, 1.0f, normal.y * 0.5f + 0.5f);
+
+	// Відбите від землі світло приходить збоку, з боку, протилежного сонцю
+    float3 away = float3(-lightDir.x, 0.0f, -lightDir.z);
+    float bounce = dot(away, away) > 0.0001f ? saturate(dot(normal, normalize(away))) * AMBIENT_BOUNCE : 0.0f;
+
+    return hemisphere + bounce;
+}
+
 float3 calculateLighting(float ambient, float diffuse, float specular, float shininess, float3 lightColor, float3 normal, float3 lightDir, float3 cameraDir, float shadow)
 {
 	//AMBIENT LIGHT
-    float3 ambient_light = ambient * lightColor;
+    float3 ambient_light = ambient * lightColor * ambientShape(normal, lightDir);
 
 	//DIFFUSE LIGHT
     float amount_diffuse_light = (dot(lightDir, normal) + 1.0f) * 0.5f;
