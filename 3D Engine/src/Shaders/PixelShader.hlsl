@@ -50,9 +50,21 @@ cbuffer material : register(b1)
     bool isTextured;
 };
 
+// Наскільки далеко вздовж нормалі зсувається точка перед читанням карти тіней, у текселях каскаду
+static const float NORMAL_OFFSET_TEXELS = 1.5f;
+// Косинус кута до світла, нижче якого поверхня темнішає плавно за кутом, а не за картою тіней
+static const float TERMINATOR_FADE = 0.25f;
+
 // Зчитує освітленість точки з одного каскаду карти тіней
-float sampleCascade(int cascade, float3 worldPos, float slope)
+float sampleCascade(int cascade, float3 worldPos, float3 normal, float slope)
 {
+	// Розмір текселя каскаду у світі: перший стовпець ортографічної матриці світла має довжину 2 / ширина
+    float3 column = float3(lightViewProjection[cascade]._11, lightViewProjection[cascade]._21, lightViewProjection[cascade]._31);
+    float texelWorld = 2.0f * shadowParams.x / length(column);
+
+	// Зсув уздовж нормалі, більший під похилим світлом, не дає поверхні затіняти саму себе сходинками
+    worldPos += normal * (texelWorld * NORMAL_OFFSET_TEXELS * slope);
+
     float4 shadowPos = mul(float4(worldPos, 1.0f), lightViewProjection[cascade]);
 
 	// Переводить позицію зі простору світла в координати карти тіней
@@ -94,12 +106,17 @@ float calculateShadow(float3 worldPos, float3 normal, float3 lightDir)
 	// Номер каскаду дорівнює кількості перетнутих меж
     int cascade = (int) dot(step(cascadeSplits, viewDepth.xxxx), float4(1.0f, 1.0f, 1.0f, 1.0f));
 
-	// Далі за останній каскад тіні не будуються
-    if (cascade >= SHADOW_CASCADE_COUNT) return 1.0f;
+    float facing = dot(normal, lightDir);
 
-    float slope = 1.0f - saturate(dot(normal, lightDir));
+	// Біля межі світла й тіні світло згасає плавно за кутом, ховаючи сходинчастий край карти тіней
+    float selfShadow = smoothstep(0.0f, TERMINATOR_FADE, facing);
 
-    float lit = sampleCascade(cascade, worldPos, slope);
+	// Далі за останній каскад і на відвернутих поверхнях карту читати нема потреби
+    if (cascade >= SHADOW_CASCADE_COUNT || selfShadow <= 0.0f) return lerp(1.0f, selfShadow, strength);
+
+    float slope = 1.0f - saturate(facing);
+
+    float lit = sampleCascade(cascade, worldPos, normal, slope);
 
 	// Ближче до межі каскаду підмішується наступний, щоб перехід не був помітним
     float blendBand = cascadeParams.y;
@@ -110,11 +127,11 @@ float calculateShadow(float3 worldPos, float3 normal, float3 lightDir)
 
         if (blend > 0.0f)
         {
-            lit = lerp(lit, sampleCascade(cascade + 1, worldPos, slope), blend);
+            lit = lerp(lit, sampleCascade(cascade + 1, worldPos, normal, slope), blend);
         }
     }
 
-    return lerp(1.0f, lit, strength);
+    return lerp(1.0f, lit * selfShadow, strength);
 }
 
 float3 calculateLighting(float ambient, float diffuse, float specular, float shininess, float3 lightColor, float3 normal, float3 lightDir, float3 cameraDir, float shadow)
