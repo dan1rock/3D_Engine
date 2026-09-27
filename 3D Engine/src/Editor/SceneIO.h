@@ -37,6 +37,8 @@ class SceneReadVisitor : public PropertyVisitor
 {
 public:
 	SceneReadVisitor(const JsonValue& fields, const std::vector<Entity*>& entities);
+	// Посилання шукаються за незмінними номерами об'єктів, а не за місцем у переліку
+	SceneReadVisitor(const JsonValue& fields);
 
 	void property(const char* name, float& value, float step) override;
 	void property(const char* name, int& value) override;
@@ -53,7 +55,8 @@ public:
 
 private:
 	const JsonValue& mFields;
-	const std::vector<Entity*>& mEntities;
+	// Перелік, за місцем у якому шукаються посилання; без нього шукається за номером об'єкта
+	const std::vector<Entity*>* mEntities = nullptr;
 };
 
 // Перетворює вектор на масив з трьох чисел і навпаки: так вектори лишаються в один рядок

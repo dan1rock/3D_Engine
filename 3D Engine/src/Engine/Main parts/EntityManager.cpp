@@ -23,6 +23,7 @@
 void EntityManager::registerEntity(Entity* gameObject)
 {
 	mEntities.push_back(gameObject);
+	mEntitiesById[gameObject->getId()] = gameObject;
 }
 
 // Видаляє ігровий об'єкт з менеджера
@@ -30,22 +31,13 @@ void EntityManager::unregisterEntity(Entity* gameObject)
 {
 	mEntities.remove(gameObject);
 	mRemovalCount++;
+
+	auto it = mEntitiesById.find(gameObject->getId());
+	if (it != mEntitiesById.end() && it->second == gameObject) mEntitiesById.erase(it);
 }
 
-// Обхідник, якого цікавлять лише посилання: решту полів він пропускає
-class ReferenceOnlyVisitor : public PropertyVisitor
-{
-public:
-	void property(const char* name, float& value, float step) override {}
-	void property(const char* name, int& value) override {}
-	void property(const char* name, bool& value) override {}
-	void property(const char* name, Vector3& value) override {}
-	void property(const char* name, std::string& value) override {}
-	void color(const char* name, float* channels, int count) override {}
-};
-
 // Рахує поля-посилання компонента
-class ReferenceCounter : public ReferenceOnlyVisitor
+class ReferenceCounter : public ReferenceVisitor
 {
 public:
 	int count = 0;
@@ -54,7 +46,7 @@ public:
 };
 
 // Обнуляє посилання на вказаний об'єкт
-class ReferenceClearer : public ReferenceOnlyVisitor
+class ReferenceClearer : public ReferenceVisitor
 {
 public:
 	ReferenceClearer(Entity* target) : mTarget(target) {}
@@ -101,6 +93,24 @@ bool EntityManager::hasReferences(Component* component)
 	mTypeHasReferences[component->getTypeName()] = result;
 
 	return result;
+}
+
+// Повертає зареєстрований об'єкт за його номером, або nullptr
+Entity* EntityManager::findById(unsigned int id) const
+{
+	auto it = mEntitiesById.find(id);
+
+	return it != mEntitiesById.end() ? it->second : nullptr;
+}
+
+// Оновлює пошук за номером, коли об'єкту задали інший номер
+void EntityManager::onEntityIdChanged(Entity* entity, unsigned int oldId)
+{
+	auto it = mEntitiesById.find(oldId);
+	if (it != mEntitiesById.end() && it->second == entity) mEntitiesById.erase(it);
+
+	// Прихований образ префаба не зареєстрований, тож і в пошук не потрапляє
+	if (std::find(mEntities.begin(), mEntities.end(), entity) != mEntities.end()) mEntitiesById[entity->getId()] = entity;
 }
 
 // Скільки разів об'єкти прибирали з менеджера від запуску

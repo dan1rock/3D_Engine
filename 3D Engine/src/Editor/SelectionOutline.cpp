@@ -7,6 +7,7 @@
 #include "Entity.h"
 #include "Renderer.h"
 #include <iostream>
+#include <unordered_set>
 
 // Слот текстури, з якого прохід обведення читає маску
 static const UINT MASK_SLOT = 2;
@@ -80,10 +81,12 @@ bool SelectionOutline::init()
 	return true;
 }
 
-// Малює обведення об'єкта та його нащадків поверх кадру у вікно swapChain розміром width x height
-void SelectionOutline::render(SwapChain* swapChain, unsigned int width, unsigned int height, Entity* selected)
+// Малює обведення вибраних об'єктів та їхніх нащадків поверх кадру у вікно swapChain розміром width x height
+void SelectionOutline::render(SwapChain* swapChain, unsigned int width, unsigned int height, const std::vector<Entity*>& selection)
 {
-	if (!mReady || selected == nullptr || width == 0 || height == 0) return;
+	if (!mReady || selection.empty() || width == 0 || height == 0) return;
+
+	std::unordered_set<Entity*> selected(selection.begin(), selection.end());
 
 	if (!resizeMask(width, height)) return;
 
@@ -112,13 +115,13 @@ void SelectionOutline::render(SwapChain* swapChain, unsigned int width, unsigned
 
 		if (!owner->isActive()) continue;
 
-		// Сам вибраний об'єкт пише в червоний канал, його нащадки на будь-якій глибині - у зелений
-		bool isSelected = owner == selected;
+		// Самі вибрані пишуть у червоний канал, їхні нащадки на будь-якій глибині - у зелений
+		bool isSelected = selected.count(owner) > 0;
 		bool isChild = false;
 
 		for (Entity* parent = owner->getParent(); parent && !isSelected; parent = parent->getParent())
 		{
-			if (parent == selected) { isChild = true; break; }
+			if (selected.count(parent)) { isChild = true; break; }
 		}
 
 		if (!isSelected && !isChild) continue;

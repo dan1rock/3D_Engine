@@ -1,5 +1,6 @@
 #pragma once
 #include "Vector3.h"
+#include <vector>
 
 class Entity;
 
@@ -31,9 +32,8 @@ public:
 	// Шукає найближчий видимий об'єкт під вказаною точкою екрана
 	static Entity* pick(float screenX, float screenY, float* hitDistance = nullptr);
 
-	// Малює маніпулятор вибраного об'єкта та обробляє перетягування. Повертає true, поки миша
-	// зайнята маніпулятором: тоді клік не повинен міняти вибір
-	bool update(Entity* entity);
+	// Малює маніпулятор на об'єкті entity і рухає ним усі targets разом; true, поки миша зайнята маніпулятором
+	bool update(Entity* entity, const std::vector<Entity*>& targets);
 
 	// Перевіряє, чи триває перетягування просто зараз
 	bool isDragging() const;
@@ -69,5 +69,11 @@ private:
 	float mStartOffset = 0.0f;
 	// Зсув точки площини, за яку вхопили, від центру об'єкта: об'єкт не перескакує центром під курсор
 	Vector3 mStartPlaneOffset;
+
+	// Об'єкти, що рухаються разом, і стан кожного на початку перетягування
+	std::vector<Entity*> mTargets;
+	std::vector<Vector3> mTargetPositions;
+	std::vector<Vector3> mTargetRotations;
+	std::vector<Vector3> mTargetScales;
 	float mStartAngle = 0.0f;
 };

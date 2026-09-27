@@ -16,6 +16,11 @@ public:
 	// Деструктор класу GameObject, видаляє всі компоненти та знімає реєстрацію об'єкта
 	virtual ~Entity();
 
+	// Повертає незмінний номер об'єкта, унікальний за весь час роботи програми
+	unsigned int getId() const;
+	// Задає номер об'єкта; так історія змін відновлює знищений об'єкт під тим самим номером
+	void setId(unsigned int id);
+
 	// Повертає ім'я об'єкта, яке показує редактор
 	const std::string& getName() const;
 	// Встановлює ім'я об'єкта
@@ -73,6 +78,7 @@ protected:
 	virtual bool shouldAwakeComponents() const { return true; }
 
 	std::string mName = "Entity";
+	unsigned int mId = 0;
 
 	Transform mTransform;
 	RigidBody* mRigidBody = nullptr;

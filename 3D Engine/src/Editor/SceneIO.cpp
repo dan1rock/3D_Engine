@@ -2,6 +2,7 @@
 #include "Entity.h"
 #include "PrefabLibrary.h"
 #include "Prefab.h"
+#include "EntityManager.h"
 
 // Перетворює вектор на масив з трьох чисел і навпаки: так вектори лишаються в один рядок
 JsonValue vectorToJson(const Vector3& value)
@@ -91,7 +92,13 @@ void SceneWriteVisitor::reference(const char* name, Entity*& value, ReferenceKin
 }
 
 SceneReadVisitor::SceneReadVisitor(const JsonValue& fields, const std::vector<Entity*>& entities)
-	: mFields(fields), mEntities(entities)
+	: mFields(fields), mEntities(&entities)
+{
+}
+
+// Посилання шукаються за незмінними номерами об'єктів, а не за місцем у переліку
+SceneReadVisitor::SceneReadVisitor(const JsonValue& fields)
+	: mFields(fields)
 {
 }
 
@@ -148,5 +155,11 @@ void SceneReadVisitor::reference(const char* name, Entity*& value, ReferenceKind
 
 	int index = field.asInt(-1);
 
-	value = (index >= 0 && index < (int)mEntities.size()) ? mEntities[index] : nullptr;
+	if (mEntities == nullptr)
+	{
+		value = index >= 0 ? EntityManager::get()->findById((unsigned int)index) : nullptr;
+		return;
+	}
+
+	value = (index >= 0 && index < (int)mEntities->size()) ? (*mEntities)[index] : nullptr;
 }

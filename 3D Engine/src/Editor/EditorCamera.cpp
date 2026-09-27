@@ -78,6 +78,9 @@ void EditorCamera::focusOn(const Vector3& target, float radius)
 	// Відводить камеру назад по її ж напрямку погляду
 	float distance = radius * 2.5f + 2.0f;
 
+	// Дальня площина відсікання стоїть на 200, тож великий об'єкт без обмеження зник би з кадру
+	if (distance > 120.0f) distance = 120.0f;
+
 	Vector3 focus = target;
 
 	mPosition = focus - forward * distance;

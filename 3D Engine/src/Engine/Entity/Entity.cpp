@@ -5,9 +5,13 @@
 
 #include <iostream>
 
+// Наступний вільний номер об'єкта
+static unsigned int gNextEntityId = 1;
+
 // Конструктор класу GameObject, реєструє об'єкт у EntityManager та ініціалізує трансформацію за замовчуванням
 Entity::Entity()
 {
+	mId = gNextEntityId++;
 	EntityManager::get()->registerEntity(this);
     mTransform.setOwner(this);
 	mTransform.setPosition(Vector3(0.0f, 0.0f, 0.0f));
@@ -18,6 +22,7 @@ Entity::Entity()
 // Конструктор класу GameObject з початковою позицією
 Entity::Entity(Vector3 position)
 {
+	mId = gNextEntityId++;
     EntityManager::get()->registerEntity(this);
     mTransform.setOwner(this);
 	mTransform.setPosition(position);
@@ -43,6 +48,24 @@ Entity::~Entity()
 	}
 
     EntityManager::get()->unregisterEntity(this);
+}
+
+// Повертає незмінний номер об'єкта, унікальний за весь час роботи програми
+unsigned int Entity::getId() const
+{
+	return mId;
+}
+
+// Задає номер об'єкта; так історія змін відновлює знищений об'єкт під тим самим номером
+void Entity::setId(unsigned int id)
+{
+	unsigned int oldId = mId;
+	mId = id;
+
+	EntityManager::get()->onEntityIdChanged(this, oldId);
+
+	// Нові об'єкти не мають отримати вже зайнятий номер
+	if (id >= gNextEntityId) gNextEntityId = id + 1;
 }
 
 // Повертає ім'я об'єкта, яке показує редактор

@@ -46,3 +46,17 @@ public:
 	void reference(const char* name, Prefab*& value);
 	void reference(const char* name, Transform*& value);
 };
+
+// Обхідник лише посилань: решту полів пропускає, тож похідним лишається перевизначити reference
+class ReferenceVisitor : public PropertyVisitor
+{
+public:
+	void property(const char* name, float& value, float step) override {}
+	void property(const char* name, int& value) override {}
+	void property(const char* name, bool& value) override {}
+	void property(const char* name, Vector3& value) override {}
+	void property(const char* name, std::string& value) override {}
+	void color(const char* name, float* channels, int count) override {}
+
+	using PropertyVisitor::reference;
+};

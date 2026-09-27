@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 
 class Entity;
 class SwapChain;
@@ -24,8 +25,8 @@ public:
 	// Завантажує шейдери, створює константний буфер і стани конвеєра
 	bool init();
 
-	// Малює обведення об'єкта та його нащадків поверх кадру у вікно swapChain розміром width x height
-	void render(SwapChain* swapChain, unsigned int width, unsigned int height, Entity* selected);
+	// Малює обведення вибраних об'єктів та їхніх нащадків поверх кадру у вікно swapChain розміром width x height
+	void render(SwapChain* swapChain, unsigned int width, unsigned int height, const std::vector<Entity*>& selection);
 
 private:
 	// Перестворює маску, якщо розмір вікна змінився

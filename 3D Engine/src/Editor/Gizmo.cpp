@@ -95,6 +95,72 @@ static void setWorldPosition(Entity* entity, const Vector3& position)
 	}
 }
 
+// Ставить об'єкту світовий масштаб, перераховуючи локальний для дочірнього
+static void setWorldScale(Entity* entity, const Vector3& scale)
+{
+	Transform* transform = entity->getTransform();
+
+	if (entity->getParent())
+	{
+		Matrix world = *transform->getMatrix();
+		world.setScale(scale);
+
+		transform->setLocalScale(worldToLocal(entity, world).getScale());
+	}
+	else
+	{
+		transform->setScale(scale);
+	}
+}
+
+// Ставить об'єкту світовий поворот, перераховуючи локальний для дочірнього
+static void setWorldRotation(Entity* entity, const Vector3& rotation)
+{
+	Transform* transform = entity->getTransform();
+
+	if (entity->getParent())
+	{
+		// Масштаб і позиція світової матриці лишаються, змінюється лише поворот
+		Matrix world = *transform->getMatrix();
+		world.setRotation(rotation);
+
+		transform->setLocalRotation(worldToLocal(entity, world).getRotation());
+	}
+	else
+	{
+		transform->setRotation(rotation);
+	}
+}
+
+// Будує поворот на кут навколо довільної осі в тому ж вигляді, що й setRotationX, Y та Z
+static Matrix rotationAroundAxis(const Vector3& axis, float angle)
+{
+	Vector3 k = axis.normalized();
+
+	float c = cosf(angle);
+	float s = sinf(angle);
+	float t = 1.0f - c;
+
+	Matrix rotation;
+	rotation.setIdentity();
+
+	// Рядковий вигляд формули Родрігеса: вектор множиться на матрицю зліва
+	rotation.mat[0][0] = c + t * k.x * k.x;       rotation.mat[0][1] = t * k.x * k.y + s * k.z; rotation.mat[0][2] = t * k.x * k.z - s * k.y;
+	rotation.mat[1][0] = t * k.y * k.x - s * k.z; rotation.mat[1][1] = c + t * k.y * k.y;       rotation.mat[1][2] = t * k.y * k.z + s * k.x;
+	rotation.mat[2][0] = t * k.z * k.x + s * k.y; rotation.mat[2][1] = t * k.z * k.y - s * k.x; rotation.mat[2][2] = c + t * k.z * k.z;
+
+	return rotation;
+}
+
+// Повертає напрямок, повернутий матрицею так само, як його повертає рушій
+static Vector3 rotateVector(const Vector3& v, const Matrix& m)
+{
+	return Vector3(
+		v.x * m.mat[0][0] + v.y * m.mat[1][0] + v.z * m.mat[2][0],
+		v.x * m.mat[0][1] + v.y * m.mat[1][1] + v.z * m.mat[2][1],
+		v.x * m.mat[0][2] + v.y * m.mat[1][2] + v.z * m.mat[2][2]);
+}
+
 // Повертає глобальні константи кадру, де лежать матриці камери
 static constant* frameConstants()
 {
@@ -384,7 +450,7 @@ bool Gizmo::isDragging() const
 }
 
 // Малює маніпулятор вибраного об'єкта та обробляє перетягування
-bool Gizmo::update(Entity* entity)
+bool Gizmo::update(Entity* entity, const std::vector<Entity*>& targets)
 {
 	if (entity == nullptr)
 	{
@@ -660,6 +726,19 @@ bool Gizmo::update(Entity* entity)
 		mStartRotation = transform->getRotation();
 		mStartScale = transform->getScale();
 
+		// Без окремого переліку рухається лише сам об'єкт маніпулятора
+		mTargets = targets.empty() ? std::vector<Entity*>(1, entity) : targets;
+		mTargetPositions.clear();
+		mTargetRotations.clear();
+		mTargetScales.clear();
+
+		for (Entity* target : mTargets)
+		{
+			mTargetPositions.push_back(target->getTransform()->getPosition());
+			mTargetRotations.push_back(target->getTransform()->getRotation());
+			mTargetScales.push_back(target->getTransform()->getScale());
+		}
+
 		Ray ray = screenPointToRay(mouse.x, mouse.y);
 
 		if (mAxis >= 3)
@@ -706,7 +785,13 @@ bool Gizmo::dragTranslate(Entity* entity)
 
 	if (!axisOffsetUnderMouse(mStartPosition, mDragAxis, offset)) return false;
 
-	setWorldPosition(entity, mStartPosition + mDragAxis * (offset - mStartOffset));
+	Vector3 delta = mDragAxis * (offset - mStartOffset);
+
+	// Усі вибрані зсуваються на той самий вектор
+	for (size_t i = 0; i < mTargets.size(); i++)
+	{
+		setWorldPosition(mTargets[i], mTargetPositions[i] + delta);
+	}
 
 	return true;
 }
@@ -723,7 +808,12 @@ bool Gizmo::dragPlane(Entity* entity)
 	// Площина проходить через початкове положення, тож уздовж її нормалі об'єкт не зсувається
 	if (!rayPlane(ray, mStartPosition, mDragAxis, hit)) return false;
 
-	setWorldPosition(entity, hit - mStartPlaneOffset);
+	Vector3 delta = hit - mStartPlaneOffset - mStartPosition;
+
+	for (size_t i = 0; i < mTargets.size(); i++)
+	{
+		setWorldPosition(mTargets[i], mTargetPositions[i] + delta);
+	}
 
 	return true;
 }
@@ -740,24 +830,21 @@ bool Gizmo::dragScale(Entity* entity, float size)
 
 	if (factor < 0.01f) factor = 0.01f;
 
-	Vector3 scale = mStartScale;
-
-	if (mAxis == 0) scale.x = mStartScale.x * factor;
-	else if (mAxis == 1) scale.y = mStartScale.y * factor;
-	else scale.z = mStartScale.z * factor;
-
-	Transform* transform = entity->getTransform();
-
-	if (entity->getParent())
+	// Кожен вибраний масштабується вздовж тієї самої осі в тій самій пропорції
+	for (size_t i = 0; i < mTargets.size(); i++)
 	{
-		Matrix world = *transform->getMatrix();
-		world.setScale(scale);
+		Vector3 scale = mTargetScales[i];
 
-		transform->setLocalScale(worldToLocal(entity, world).getScale());
-	}
-	else
-	{
-		transform->setScale(scale);
+		if (mAxis == 0) scale.x *= factor;
+		else if (mAxis == 1) scale.y *= factor;
+		else scale.z *= factor;
+
+		setWorldScale(mTargets[i], scale);
+
+		// Відстань від центру маніпулятора вздовж осі змінюється в тій самій пропорції
+		Vector3 offset = mTargetPositions[i] - mStartPosition;
+
+		setWorldPosition(mTargets[i], mStartPosition + offset + mDragAxis * ((offset * mDragAxis) * (factor - 1.0f)));
 	}
 
 	return true;
@@ -779,35 +866,24 @@ bool Gizmo::dragRotate(Entity* entity)
 
 	float angle = atan2f(offset * mDragSecond, offset * mDragFirst) - mStartAngle;
 
-	// Кути Ейлера самі по собі не дають обертання навколо довільної осі, тому складаємо
-	// матриці і лише наприкінці повертаємось до кутів
-	Matrix start;
-	start.setIdentity();
-	start.setRotation(mStartRotation);
+	// Поворот навколо осі маніпулятора у світі: у локальному режимі це вісь активного об'єкта
+	Matrix delta = rotationAroundAxis(mDragAxis, angle);
 
-	Matrix delta;
-	delta.setIdentity();
-
-	if (mAxis == 0) delta.setRotationX(angle);
-	else if (mAxis == 1) delta.setRotationY(angle);
-	else delta.setRotationZ(angle);
-
-	// У локальному режимі поворот застосовується до осей об'єкта, тобто перед його власним
-	Matrix result = local ? delta * start : start * delta;
-
-	Transform* transform = entity->getTransform();
-
-	if (entity->getParent())
+	// Усі вибрані обертаються навколо центру маніпулятора: і самі повертаються, і обходять його
+	for (size_t i = 0; i < mTargets.size(); i++)
 	{
-		// Масштаб і позиція світової матриці лишаються, змінюється лише поворот
-		Matrix world = *transform->getMatrix();
-		world.setRotation(result.getRotation());
+		// Кути Ейлера не дають обертання навколо довільної осі, тож складаються матриці
+		Matrix start;
+		start.setIdentity();
+		start.setRotation(mTargetRotations[i]);
 
-		transform->setLocalRotation(worldToLocal(entity, world).getRotation());
-	}
-	else
-	{
-		transform->setRotation(result.getRotation());
+		Matrix result = start * delta;
+
+		setWorldRotation(mTargets[i], result.getRotation());
+
+		Vector3 offset = mTargetPositions[i] - mStartPosition;
+
+		setWorldPosition(mTargets[i], mStartPosition + rotateVector(offset, delta));
 	}
 
 	return true;

@@ -274,6 +274,328 @@ static JsonValue writeEntity(Entity* entity, WriteContext& context, bool prefabR
 	return entityValue;
 }
 
+// Повертає номер матеріалу, за потреби видаючи новий
+int MaterialRegistry::idOf(Material* material)
+{
+	auto it = ids.find(material);
+
+	if (it != ids.end()) return it->second;
+
+	int id = (int)materials.size();
+
+	materials.push_back(material);
+	ids[material] = id;
+
+	return id;
+}
+
+// Замінює в описі рендер-компонентів номери з таблиці запису на номери реєстру
+static void remapMaterials(JsonValue& entityValue, const std::vector<Material*>& table, MaterialRegistry& registry)
+{
+	if (!entityValue.has("components")) return;
+
+	// -1 лишається спільним матеріалом рушія за замовчуванням
+	auto remap = [&](int index) { return index >= 0 && index < (int)table.size() ? registry.idOf(table[index]) : index; };
+
+	const JsonValue& components = entityValue.get("components");
+	JsonValue remapped = JsonValue::array();
+
+	for (size_t i = 0; i < components.size(); i++)
+	{
+		JsonValue component = components.at(i);
+
+		if (component.has("material")) component.set("material", remap(component.get("material").asInt(-1)));
+
+		if (component.has("slotMaterials"))
+		{
+			const JsonValue& slots = component.get("slotMaterials");
+			JsonValue slotList = JsonValue::array();
+
+			for (size_t s = 0; s < slots.size(); s++)
+			{
+				JsonValue slot = slots.at(s);
+				slot.set("material", remap(slot.get("material").asInt(-1)));
+				slotList.push(slot);
+			}
+
+			component.set("slotMaterials", slotList);
+		}
+
+		remapped.push(component);
+	}
+
+	entityValue.set("components", remapped);
+}
+
+// Дописує номер об'єкта і номери його нащадків у порядку дерева
+static void appendOrder(Entity* entity, std::vector<int>& order)
+{
+	order.push_back((int)entity->getId());
+
+	for (Entity* child : *entity->getChildren())
+	{
+		appendOrder(child, order);
+	}
+}
+
+// Записує стан сцени для історії змін: посилання й батьки як номери об'єктів, матеріали як номери реєстру
+void SceneSerializer::captureRecords(SceneRecords& out, MaterialRegistry& registry)
+{
+	out.entities.clear();
+	out.materials.clear();
+	out.order.clear();
+
+	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
+
+	WriteContext context;
+	context.defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+
+	// Посилання й батьки пишуться незмінними номерами об'єктів, а не місцем у переліку
+	for (Entity* entity : entities)
+	{
+		context.indices[entity] = (int)entity->getId();
+	}
+
+	std::vector<JsonValue> values;
+
+	for (Entity* entity : entities)
+	{
+		values.push_back(writeEntity(entity, context, false, true));
+	}
+
+	// Таблиця запису нумерує матеріали по-своєму, тож її номери переводяться в номери реєстру
+	std::vector<Material*> table(context.materials.size(), nullptr);
+
+	for (const auto& entry : context.materialIndices)
+	{
+		table[entry.second] = entry.first;
+	}
+
+	size_t index = 0;
+
+	for (Entity* entity : entities)
+	{
+		remapMaterials(values[index], table, registry);
+		out.entities[(int)entity->getId()] = values[index].toString();
+
+		index++;
+	}
+
+	for (size_t i = 0; i < table.size(); i++)
+	{
+		out.materials[registry.idOf(table[i])] = context.materials.at(i).toString();
+	}
+
+	for (Entity* entity : entities)
+	{
+		if (entity->getParent() == nullptr) appendOrder(entity, out.order);
+	}
+}
+
+// Ставить рендер-компоненту матеріали з запису історії змін
+static void assignRecordMaterials(Renderer* renderer, const JsonValue& data, MaterialRegistry& registry)
+{
+	Material* defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+
+	auto lookup = [&](int id) -> Material* {
+		if (id == -1) return defaultMaterial;
+		return id >= 0 && id < (int)registry.materials.size() ? registry.materials[id] : nullptr;
+	};
+
+	renderer->setMaterial(data.has("material") ? lookup(data.get("material").asInt(-2)) : nullptr);
+
+	// Слоти без власного матеріалу в записі повертаються до спільного
+	for (unsigned int slot = 0; slot < renderer->getSlotMaterialCount(); slot++)
+	{
+		renderer->setMaterial(slot, nullptr);
+	}
+
+	const JsonValue& slotList = data.get("slotMaterials");
+
+	for (size_t i = 0; i < slotList.size(); i++)
+	{
+		const JsonValue& slotValue = slotList.at(i);
+
+		renderer->setMaterial((unsigned int)slotValue.get("slot").asInt(0), lookup(slotValue.get("material").asInt(-2)));
+	}
+}
+
+// Приводить компоненти об'єкта до запису; ті, що збігаються за типом і місцем, лишаються тими самими
+static void syncRecordComponents(Entity* entity, const JsonValue& components, MaterialRegistry& registry)
+{
+	std::vector<Component*> existing(entity->getComponentList().begin(), entity->getComponentList().end());
+
+	size_t keep = 0;
+
+	while (keep < existing.size() && keep < components.size() && components.at(keep).get("type").asString() == existing[keep]->getTypeName())
+	{
+		keep++;
+	}
+
+	for (size_t i = existing.size(); i > keep; i--)
+	{
+		entity->removeComponent(existing[i - 1]);
+	}
+
+	std::vector<Component*> current(existing.begin(), existing.begin() + keep);
+
+	unsigned int removals = EntityManager::get()->getRemovalCount();
+
+	for (size_t i = keep; i < components.size(); i++)
+	{
+		current.push_back(SceneSerializer::createComponent(entity, components.at(i)));
+
+		// Компонент-одинак міг знищити свій об'єкт ще під час прокидання
+		if (EntityManager::get()->getRemovalCount() != removals && !EntityManager::get()->isAlive(entity)) return;
+	}
+
+	for (size_t i = 0; i < components.size(); i++)
+	{
+		Component* component = current[i];
+
+		if (component == nullptr) continue;
+
+		const JsonValue& data = components.at(i);
+
+		if (Renderer* renderer = dynamic_cast<Renderer*>(component))
+		{
+			SceneSerializer::applyRenderer(renderer, data);
+			assignRecordMaterials(renderer, data, registry);
+		}
+
+		SceneReadVisitor reader(data);
+		component->visitProperties(reader);
+	}
+}
+
+// Переводить названі об'єкти й матеріали між записами, торкаючись лише того, що в записі змінилося
+void SceneSerializer::applyRecords(const std::vector<RecordChange>& entities, const std::vector<std::pair<int, std::string>>& materials, const std::vector<int>& order, MaterialRegistry& registry)
+{
+	EntityManager* manager = EntityManager::get();
+
+	std::vector<std::pair<int, JsonValue>> targets;
+	std::vector<int> removed;
+
+	// Для кожного об'єкта: чи змінилися батько з трансформацією і чи змінилися компоненти
+	std::unordered_map<int, bool> transformChanged;
+	std::unordered_map<int, bool> componentsChanged;
+
+	for (const RecordChange& change : entities)
+	{
+		if (change.to.empty())
+		{
+			removed.push_back(change.id);
+			continue;
+		}
+
+		JsonValue to = JsonValue::parse(change.to);
+
+		// Новий об'єкт отримує все; наявний - лише ті частини, що різняться між записами
+		bool isNew = change.from.empty();
+		JsonValue from = isNew ? JsonValue() : JsonValue::parse(change.from);
+
+		transformChanged[change.id] = isNew || from.get("parent").toString() != to.get("parent").toString() || from.get("transform").toString() != to.get("transform").toString();
+		componentsChanged[change.id] = isNew || from.get("components").toString() != to.get("components").toString();
+
+		targets.push_back(std::make_pair(change.id, to));
+	}
+
+	// Відсутні об'єкти створюються під тими самими номерами, тож посилання на них знову знаходяться
+	for (const auto& target : targets)
+	{
+		if (manager->findById((unsigned int)target.first)) continue;
+
+		Entity* entity = target.second.get("prefab").asBool(false) ? new Prefab() : new Entity();
+		entity->setId((unsigned int)target.first);
+	}
+
+	// Імена, прапорці та батьки
+	for (const auto& target : targets)
+	{
+		Entity* entity = manager->findById((unsigned int)target.first);
+		const JsonValue& data = target.second;
+
+		entity->setName(data.get("name").asString("Entity"));
+		entity->isActiveSelf = data.get("active").asBool(true);
+		entity->dontDestroyOnLoad = data.get("persistent").asBool(false);
+		entity->prefabAsset = data.get("prefabAsset").asString();
+
+		int parentId = data.get("parent").asInt(-1);
+		Entity* parent = parentId >= 0 ? manager->findById((unsigned int)parentId) : nullptr;
+
+		if (entity->getParent() != parent) entity->setParent(parent);
+	}
+
+	// Трансформації після батьків, бо дочірній зберігає локальні
+	for (const auto& target : targets)
+	{
+		// Незмінена трансформація не чіпається, тож фізичне тіло не переставляється даремно
+		Entity* entity = manager->findById((unsigned int)target.first);
+
+		if (entity == nullptr || !transformChanged[target.first]) continue;
+
+		const JsonValue& transformData = target.second.get("transform");
+
+		Vector3 position = jsonToVector(transformData.get("position"), Vector3(0.0f, 0.0f, 0.0f));
+		Vector3 rotation = jsonToVector(transformData.get("rotation"), Vector3(0.0f, 0.0f, 0.0f));
+		Vector3 scale = jsonToVector(transformData.get("scale"), Vector3(1.0f, 1.0f, 1.0f));
+
+		Transform* transform = entity->getTransform();
+
+		if (entity->getParent())
+		{
+			transform->setLocalScale(scale);
+			transform->setLocalRotation(rotation);
+			transform->setLocalPosition(position);
+		}
+		else
+		{
+			transform->setScale(scale);
+			transform->setRotation(rotation);
+			transform->setPosition(position);
+		}
+	}
+
+	// Компоненти після трансформацій: фізика будує форми за поточним масштабом
+	for (const auto& target : targets)
+	{
+		Entity* entity = manager->findById((unsigned int)target.first);
+
+		// Незмінені компоненти лишаються як є, і ресурси їхніх мешів навіть не шукаються
+		if (entity && componentsChanged[target.first]) syncRecordComponents(entity, target.second.get("components"), registry);
+	}
+
+	// Значення матеріалів правляться на місці, тож ті, хто ними користується, лишаються з ними
+	for (const auto& change : materials)
+	{
+		if (change.first < 0 || change.first >= (int)registry.materials.size()) continue;
+
+		readMaterial(registry.materials[change.first], JsonValue::parse(change.second));
+	}
+
+	// Знищення наприкінці: дочірні, що мають лишитися, уже перейшли до інших батьків
+	for (int id : removed)
+	{
+		if (Entity* entity = manager->findById((unsigned int)id)) entity->destroy();
+	}
+
+	// Кожен стає в кінець своїх сусідів у порядку запису, тож порядок дерева повторює запис
+	if (!order.empty())
+	{
+		for (int id : order)
+		{
+			Entity* entity = manager->findById((unsigned int)id);
+
+			if (entity == nullptr) continue;
+
+			if (entity->getParent()) entity->getParent()->moveChildBefore(entity, nullptr);
+			else manager->moveRootBefore(entity, nullptr);
+		}
+
+		manager->sortByHierarchy();
+	}
+}
+
 // Записує поточну сцену у текст
 std::string SceneSerializer::serialize(bool includePersistent)
 {
@@ -353,6 +675,40 @@ JsonValue SceneSerializer::serializeSubtree(Entity* root)
 	data.set("entities", entityList);
 
 	return data;
+}
+
+// Записує вказані об'єкти з нащадками так само, як сцену: корені у світових координатах і зі зв'язками з префабами
+std::string SceneSerializer::serializeEntities(const std::vector<Entity*>& roots)
+{
+	std::vector<Entity*> entities;
+
+	for (Entity* root : roots)
+	{
+		collectSubtree(root, entities);
+	}
+
+	WriteContext context;
+	context.defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+
+	for (size_t i = 0; i < entities.size(); i++)
+	{
+		context.indices[entities[i]] = (int)i;
+	}
+
+	JsonValue entityList = JsonValue::array();
+
+	for (Entity* entity : entities)
+	{
+		entityList.push(writeEntity(entity, context, false, true));
+	}
+
+	JsonValue data = JsonValue::object();
+
+	data.set("version", SCENE_VERSION);
+	data.set("materials", context.materials);
+	data.set("entities", entityList);
+
+	return data.toString();
 }
 
 // Повертає матеріал з таблиці за номером; -1 означає спільний матеріал рушія за замовчуванням

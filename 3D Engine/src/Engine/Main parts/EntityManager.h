@@ -53,6 +53,10 @@ public:
 	const std::list<Renderer*>& getRenderers() const;
 	// Перевіряє, чи об'єкт ще існує у сцені, не розіменовуючи вказівник
 	bool isAlive(Entity* entity) const;
+	// Повертає зареєстрований об'єкт за його номером, або nullptr
+	Entity* findById(unsigned int id) const;
+	// Оновлює пошук за номером, коли об'єкту задали інший номер
+	void onEntityIdChanged(Entity* entity, unsigned int oldId);
 	// Обнуляє в усіх компонентах посилання на об'єкт, що знищується, щоб вони не вказували на звільнену пам'ять
 	void clearReferencesTo(Entity* entity);
 	// Скільки разів об'єкти прибирали з менеджера від запуску. Дешевий спосіб помітити, що
@@ -98,6 +102,8 @@ public:
 
 private:
 	std::list<Entity*> mEntities = {};
+	// Зареєстровані об'єкти за їхніми номерами
+	std::unordered_map<unsigned int, Entity*> mEntitiesById;
 	unsigned int mRemovalCount = 0;
 	// Чи має тип компонента поля-посилання; ключ - сталий рядок імені типу, тож рядки не копіюються
 	std::unordered_map<const char*, bool> mTypeHasReferences;

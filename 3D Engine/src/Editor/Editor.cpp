@@ -21,6 +21,8 @@
 #include "ShadowMap.h"
 #include "PostProcessing.h"
 #include "Input.h"
+#include "Properties.h"
+#include <unordered_set>
 
 #include "imgui.h"
 
@@ -51,6 +53,17 @@ static bool isAlive(Entity* entity)
 	}
 
 	return false;
+}
+
+// Дописує об'єкт і всіх його нащадків у порядку дерева
+static void collectSubtree(Entity* entity, std::vector<Entity*>& out)
+{
+	out.push_back(entity);
+
+	for (Entity* child : *entity->getChildren())
+	{
+		collectSubtree(child, out);
+	}
 }
 
 // Розставляє панель у типове місце, поки користувач не пересунув її сам
@@ -163,6 +176,14 @@ void Editor::update()
 
 	if (!mEnabled) return;
 
+	syncSelection();
+
+	// Вибір перед будь-якою зміною цього кадру: його поверне скасування цієї зміни
+	if (!mPlaying && mUndoCheckFrames == 0 && !ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::IsAnyItemActive())
+	{
+		captureSelection(mUndoSelection, mUndoActive);
+	}
+
 	// Поза режимом гри та на паузі сценою керує камера редактора
 	if (!mPlaying || mPaused)
 	{
@@ -180,13 +201,16 @@ void Editor::update()
 	drawAssets();
 	drawPrefabModeBar();
 
+	syncSelection();
 	updateSelection();
 	dropPrefabIntoScene();
 
 	// Гарячі клавіші працюють лише тоді, коли ввід не перехоплює поле тексту
 	ImGuiIO& io = ImGui::GetIO();
 
-	if (!io.WantCaptureKeyboard)
+	handleShortcuts();
+
+	if (!io.WantCaptureKeyboard && !io.KeyCtrl)
 	{
 		if (Input::getKeyDown('F')) focusSelected();
 		if (Input::getKeyDown(VK_DELETE)) deleteSelected();
@@ -204,6 +228,20 @@ void Editor::update()
 
 	applyPrefabModeRequests();
 	applySceneRequests();
+
+	// Правку завершено, коли відпустили кнопку миші або поле перестало бути активним
+	bool itemActive = ImGui::IsAnyItemActive();
+
+	if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || (mWasItemActive && !itemActive)) mUndoCheckFrames = 2;
+
+	mWasItemActive = itemActive;
+
+	// Сцена перевіряється, лише коли нічого не тягнуть і не редагують, тож перетягування стає одним кроком
+	if (mUndoCheckFrames > 0 && !ImGui::IsMouseDown(ImGuiMouseButton_Left) && !itemActive && !mGizmo.isDragging())
+	{
+		recordUndo();
+		mUndoCheckFrames--;
+	}
 }
 
 // Помічає, що сцену замінили, і забуває вибір, якщо вибраний об'єкт знищено
@@ -218,6 +256,9 @@ void Editor::trackSceneLoads()
 		// Під час гри сцени перемикають компоненти, а зупинка однаково поверне знімок, тож
 		// збереженим стає лише те, що відкрили для редагування
 		if (!mPlaying) markSceneSaved();
+
+		// Історія скасування належить попередній сцені
+		if (!mPlaying) resetUndo();
 	}
 
 	// Гра чи перемикання сцени могли знищити вибраний об'єкт
@@ -273,6 +314,7 @@ void Editor::applySceneRequests()
 	mSeenLoadCount = SceneManager::get()->getLoadCount();
 
 	markSceneSaved();
+	resetUndo();
 }
 
 // Малює питання про збереження сцени перед переходом до іншої
@@ -496,7 +538,10 @@ void Editor::drawToolbar()
 
 	ImGui::Separator();
 	ImGui::TextUnformatted("F1 hide editor, F focus, Del delete");
-	ImGui::TextUnformatted("Click to select, W/E/R move/rotate/scale, X local");
+	ImGui::TextUnformatted("Click to select, Ctrl/Shift+click to add");
+	ImGui::TextUnformatted("W/E/R move/rotate/scale, X local");
+	ImGui::TextUnformatted("Ctrl+Z/Y undo/redo, Ctrl+S save");
+	ImGui::TextUnformatted("Ctrl+D duplicate, Ctrl+C/V copy/paste");
 	ImGui::TextUnformatted("Right mouse + WASDQE to fly");
 
 	ImGui::End();
@@ -513,6 +558,8 @@ void Editor::drawHierarchy()
 	drawCreateMenu();
 
 	ImGui::Separator();
+
+	mHierarchyRowsBuilding.clear();
 
 	// Копія списку потрібна, бо створення чи видалення змінює його під час обходу
 	std::vector<Entity*> roots;
@@ -549,6 +596,18 @@ void Editor::drawHierarchy()
 		ImGui::EndDragDropTarget();
 	}
 
+	mHierarchyRows = mHierarchyRowsBuilding;
+
+	// Клік по одному з кількох вибраних без перетягування лишає вибраним лише його, як у Unity
+	if (mPendingSingleSelect && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+	{
+		ImGuiIO& io = ImGui::GetIO();
+
+		if (io.MouseDragMaxDistanceSqr[ImGuiMouseButton_Left] <= io.MouseDragThreshold * io.MouseDragThreshold) selectOnly(mPendingSingleSelect);
+
+		mPendingSingleSelect = nullptr;
+	}
+
 	applyDrop();
 
 	ImGui::End();
@@ -559,7 +618,9 @@ void Editor::drawEntityNode(Entity* entity)
 {
 	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-	if (entity == mSelected) flags |= ImGuiTreeNodeFlags_Selected;
+	if (isSelected(entity)) flags |= ImGuiTreeNodeFlags_Selected;
+
+	mHierarchyRowsBuilding.push_back(entity);
 	if (entity->getChildren()->empty()) flags |= ImGuiTreeNodeFlags_Leaf;
 
 	// Неактивні об'єкти показуються приглушеним кольором, а частини префабів — блакитним, як в Unity
@@ -581,13 +642,16 @@ void Editor::drawEntityNode(Entity* entity)
 
 	if (colored) ImGui::PopStyleColor();
 
-	if (ImGui::IsItemClicked()) mSelected = entity;
+	if (ImGui::IsItemClicked()) clickHierarchyRow(entity);
 
-	// Рядок можна тягнути мишею, щоб змінити місце об'єкта в дереві
+	// Рядок можна тягнути мишею, щоб змінити місце об'єкта в дереві; вибраний тягне за собою весь вибір
 	if (ImGui::BeginDragDropSource())
 	{
 		ImGui::SetDragDropPayload(HIERARCHY_PAYLOAD, &entity, sizeof(Entity*));
-		ImGui::TextUnformatted(entity->getName().c_str());
+
+		if (isSelected(entity) && mSelection.size() > 1) ImGui::Text("%d objects", (int)topLevelSelection().size());
+		else ImGui::TextUnformatted(entity->getName().c_str());
+
 		ImGui::EndDragDropSource();
 	}
 
@@ -726,6 +790,16 @@ void Editor::applyDrop()
 	if (drop.dragged && !isAlive(drop.dragged)) return;
 	if (drop.target && !isAlive(drop.target)) return;
 
+	// Вибраний рядок переносить увесь вибір, окрім самої цілі
+	std::vector<Entity*> items;
+
+	if (drop.dragged && isSelected(drop.dragged) && mSelection.size() > 1) items = topLevelSelection();
+	else if (drop.dragged) items.push_back(drop.dragged);
+
+	items.erase(std::remove(items.begin(), items.end(), drop.target), items.end());
+
+	if (!isPrefab && items.empty()) return;
+
 	Entity* newParent = nullptr;
 	Entity* before = nullptr;
 
@@ -752,7 +826,10 @@ void Editor::applyDrop()
 			}
 		}
 
-		siblings.erase(std::remove(siblings.begin(), siblings.end(), drop.dragged), siblings.end());
+		for (Entity* item : items)
+		{
+			siblings.erase(std::remove(siblings.begin(), siblings.end(), item), siblings.end());
+		}
 
 		auto position = std::find(siblings.begin(), siblings.end(), drop.target);
 
@@ -773,17 +850,20 @@ void Editor::applyDrop()
 		if (newParent == nullptr) drop.dragged->getTransform()->setPosition(mCamera.getSpawnPoint());
 
 		mSelected = drop.dragged;
+		items.assign(1, drop.dragged);
 	}
-	else if (!canDrop(drop.dragged, newParent))
+
+	// Кожен стає перед тим самим сусідом, тож порядок перенесених зберігається
+	for (Entity* item : items)
 	{
-		return;
+		if (!canDrop(item, newParent)) continue;
+
+		// Об'єкт лишається там, де був у світі, як у Unity, змінюється лише його батько
+		item->setParent(newParent, true);
+
+		if (newParent) newParent->moveChildBefore(item, before);
+		else EntityManager::get()->moveRootBefore(item, before);
 	}
-
-	// Об'єкт лишається там, де був у світі, як у Unity, змінюється лише його батько
-	drop.dragged->setParent(newParent, true);
-
-	if (newParent) newParent->moveChildBefore(drop.dragged, before);
-	else EntityManager::get()->moveRootBefore(drop.dragged, before);
 
 	EntityManager::get()->sortByHierarchy();
 
@@ -1026,6 +1106,9 @@ void Editor::openPrefab(const std::string& path)
 	mExpandEntity = mPrefabRoot;
 
 	focusSelected();
+
+	// Префаб має власну історію скасування
+	resetUndo();
 }
 
 // Повертає сцену, з якої відкривали префаб; save спершу записує зміни у файл префаба
@@ -1056,6 +1139,8 @@ void Editor::closePrefab(bool save)
 	mCamera.setView(mPrefabModeView);
 
 	mPrefabModeScene.clear();
+
+	resetUndo();
 
 	// Об'єкти сцени, створені заново, можуть сховати курсор, як SceneChanger при прокиданні
 	Input::hideCursor(false);
@@ -1284,6 +1369,8 @@ void Editor::drawInspector()
 		ImGui::End();
 		return;
 	}
+
+	if (mSelection.size() > 1) ImGui::TextDisabled("%d objects selected, editing the active one", (int)mSelection.size());
 
 	// Зв'язок вибраного об'єкта з префабом і змінені поля рахуються раз на кадр
 	mInstanceRoot = PrefabLibrary::findInstanceRoot(mSelected);
@@ -1830,6 +1917,9 @@ void Editor::stop()
 	mPlayScenePath.clear();
 	mPlayOrder.clear();
 
+	// Відновлення після гри створило всі об'єкти й матеріали заново, тож старі кроки на них не вказують
+	resetUndo();
+
 	Input::hideCursor(false);
 }
 
@@ -1844,7 +1934,7 @@ void Editor::updateSelection()
 	// Поки камера обертається, вибір і маніпулятор лише заважали б
 	if (Input::getMouseButton(MB_Right)) return;
 
-	bool overGizmo = mGizmo.update(mSelected);
+	bool overGizmo = mGizmo.update(mSelected, topLevelSelection());
 
 	// Клік по панелі редактора не має міняти вибір у сцені
 	if (io.WantCaptureMouse) return;
@@ -1853,7 +1943,17 @@ void Editor::updateSelection()
 
 	if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
-		mSelected = Gizmo::pick(io.MousePos.x, io.MousePos.y);
+		Entity* picked = Gizmo::pick(io.MousePos.x, io.MousePos.y);
+
+		// Ctrl чи Shift додають об'єкт до вибору або прибирають з нього, як у сцені Unity
+		if (io.KeyCtrl || io.KeyShift)
+		{
+			if (picked) toggleSelected(picked);
+		}
+		else
+		{
+			selectOnly(picked);
+		}
 	}
 }
 
@@ -1867,22 +1967,22 @@ void Editor::renderOverlay(SwapChain* swapChain, unsigned int width, unsigned in
 	// Префаб показується без сцени навколо, тож сітка дає відчуття землі та масштабу, як у Unity
 	if (isPrefabMode()) mGrid.render(swapChain);
 
+	syncSelection();
+
 	// Обведення малюється після сітки, щоб лежати поверх неї
-	mOutline.render(swapChain, width, height, mSelected);
+	mOutline.render(swapChain, width, height, mSelection);
 }
 
-// Наводить камеру редактора на вибраний об'єкт
-void Editor::focusSelected()
+// Повертає радіус, у якому вміщується меш об'єкта
+static float boundsRadius(Entity* entity)
 {
-	if (mSelected == nullptr) return;
-
 	float radius = 1.0f;
 
-	if (Renderer* renderer = mSelected->getComponent<Renderer>())
+	if (Renderer* renderer = entity->getComponent<Renderer>())
 	{
 		if (renderer->getMesh())
 		{
-			Vector3 scale = mSelected->getTransform()->getScale();
+			Vector3 scale = entity->getTransform()->getScale();
 
 			float maxScale = fabsf(scale.x);
 			if (fabsf(scale.y) > maxScale) maxScale = fabsf(scale.y);
@@ -1892,17 +1992,537 @@ void Editor::focusSelected()
 		}
 	}
 
-	mCamera.focusOn(mSelected->getTransform()->getPosition(), radius);
+	return radius;
 }
 
-// Знищує вибраний об'єкт
+// Наводить камеру редактора на вибрані об'єкти
+void Editor::focusSelected()
+{
+	syncSelection();
+
+	if (mSelection.empty()) return;
+
+	Vector3 center;
+
+	for (Entity* entity : mSelection)
+	{
+		center = center + entity->getTransform()->getPosition();
+	}
+
+	center = center * (1.0f / (float)mSelection.size());
+
+	// Радіус охоплює всі вибрані разом з їхніми мешами
+	float radius = 0.0f;
+
+	for (Entity* entity : mSelection)
+	{
+		float reach = (entity->getTransform()->getPosition() - center).length() + boundsRadius(entity);
+
+		if (reach > radius) radius = reach;
+	}
+
+	mCamera.focusOn(center, radius);
+}
+
+// Знищує вибрані об'єкти
 void Editor::deleteSelected()
 {
-	if (mSelected == nullptr) return;
+	syncSelection();
 
-	// Без кореня префаба не лишилося б чого зберігати
-	if (isPrefabMode() && mSelected == mPrefabRoot) return;
+	// Нащадки зникають разом з предками, тож знищуються лише верхні з вибраних
+	for (Entity* entity : topLevelSelection())
+	{
+		// Без кореня префаба не лишилося б чого зберігати
+		if (isPrefabMode() && entity == mPrefabRoot) continue;
 
-	mSelected->destroy();
-	mSelected = nullptr;
+		entity->destroy();
+	}
+
+	syncSelection();
+
+	mUndoCheckFrames = 2;
+}
+
+// Прибирає з вибору знищені об'єкти і узгоджує перелік вибраних з активним об'єктом
+void Editor::syncSelection()
+{
+	// Живі об'єкти збираються один раз, а не шукаються для кожного вибраного
+	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
+	std::unordered_set<Entity*> alive(entities.begin(), entities.end());
+
+	mSelection.erase(std::remove_if(mSelection.begin(), mSelection.end(), [&alive](Entity* entity) { return alive.count(entity) == 0; }), mSelection.end());
+
+	if (mSelected && !alive.count(mSelected)) mSelected = mSelection.empty() ? nullptr : mSelection.back();
+
+	// Код, що просто ставить mSelected, вибирає лише цей об'єкт
+	if (mSelected == nullptr) mSelection.clear();
+	else if (std::find(mSelection.begin(), mSelection.end(), mSelected) == mSelection.end()) mSelection.assign(1, mSelected);
+
+	if (mSelectionAnchor && !alive.count(mSelectionAnchor)) mSelectionAnchor = nullptr;
+	if (mPendingSingleSelect && !alive.count(mPendingSingleSelect)) mPendingSingleSelect = nullptr;
+
+	updateSelectionSet();
+}
+
+// Оновлює множину вибраних після зміни переліку
+void Editor::updateSelectionSet()
+{
+	mSelectionSet = std::unordered_set<Entity*>(mSelection.begin(), mSelection.end());
+}
+
+// Перевіряє, чи об'єкт вибрано
+bool Editor::isSelected(Entity* entity) const
+{
+	return mSelectionSet.count(entity) > 0;
+}
+
+// Лишає вибраним лише вказаний об'єкт; nullptr знімає вибір
+void Editor::selectOnly(Entity* entity)
+{
+	mSelection.clear();
+
+	if (entity) mSelection.push_back(entity);
+
+	mSelected = entity;
+	mSelectionAnchor = entity;
+
+	updateSelectionSet();
+}
+
+// Додає об'єкт до вибору або прибирає з нього
+void Editor::toggleSelected(Entity* entity)
+{
+	auto it = std::find(mSelection.begin(), mSelection.end(), entity);
+
+	if (it != mSelection.end())
+	{
+		mSelection.erase(it);
+
+		// Активним стає останній з тих, що лишилися
+		if (mSelected == entity) mSelected = mSelection.empty() ? nullptr : mSelection.back();
+	}
+	else
+	{
+		mSelection.push_back(entity);
+		mSelected = entity;
+	}
+
+	mSelectionAnchor = entity;
+
+	updateSelectionSet();
+}
+
+// Вибирає рядки дерева від опорного до вказаного, як Shift у Unity
+void Editor::selectRange(Entity* entity)
+{
+	auto from = std::find(mHierarchyRows.begin(), mHierarchyRows.end(), mSelectionAnchor);
+	auto to = std::find(mHierarchyRows.begin(), mHierarchyRows.end(), entity);
+
+	// Без опорного рядка діапазону немає
+	if (from == mHierarchyRows.end() || to == mHierarchyRows.end())
+	{
+		selectOnly(entity);
+		return;
+	}
+
+	if (from > to) std::swap(from, to);
+
+	mSelection.assign(from, to + 1);
+	mSelected = entity;
+
+	updateSelectionSet();
+}
+
+// Обробляє клік по рядку дерева з урахуванням Ctrl та Shift
+void Editor::clickHierarchyRow(Entity* entity)
+{
+	ImGuiIO& io = ImGui::GetIO();
+
+	if (io.KeyCtrl)
+	{
+		toggleSelected(entity);
+	}
+	else if (io.KeyShift && mSelectionAnchor)
+	{
+		selectRange(entity);
+	}
+	else if (isSelected(entity) && mSelection.size() > 1)
+	{
+		// Вибір лишається, поки не ясно, чи це клік, чи початок перетягування всієї групи
+		mSelected = entity;
+		mPendingSingleSelect = entity;
+	}
+	else
+	{
+		selectOnly(entity);
+	}
+}
+
+// Повертає вибрані об'єкти без тих, чий предок теж вибраний, у порядку дерева
+std::vector<Entity*> Editor::topLevelSelection() const
+{
+	std::vector<Entity*> result;
+
+	for (Entity* entity : EntityManager::get()->getEntities())
+	{
+		if (!isSelected(entity)) continue;
+
+		bool ancestorSelected = false;
+
+		for (Entity* parent = entity->getParent(); parent; parent = parent->getParent())
+		{
+			if (isSelected(parent)) { ancestorSelected = true; break; }
+		}
+
+		if (!ancestorSelected) result.push_back(entity);
+	}
+
+	return result;
+}
+
+// Вибирає всі об'єкти сцени
+void Editor::selectAll()
+{
+	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
+
+	mSelection.assign(entities.begin(), entities.end());
+
+	updateSelectionSet();
+
+	if (!mSelection.empty() && !isSelected(mSelected)) mSelected = mSelection.back();
+	if (mSelection.empty()) mSelected = nullptr;
+}
+
+// Обробляє поєднання клавіш з Ctrl
+void Editor::handleShortcuts()
+{
+	ImGuiIO& io = ImGui::GetIO();
+
+	// Поки друкують у полі, Ctrl+Z і решта належать самому полю
+	if (io.WantTextInput || !io.KeyCtrl) return;
+
+	bool shift = io.KeyShift;
+
+	// Збереження: у режимі префаба зберігається префаб; під час гри у файл потрапив би стан гри
+	if (ImGui::IsKeyPressed(ImGuiKey_S, false) && !mPlaying)
+	{
+		if (isPrefabMode()) PrefabLibrary::get()->saveAsset(mPrefabModePath, mPrefabRoot);
+		else saveScene();
+	}
+
+	if (ImGui::IsKeyPressed(ImGuiKey_Z, true))
+	{
+		if (shift) redo();
+		else undo();
+	}
+
+	if (ImGui::IsKeyPressed(ImGuiKey_Y, true)) redo();
+
+	if (ImGui::IsKeyPressed(ImGuiKey_D, false)) duplicateSelection();
+	if (ImGui::IsKeyPressed(ImGuiKey_C, false)) copySelection(mClipboard);
+	if (ImGui::IsKeyPressed(ImGuiKey_V, false)) pasteClipboard(mClipboard);
+	if (ImGui::IsKeyPressed(ImGuiKey_A, false)) selectAll();
+
+	// Гра запускається й зупиняється так само, як у Unity; у режимі префаба гри немає
+	if (ImGui::IsKeyPressed(ImGuiKey_P, false) && !isPrefabMode())
+	{
+		if (shift) setPaused(!mPaused);
+		else if (mPlaying) stop();
+		else play();
+	}
+}
+
+// Записує поточний вибір як незмінні номери об'єктів
+void Editor::captureSelection(std::vector<int>& selection, int& active) const
+{
+	selection.clear();
+
+	for (Entity* entity : mSelection)
+	{
+		selection.push_back((int)entity->getId());
+	}
+
+	active = mSelected ? (int)mSelected->getId() : -1;
+}
+
+// Вибирає об'єкти за їхніми номерами
+void Editor::restoreSelection(const std::vector<int>& selection, int active)
+{
+	// Кроки могли знищити об'єкти, на які вказували відкладені дії
+	mPendingSingleSelect = nullptr;
+	mPendingDrop = PendingDrop();
+	mExpandEntity = nullptr;
+
+	mSelection.clear();
+
+	for (int id : selection)
+	{
+		if (Entity* entity = EntityManager::get()->findById((unsigned int)id)) mSelection.push_back(entity);
+	}
+
+	mSelected = active >= 0 ? EntityManager::get()->findById((unsigned int)active) : nullptr;
+
+	if (mSelected == nullptr && !mSelection.empty()) mSelected = mSelection.back();
+
+	mSelectionAnchor = mSelected;
+
+	updateSelectionSet();
+}
+
+// Записує крок скасування, якщо сцена змінилася від попереднього запису
+void Editor::recordUndo()
+{
+	if (mPlaying) return;
+
+	std::vector<int> selection;
+	int active = -1;
+	captureSelection(selection, active);
+
+	mHistory.record(mUndoSelection, mUndoActive, selection, active);
+
+	mUndoSelection = selection;
+	mUndoActive = active;
+}
+
+// Починає історію від поточного стану сцени
+void Editor::resetUndo()
+{
+	mSceneGeneration++;
+	mUndoCheckFrames = 0;
+
+	mHistory.reset();
+
+	captureSelection(mUndoSelection, mUndoActive);
+}
+
+// Скасовує останню зміну
+void Editor::undo()
+{
+	// Під час гри сцену однаково поверне зупинка, а посеред перетягування крок ще не завершено
+	if (mPlaying || mGizmo.isDragging()) return;
+
+	// Зміна, яку ще не записали, теж має скасуватися
+	recordUndo();
+
+	std::vector<int> selection;
+	int active = -1;
+
+	if (!mHistory.undo(selection, active)) return;
+
+	// Знищені й відновлені об'єкти мають нові адреси, тож старі джерела копіювання вже не ті
+	mSceneGeneration++;
+
+	restoreSelection(selection, active);
+
+	captureSelection(mUndoSelection, mUndoActive);
+}
+
+// Повертає скасовану зміну
+void Editor::redo()
+{
+	if (mPlaying || mGizmo.isDragging()) return;
+
+	std::vector<int> selection;
+	int active = -1;
+
+	if (!mHistory.redo(selection, active)) return;
+
+	mSceneGeneration++;
+
+	restoreSelection(selection, active);
+
+	captureSelection(mUndoSelection, mUndoActive);
+}
+
+// Збирає посилання компонента в порядку, у якому він їх перелічує
+class ReferenceReader : public ReferenceVisitor
+{
+public:
+	std::vector<Entity*> values;
+
+	void reference(const char* name, Entity*& value, ReferenceKind kind) override { values.push_back(value); }
+};
+
+// Повертає копії посилання на об'єкти поза скопійованим набором, які запис не зберіг
+class ReferenceRestorer : public ReferenceVisitor
+{
+public:
+	ReferenceRestorer(const std::vector<Entity*>& values, const std::vector<Entity*>& copied) : mValues(values), mCopied(copied) {}
+
+	void reference(const char* name, Entity*& value, ReferenceKind kind) override
+	{
+		Entity* original = mIndex < mValues.size() ? mValues[mIndex] : nullptr;
+		mIndex++;
+
+		// Посилання всередині набору запис уже переніс на копії, тож повертаються лише зовнішні
+		if (value == nullptr && original && std::find(mCopied.begin(), mCopied.end(), original) == mCopied.end()) value = original;
+	}
+
+private:
+	const std::vector<Entity*>& mValues;
+	const std::vector<Entity*>& mCopied;
+	size_t mIndex = 0;
+};
+
+// Записує вибрані об'єкти в буфер
+void Editor::copySelection(Clipboard& clipboard) const
+{
+	std::vector<Entity*> roots = topLevelSelection();
+
+	// Корінь префаба в режимі префаба лишається єдиним, тож його не копіюють
+	if (isPrefabMode()) roots.erase(std::remove(roots.begin(), roots.end(), mPrefabRoot), roots.end());
+
+	if (roots.empty()) return;
+
+	clipboard.data = SceneSerializer::serializeEntities(roots);
+	clipboard.sources = roots;
+	clipboard.subtreeSizes.clear();
+	clipboard.generation = mSceneGeneration;
+
+	for (Entity* root : roots)
+	{
+		std::vector<Entity*> subtree;
+		collectSubtree(root, subtree);
+
+		clipboard.subtreeSizes.push_back((int)subtree.size());
+	}
+}
+
+// Створює копії об'єктів з буфера; поруч із джерелами, якщо вони ще в цій самій сцені
+void Editor::pasteClipboard(const Clipboard& clipboard)
+{
+	if (clipboard.data.empty()) return;
+
+	std::string error;
+	JsonValue data = JsonValue::parse(clipboard.data, &error);
+
+	if (!error.empty()) return;
+
+	std::vector<Entity*> created = SceneSerializer::buildSubtree(data, nullptr, false);
+
+	// Джерела ще ті самі об'єкти, лише поки сцену не перебудовували
+	bool sourcesValid = clipboard.generation == mSceneGeneration;
+
+	std::vector<Entity*> copiedSources;
+
+	if (sourcesValid)
+	{
+		for (Entity* source : clipboard.sources)
+		{
+			if (isAlive(source)) collectSubtree(source, copiedSources);
+		}
+	}
+
+	std::vector<Entity*> pasted;
+
+	size_t offset = 0;
+
+	for (size_t root = 0; root < clipboard.subtreeSizes.size(); root++)
+	{
+		size_t size = (size_t)clipboard.subtreeSizes[root];
+
+		Entity* copy = offset < created.size() ? created[offset] : nullptr;
+		Entity* source = sourcesValid && isAlive(clipboard.sources[root]) ? clipboard.sources[root] : nullptr;
+
+		// Копію, яку знищив власний компонент при прокиданні, пропускаємо
+		if (copy)
+		{
+			std::vector<Entity*> sourceTree;
+			if (source) collectSubtree(source, sourceTree);
+
+			// Посилання на об'єкти поза копією запис губить, тож їх беремо з живого джерела
+			if (sourceTree.size() == size)
+			{
+				for (size_t i = 0; i < size; i++)
+				{
+					Entity* copyEntity = created[offset + i];
+
+					if (copyEntity == nullptr) continue;
+
+					const std::list<Component*>& sourceComponents = sourceTree[i]->getComponentList();
+					const std::list<Component*>& copyComponents = copyEntity->getComponentList();
+
+					if (sourceComponents.size() != copyComponents.size()) continue;
+
+					auto copyIt = copyComponents.begin();
+
+					for (Component* sourceComponent : sourceComponents)
+					{
+						Component* copyComponent = *copyIt++;
+
+						if (std::string(sourceComponent->getTypeName()) != copyComponent->getTypeName()) continue;
+
+						ReferenceReader reader;
+						sourceComponent->visitProperties(reader);
+
+						ReferenceRestorer restorer(reader.values, copiedSources);
+						copyComponent->visitProperties(restorer);
+					}
+				}
+			}
+
+			// Копія стає одразу після джерела під тим самим батьком, інакше в кінець сцени
+			Entity* parent = source ? source->getParent() : nullptr;
+
+			if (parent)
+			{
+				copy->setParent(parent, true);
+
+				auto& siblings = *parent->getChildren();
+				auto next = std::find(siblings.begin(), siblings.end(), source);
+
+				if (next != siblings.end()) ++next;
+				while (next != siblings.end() && std::find(pasted.begin(), pasted.end(), *next) != pasted.end()) ++next;
+
+				parent->moveChildBefore(copy, next != siblings.end() ? *next : nullptr);
+			}
+			else if (source)
+			{
+				const std::list<Entity*>& entities = EntityManager::get()->getEntities();
+
+				Entity* before = nullptr;
+				bool passed = false;
+
+				for (Entity* entity : entities)
+				{
+					if (entity == source) { passed = true; continue; }
+
+					if (passed && entity->getParent() == nullptr && entity != copy && std::find(pasted.begin(), pasted.end(), entity) == pasted.end()) { before = entity; break; }
+				}
+
+				EntityManager::get()->moveRootBefore(copy, before);
+			}
+
+			// У префабі корінь один, тож копія лягає під нього
+			if (isPrefabMode() && copy->getParent() == nullptr) adoptIntoPrefab(copy);
+
+			pasted.push_back(copy);
+		}
+
+		offset += size;
+	}
+
+	EntityManager::get()->sortByHierarchy();
+
+	if (pasted.empty()) return;
+
+	mSelection = pasted;
+	mSelected = pasted.back();
+	mSelectionAnchor = mSelected;
+
+	updateSelectionSet();
+
+	mUndoCheckFrames = 2;
+}
+
+// Створює копії вибраних об'єктів поруч з ними
+void Editor::duplicateSelection()
+{
+	syncSelection();
+
+	// Буфер копіювання при цьому не змінюється, як у Unity
+	Clipboard clipboard;
+	copySelection(clipboard);
+
+	pasteClipboard(clipboard);
 }

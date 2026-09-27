@@ -3,10 +3,12 @@
 #include "Gizmo.h"
 #include "EditorGrid.h"
 #include "SelectionOutline.h"
+#include "SceneHistory.h"
 #include "Vector3.h"
 #include <string>
 #include <vector>
 #include <set>
+#include <unordered_set>
 
 class Entity;
 class Component;
@@ -136,10 +138,86 @@ private:
 	// Наводить камеру редактора на вибраний об'єкт
 	void focusSelected();
 
-	// Знищує вибраний об'єкт
+	// Знищує вибрані об'єкти
 	void deleteSelected();
 
+	// Прибирає з вибору знищені об'єкти і узгоджує перелік вибраних з активним об'єктом
+	void syncSelection();
+	// Оновлює множину вибраних після зміни переліку
+	void updateSelectionSet();
+	// Перевіряє, чи об'єкт вибрано
+	bool isSelected(Entity* entity) const;
+	// Лишає вибраним лише вказаний об'єкт; nullptr знімає вибір
+	void selectOnly(Entity* entity);
+	// Додає об'єкт до вибору або прибирає з нього
+	void toggleSelected(Entity* entity);
+	// Вибирає рядки дерева від опорного до вказаного, як Shift у Unity
+	void selectRange(Entity* entity);
+	// Обробляє клік по рядку дерева з урахуванням Ctrl та Shift
+	void clickHierarchyRow(Entity* entity);
+	// Повертає вибрані об'єкти без тих, чий предок теж вибраний, у порядку дерева
+	std::vector<Entity*> topLevelSelection() const;
+	// Вибирає всі об'єкти сцени
+	void selectAll();
+
+	// Обробляє поєднання клавіш з Ctrl
+	void handleShortcuts();
+
+	// Записує поточний вибір як незмінні номери об'єктів
+	void captureSelection(std::vector<int>& selection, int& active) const;
+	// Вибирає об'єкти за їхніми номерами
+	void restoreSelection(const std::vector<int>& selection, int active);
+	// Записує крок скасування, якщо сцена змінилася від попереднього запису
+	void recordUndo();
+	// Починає історію від поточного стану сцени
+	void resetUndo();
+	// Скасовує останню зміну
+	void undo();
+	// Повертає скасовану зміну
+	void redo();
+
+	// Скопійовані об'єкти: їхній опис, розмір кожного піддерева та самі джерела, поки вони живі
+	struct Clipboard
+	{
+		std::string data;
+		std::vector<int> subtreeSizes;
+		std::vector<Entity*> sources;
+		unsigned int generation = 0;
+	};
+
+	// Записує вибрані об'єкти в буфер
+	void copySelection(Clipboard& clipboard) const;
+	// Створює копії об'єктів з буфера; поруч із джерелами, якщо вони ще в цій самій сцені
+	void pasteClipboard(const Clipboard& clipboard);
+	// Створює копії вибраних об'єктів поруч з ними
+	void duplicateSelection();
+
 	Entity* mSelected = nullptr;
+	// Усі вибрані об'єкти; mSelected серед них активний, його показує інспектор і на ньому стоїть маніпулятор
+	std::vector<Entity*> mSelection;
+	// Ті самі об'єкти множиною, щоб перевірка вибору не обходила весь перелік
+	std::unordered_set<Entity*> mSelectionSet;
+	// Рядок, від якого Shift вибирає діапазон у дереві
+	Entity* mSelectionAnchor = nullptr;
+	// Рядки дерева в порядку показу: минулий кадр для діапазону Shift і поточний, що саме збирається
+	std::vector<Entity*> mHierarchyRows;
+	std::vector<Entity*> mHierarchyRowsBuilding;
+	// Вибраний рядок, клік по якому без перетягування лишить вибраним тільки його
+	Entity* mPendingSingleSelect = nullptr;
+
+	// Історія змін для скасування
+	SceneHistory mHistory;
+	// Вибір перед зміною, яку ще не записали: його поверне скасування цієї зміни
+	std::vector<int> mUndoSelection;
+	int mUndoActive = -1;
+	// Скільки ще кадрів перевіряти сцену на зміни після дії користувача
+	int mUndoCheckFrames = 0;
+	// Чи було якесь поле активним минулого кадру: коли його відпускають, правку завершено
+	bool mWasItemActive = false;
+
+	// Буфер копіювання та номер покоління сцени: після перебудови сцени старі вказівники вже не джерела
+	Clipboard mClipboard;
+	unsigned int mSceneGeneration = 0;
 
 	// Куди відпустили перетягнутий об'єкт відносно рядка під курсором
 	enum class DropZone

@@ -168,6 +168,7 @@
     <ClCompile Include="src\Editor\Gizmo.cpp" />
     <ClCompile Include="src\Editor\EditorGrid.cpp" />
     <ClCompile Include="src\Editor\SelectionOutline.cpp" />
+    <ClCompile Include="src\Editor\SceneHistory.cpp" />
     <ClCompile Include="src\Editor\PrefabLibrary.cpp" />
     <ClCompile Include="src\Engine\Entity\Camera.cpp" />
     <ClCompile Include="src\Engine\Entity\Collider.cpp" />
@@ -242,6 +243,7 @@
     <ClInclude Include="src\Editor\Gizmo.h" />
     <ClInclude Include="src\Editor\EditorGrid.h" />
     <ClInclude Include="src\Editor\SelectionOutline.h" />
+    <ClInclude Include="src\Editor\SceneHistory.h" />
     <ClInclude Include="src\Editor\PrefabLibrary.h" />
     <ClInclude Include="src\Engine\Entity\Camera.h" />
     <ClInclude Include="src\Engine\Entity\Collider.h" />

@@ -2,11 +2,38 @@
 #include "Json.h"
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 class Entity;
 class Component;
 class Renderer;
 class Material;
+
+// Незмінні номери матеріалів для історії змін: матеріал живе, поки не завантажили іншу сцену
+struct MaterialRegistry
+{
+	std::vector<Material*> materials;
+	std::unordered_map<Material*, int> ids;
+
+	// Повертає номер матеріалу, за потреби видаючи новий
+	int idOf(Material* material);
+};
+
+// Стан сцени для історії змін: запис кожного об'єкта за його номером, значення матеріалів і порядок дерева
+struct SceneRecords
+{
+	std::unordered_map<int, std::string> entities;
+	std::unordered_map<int, std::string> materials;
+	std::vector<int> order;
+};
+
+// Зміна запису одного об'єкта в історії: з якого стану й до якого; порожній запис означає, що об'єкта немає
+struct RecordChange
+{
+	int id = 0;
+	std::string from;
+	std::string to;
+};
 
 // Зберігає та відновлює сцену у форматі JSON
 class SceneSerializer
@@ -30,10 +57,17 @@ public:
 	// кореня обнуляються, бо кожен екземпляр префаба має власні, а посилання на об'єкти поза
 	// піддеревом губляться, крім посилань на префаби-файли
 	static JsonValue serializeSubtree(Entity* root);
+	// Записує вказані об'єкти з нащадками так само, як сцену: корені у світових координатах і зі зв'язками з префабами
+	static std::string serializeEntities(const std::vector<Entity*>& roots);
 	// Створює об'єкти з опису, не чіпаючи решту сцени; кореневі стають дочірніми для parent.
 	// asTemplate будує прихований образ префаба: його компоненти не прокидаються, матеріали
 	// переживають зміну сцени, а самі об'єкти не показуються в дереві сцени
 	static std::vector<Entity*> buildSubtree(const JsonValue& data, Entity* parent, bool asTemplate);
+
+	// Записує стан сцени для історії змін: посилання й батьки як номери об'єктів, матеріали як номери реєстру
+	static void captureRecords(SceneRecords& out, MaterialRegistry& registry);
+	// Переводить названі об'єкти й матеріали між записами, торкаючись лише того, що в записі змінилося
+	static void applyRecords(const std::vector<RecordChange>& entities, const std::vector<std::pair<int, std::string>>& materials, const std::vector<int>& order, MaterialRegistry& registry);
 
 	// Складає опис одного матеріалу
 	static JsonValue writeMaterial(Material* material);
