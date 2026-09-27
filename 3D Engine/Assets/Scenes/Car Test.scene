@@ -55,6 +55,17 @@
       "clampTexture": true,
       "texture": "Assets\\Textures\\car.png",
       "shader": "src\\Shaders\\PixelShader.hlsl"
+    },
+    {
+      "color": [1, 1, 1, 1],
+      "ambient": 0.4,
+      "smoothness": 0.5,
+      "shininess": 32,
+      "textureScale": 1,
+      "cullBack": true,
+      "clampTexture": true,
+      "texture": "Assets\\Textures\\car.png",
+      "shader": "src\\Shaders\\PixelShader.hlsl"
     }
   ],
   "entities": [
@@ -288,6 +299,8 @@
       "index": 9,
       "name": "Player Car",
       "active": true,
+      "prefabAsset": "Assets\\Prefabs\\Player Car.prefab",
+      "prefabOverrides": [],
       "parent": -1,
       "transform": {
         "position": [0, 0, 0],
@@ -299,7 +312,7 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\car.obj",
           "castShadows": true,
-          "material": 4
+          "material": 5
         },
         {
           "type": "MeshCollider"
@@ -319,7 +332,7 @@
           "maxSpeed": 70,
           "maxSteering": 0.3,
           "gripRatio": 0.5,
-          "wheelPrefab": 6
+          "wheelPrefab": "Assets\\Prefabs\\Wheel.prefab"
         }
       ]
     }

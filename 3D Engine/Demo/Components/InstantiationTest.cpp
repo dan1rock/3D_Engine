@@ -13,7 +13,7 @@ InstantiationTest::~InstantiationTest()
 
 void InstantiationTest::update()
 {
-	if (Input::getKeyDown('I'))
+	if (Input::getKeyDown('I') && prefab)
 	{
 		Entity* newObject = prefab->instantiate();
 		newObject->getTransform()->setPosition(mPosition);

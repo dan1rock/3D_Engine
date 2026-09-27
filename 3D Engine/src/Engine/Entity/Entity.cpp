@@ -28,6 +28,9 @@ Entity::Entity(Vector3 position)
 // Деструктор класу GameObject, видаляє всі компоненти та знімає реєстрацію об'єкта
 Entity::~Entity()
 {
+	// Посилання інших компонентів на цей об'єкт обнуляються, поки його пам'ять ще дійсна
+	EntityManager::get()->clearReferencesTo(this);
+
     for (auto* component : mComponents) {
         delete component;
     }

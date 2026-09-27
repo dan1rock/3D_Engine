@@ -15,6 +15,7 @@
 #include "RigidBody.h"
 #include "GlobalResources.h"
 #include "Frustum.h"
+#include "Properties.h"
 
 #include <iostream>
 
@@ -31,6 +32,77 @@ void EntityManager::unregisterEntity(Entity* gameObject)
 	mRemovalCount++;
 }
 
+// Обхідник, якого цікавлять лише посилання: решту полів він пропускає
+class ReferenceOnlyVisitor : public PropertyVisitor
+{
+public:
+	void property(const char* name, float& value, float step) override {}
+	void property(const char* name, int& value) override {}
+	void property(const char* name, bool& value) override {}
+	void property(const char* name, Vector3& value) override {}
+	void property(const char* name, std::string& value) override {}
+	void color(const char* name, float* channels, int count) override {}
+};
+
+// Рахує поля-посилання компонента
+class ReferenceCounter : public ReferenceOnlyVisitor
+{
+public:
+	int count = 0;
+
+	void reference(const char* name, Entity*& value, ReferenceKind kind) override { count++; }
+};
+
+// Обнуляє посилання на вказаний об'єкт
+class ReferenceClearer : public ReferenceOnlyVisitor
+{
+public:
+	ReferenceClearer(Entity* target) : mTarget(target) {}
+
+	void reference(const char* name, Entity*& value, ReferenceKind kind) override
+	{
+		if (value == mTarget) value = nullptr;
+	}
+
+private:
+	Entity* mTarget;
+};
+
+// Обнуляє в усіх компонентах посилання на об'єкт, що знищується, щоб вони не вказували на звільнену пам'ять
+void EntityManager::clearReferencesTo(Entity* entity)
+{
+	// Нові компоненти з посиланнями додаються до переліку, решта більше не розглядається
+	for (Component* component : mUncheckedComponents)
+	{
+		if (hasReferences(component)) mReferencingComponents.insert(component);
+	}
+
+	mUncheckedComponents.clear();
+
+	ReferenceClearer clearer(entity);
+
+	for (Component* component : mReferencingComponents)
+	{
+		component->visitProperties(clearer);
+	}
+}
+
+// Перевіряє, чи є серед полів компонента посилання на інші об'єкти
+bool EntityManager::hasReferences(Component* component)
+{
+	auto it = mTypeHasReferences.find(component->getTypeName());
+
+	if (it != mTypeHasReferences.end()) return it->second;
+
+	ReferenceCounter counter;
+	component->visitProperties(counter);
+
+	bool result = counter.count > 0;
+	mTypeHasReferences[component->getTypeName()] = result;
+
+	return result;
+}
+
 // Скільки разів об'єкти прибирали з менеджера від запуску
 unsigned int EntityManager::getRemovalCount() const
 {
@@ -41,12 +113,15 @@ unsigned int EntityManager::getRemovalCount() const
 void EntityManager::registerComponent(Component* component)
 {
 	mComponents.push_back(component);
+	mUncheckedComponents.insert(component);
 }
 
 // Видаляє компонент з менеджера
 void EntityManager::unregisterComponent(Component* component)
 {
 	mComponents.remove(component);
+	mUncheckedComponents.erase(component);
+	mReferencingComponents.erase(component);
 }
 
 // Реєструє рендер-компонент у менеджері

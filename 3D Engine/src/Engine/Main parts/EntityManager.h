@@ -1,6 +1,7 @@
 #pragma once
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 
 class Component;
 class Renderer;
@@ -52,6 +53,8 @@ public:
 	const std::list<Renderer*>& getRenderers() const;
 	// Перевіряє, чи об'єкт ще існує у сцені, не розіменовуючи вказівник
 	bool isAlive(Entity* entity) const;
+	// Обнуляє в усіх компонентах посилання на об'єкт, що знищується, щоб вони не вказували на звільнену пам'ять
+	void clearReferencesTo(Entity* entity);
 	// Скільки разів об'єкти прибирали з менеджера від запуску. Дешевий спосіб помітити, що
 	// якийсь виклик знищив об'єкти, не перевіряючи кожен вказівник окремо
 	unsigned int getRemovalCount() const;
@@ -96,6 +99,15 @@ public:
 private:
 	std::list<Entity*> mEntities = {};
 	unsigned int mRemovalCount = 0;
+	// Чи має тип компонента поля-посилання; ключ - сталий рядок імені типу, тож рядки не копіюються
+	std::unordered_map<const char*, bool> mTypeHasReferences;
+	// Компоненти з полями-посиланнями: лише їх обходить знищення об'єкта
+	std::unordered_set<Component*> mReferencingComponents;
+	// Нові компоненти, ще не перевірені на посилання; перевіряються при першому знищенні після реєстрації
+	std::unordered_set<Component*> mUncheckedComponents;
+
+	// Перевіряє, чи є серед полів компонента посилання на інші об'єкти
+	bool hasReferences(Component* component);
 	std::list<Component*> mComponents = {};
 	std::list<Renderer*> mRenderers = {};
 	std::list<Camera*> mCameras = {};
