@@ -35,13 +35,6 @@
 
 namespace filesystem = std::experimental::filesystem;
 
-// Тип вмісту, що переноситься мишею між рядками дерева сцени
-static const char* HIERARCHY_PAYLOAD = "HIERARCHY_ENTITY";
-// Тип вмісту, що переносить шлях до префаба з панелі ресурсів
-static const char* PREFAB_PAYLOAD = "PREFAB_ASSET";
-// Тип вмісту, що переносить посилання на матеріал з панелі ресурсів
-static const char* MATERIAL_PAYLOAD = "MATERIAL_ASSET";
-
 // Колір префабів у вигляді, зручному для ImGui
 static ImVec4 prefabColor(float alpha = 1.0f)
 {
@@ -1568,6 +1561,16 @@ void Editor::drawRendererAssets(Renderer* renderer)
 
 		ImGui::EndCombo();
 	}
+	else if (ImGui::BeginDragDropTarget())
+	{
+		// Меш з панелі ресурсів можна просто покласти на поле
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(MESH_PAYLOAD))
+		{
+			renderer->setMesh(GraphicsEngine::get()->getMeshManager()->createMeshFromFile((const wchar_t*)payload->Data));
+		}
+
+		ImGui::EndDragDropTarget();
+	}
 
 	inspectorLabel("Cast Shadows", isOverridden(mComponentKey + "castShadows"));
 	ImGui::Checkbox("##castShadows", &renderer->castShadows);
@@ -1992,6 +1995,17 @@ bool Editor::drawMapField(const char* label, const char* id, Texture*& map)
 
 		ImGui::EndCombo();
 	}
+	else if (ImGui::BeginDragDropTarget())
+	{
+		// Текстуру з панелі ресурсів можна просто покласти на поле карти
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(TEXTURE_PAYLOAD))
+		{
+			map = GraphicsEngine::get()->getTextureManager()->createTextureFromFile((const wchar_t*)payload->Data);
+			changed = true;
+		}
+
+		ImGui::EndDragDropTarget();
+	}
 
 	return changed;
 }
@@ -2166,6 +2180,8 @@ void Editor::drawAssets()
 			if (slash != std::string::npos) name = name.substr(slash + 1);
 
 			// Подвійний клік створює у сцені об'єкт з цим мешем
+			ImGui::PushID((int)i);
+
 			if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick)
 				&& ImGui::IsMouseDoubleClicked(0))
 			{
@@ -2179,19 +2195,40 @@ void Editor::drawAssets()
 
 				mSelected = entity;
 			}
+
+			// Меш перетягують на поле меша в інспекторі
+			if (ImGui::BeginDragDropSource())
+			{
+				ImGui::SetDragDropPayload(MESH_PAYLOAD, mMeshPaths[i].c_str(), (mMeshPaths[i].size() + 1) * sizeof(wchar_t));
+				ImGui::TextUnformatted(name.c_str());
+				ImGui::EndDragDropSource();
+			}
+
+			ImGui::PopID();
 		}
 	}
 
 	if (ImGui::CollapsingHeader("Textures"))
 	{
-		for (const std::string& path : mTextureNames)
+		for (size_t i = 0; i < mTextureNames.size(); i++)
 		{
-			std::string name = path;
+			std::string name = mTextureNames[i];
 
 			size_t slash = name.find_last_of("\\/");
 			if (slash != std::string::npos) name = name.substr(slash + 1);
 
-			ImGui::TextUnformatted(name.c_str());
+			ImGui::PushID((int)i);
+			ImGui::Selectable(name.c_str());
+
+			// Текстуру перетягують на поле карти матеріалу
+			if (ImGui::BeginDragDropSource())
+			{
+				ImGui::SetDragDropPayload(TEXTURE_PAYLOAD, mTexturePaths[i].c_str(), (mTexturePaths[i].size() + 1) * sizeof(wchar_t));
+				ImGui::TextUnformatted(name.c_str());
+				ImGui::EndDragDropSource();
+			}
+
+			ImGui::PopID();
 		}
 	}
 
@@ -2516,6 +2553,11 @@ void Editor::clickHierarchyRow(Entity* entity)
 	{
 		// Вибір лишається, поки не ясно, чи це клік, чи початок перетягування всієї групи
 		mSelected = entity;
+		mPendingSingleSelect = entity;
+	}
+	else if (!isSelected(entity))
+	{
+		// Вибір чекає, поки кнопку відпустять без перетягування: так об'єкт можна тягнути на поле в інспекторі, не змінюючи вибраного
 		mPendingSingleSelect = entity;
 	}
 	else

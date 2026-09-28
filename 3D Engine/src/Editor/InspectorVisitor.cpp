@@ -28,6 +28,17 @@ static std::string toLabel(const char* name)
 // Колір, яким редактор позначає все, що стосується префабів
 const float PREFAB_COLOR[4] = { 0.45f, 0.72f, 1.0f, 1.0f };
 
+// Тип вмісту, що переносить об'єкт з дерева сцени
+const char* const HIERARCHY_PAYLOAD = "HIERARCHY_ENTITY";
+// Тип вмісту, що переносить шлях до префаба з панелі ресурсів
+const char* const PREFAB_PAYLOAD = "PREFAB_ASSET";
+// Тип вмісту, що переносить посилання на матеріал з панелі ресурсів
+const char* const MATERIAL_PAYLOAD = "MATERIAL_ASSET";
+// Тип вмісту, що переносить шлях до меша з панелі ресурсів
+const char* const MESH_PAYLOAD = "MESH_ASSET";
+// Тип вмісту, що переносить шлях до текстури з панелі ресурсів
+const char* const TEXTURE_PAYLOAD = "TEXTURE_ASSET";
+
 // Ставить підпис у ліву колонку, а саме поле розтягує на решту ширини
 void inspectorLabel(const char* label, bool overridden)
 {
@@ -54,6 +65,33 @@ void inspectorLabel(const char* label, bool overridden)
 
 	ImGui::SameLine(labelWidth);
 	ImGui::SetNextItemWidth(-1.0f);
+}
+
+// Приймає на поле-посилання об'єкт, перетягнутий з дерева сцени, або префаб з панелі ресурсів
+static void acceptReferenceDrop(Entity*& value, ReferenceKind kind)
+{
+	if (!ImGui::BeginDragDropTarget()) return;
+
+	const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+	Entity* candidate = nullptr;
+
+	if (payload && payload->IsDataType(HIERARCHY_PAYLOAD))
+	{
+		Entity* dragged = *(Entity* const*)payload->Data;
+
+		// Поле під префаб приймає корінь екземпляра як посилання на сам префаб, а звичайний об'єкт не приймає
+		if (kind == ReferenceKind::Any) candidate = dragged;
+		else if (!dragged->prefabAsset.empty()) candidate = PrefabLibrary::get()->getTemplate(dragged->prefabAsset);
+	}
+	else if (payload && payload->IsDataType(PREFAB_PAYLOAD))
+	{
+		candidate = PrefabLibrary::get()->getTemplate((const char*)payload->Data);
+	}
+
+	// Непридатний вміст поле не підсвічує і не приймає
+	if (candidate && ImGui::AcceptDragDropPayload(payload->DataType)) value = candidate;
+
+	ImGui::EndDragDropTarget();
 }
 
 // Ім'я поля стає і підписом, і прихованим ідентифікатором віджета
@@ -115,7 +153,12 @@ void InspectorVisitor::reference(const char* name, Entity*& value, ReferenceKind
 
 	inspectorLabel(toLabel(name).c_str(), isOverridden(name));
 
-	if (!ImGui::BeginCombo(fieldId(name).c_str(), current.c_str())) return;
+	// Закрите поле приймає перетягнутий об'єкт чи префаб, відкрите показує список вибору
+	if (!ImGui::BeginCombo(fieldId(name).c_str(), current.c_str()))
+	{
+		acceptReferenceDrop(value, kind);
+		return;
+	}
 
 	if (ImGui::Selectable("none", value == nullptr)) value = nullptr;
 

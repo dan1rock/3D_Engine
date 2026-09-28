@@ -12,6 +12,17 @@ void inspectorLabel(const char* label, bool overridden = false);
 // Колір, яким редактор позначає все, що стосується префабів
 extern const float PREFAB_COLOR[4];
 
+// Тип вмісту, що переносить об'єкт з дерева сцени
+extern const char* const HIERARCHY_PAYLOAD;
+// Тип вмісту, що переносить шлях до префаба з панелі ресурсів
+extern const char* const PREFAB_PAYLOAD;
+// Тип вмісту, що переносить посилання на матеріал з панелі ресурсів
+extern const char* const MATERIAL_PAYLOAD;
+// Тип вмісту, що переносить шлях до меша з панелі ресурсів
+extern const char* const MESH_PAYLOAD;
+// Тип вмісту, що переносить шлях до текстури з панелі ресурсів
+extern const char* const TEXTURE_PAYLOAD;
+
 // Малює поля компонента в інспекторі редактора та одразу записує зміни назад у компонент
 class InspectorVisitor : public PropertyVisitor
 {
