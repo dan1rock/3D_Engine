@@ -1,4 +1,5 @@
 #include "MeshRenderer.h"
+#include "Material.h"
 
 MeshRenderer::MeshRenderer()
 {
@@ -42,9 +43,14 @@ void MeshRenderer::render()
 
 	const std::vector<SubMesh>& subMeshes = mMesh->getSubMeshes();
 
+	// Кожна частина малюється лише у своєму проході: непрозорі першими, прозорі після них
+	bool transparentPass = GraphicsEngine::get()->getRenderPass() == RenderPass::Transparent;
+
 	// Меш без явного поділу малюється одним викликом, як і раніше
 	if (subMeshes.empty())
 	{
+		if (resolveMaterial(0)->isTransparent() != transparentPass) return;
+
 		applyMaterial(0);
 		deviceContext->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);
 		return;
@@ -55,6 +61,8 @@ void MeshRenderer::render()
 	for (const SubMesh& subMesh : subMeshes)
 	{
 		Material* material = resolveMaterial(subMesh.materialSlot);
+
+		if (material->isTransparent() != transparentPass) continue;
 
 		// Сусідні частини часто мають спільний матеріал, тому не перевстановлюємо його марно
 		if (material != lastMaterial)

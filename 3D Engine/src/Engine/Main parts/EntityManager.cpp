@@ -244,6 +244,13 @@ void EntityManager::updateRenderers()
 	mVisibleRenderers = 0;
 	mActiveRenderers = 0;
 
+	GraphicsEngine::get()->bindEnvironment();
+
+	// Спершу всі непрозорі поверхні: вони пишуть глибину, крізь яку потім видно прозорі
+	GraphicsEngine::get()->setRenderPass(RenderPass::Opaque);
+
+	std::vector<Renderer*> transparent;
+
 	for (auto* r : mRenderers) {
 		if (!r->getOwner()->isActive()) continue;
 
@@ -254,7 +261,38 @@ void EntityManager::updateRenderers()
 		mVisibleRenderers++;
 
 		r->render();
+
+		if (r->hasTransparentMaterial()) transparent.push_back(r);
 	}
+
+	// Прозорі від найдальшого до найближчого, щоб кожен змішувався з уже намальованим за ним; порядок сортування важливіший
+	Vector3 camera(constantData->cameraPos[0], constantData->cameraPos[1], constantData->cameraPos[2]);
+
+	std::vector<std::pair<Renderer*, float>> sorted;
+
+	for (Renderer* r : transparent)
+	{
+		sorted.push_back(std::make_pair(r, (r->getWorldBoundsCenter() - camera).length()));
+	}
+
+	std::stable_sort(sorted.begin(), sorted.end(), [](const std::pair<Renderer*, float>& a, const std::pair<Renderer*, float>& b) {
+		int pa = a.first->getSortingPriority();
+		int pb = b.first->getSortingPriority();
+
+		if (pa != pb) return pa < pb;
+
+		return a.second > b.second;
+	});
+
+	GraphicsEngine::get()->setRenderPass(RenderPass::Transparent);
+
+	for (const auto& entry : sorted)
+	{
+		entry.first->render();
+	}
+
+	GraphicsEngine::get()->setRenderPass(RenderPass::Opaque);
+	GraphicsEngine::get()->resetRenderStates();
 }
 
 // Рендерить глибину рендер-компонентів, які кидають тінь у вказану піраміду видимості
@@ -413,9 +451,9 @@ void EntityManager::onSceneLoadFinished()
 
 	for (Material* material : mMaterials)
 	{
-		for (unsigned int i = 0; i < material->getTextureCount(); i++)
+		for (int i = 0; i < (int)MaterialMap::Count; i++)
 		{
-			GraphicsEngine::get()->getTextureManager()->keepResource(material->getTexture(i));
+			GraphicsEngine::get()->getTextureManager()->keepResource(material->getMap((MaterialMap)i));
 		}
 	}
 

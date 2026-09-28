@@ -17,6 +17,14 @@ cbuffer postProcess : register(b0)
     float4 vignetteColor;
 };
 
+// Переводить лінійний колір у sRGB
+float3 linearToSrgb(float3 c)
+{
+    c = max(c, 0.0f);
+
+    return c <= 0.0031308f ? c * 12.92f : 1.055f * pow(c, 1.0f / 2.4f) - 0.055f;
+}
+
 // Затемнює зображення до країв кадру
 float3 applyVignette(float3 color, float2 texCoord)
 {
@@ -46,6 +54,9 @@ float4 main(PS_INPUT input) : SV_TARGET
     {
         color += Bloom.Sample(SourceSampler, input.texCoord).rgb * bloomParams.z;
     }
+
+	// Освітлення рахується в лінійному просторі, а екран чекає на sRGB
+    color = linearToSrgb(color);
 
     color = applyVignette(color, input.texCoord);
 

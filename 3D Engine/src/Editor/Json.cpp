@@ -164,6 +164,19 @@ void JsonValue::set(const char* key, const JsonValue& value)
 	mObject.push_back(std::make_pair(std::string(key), value));
 }
 
+// Прибирає поле об'єкта, якщо воно є
+void JsonValue::remove(const char* key)
+{
+	for (size_t i = 0; i < mObject.size(); i++)
+	{
+		if (mObject[i].first == key)
+		{
+			mObject.erase(mObject.begin() + i);
+			return;
+		}
+	}
+}
+
 // Повертає ім'я поля об'єкта за його номером
 const std::string& JsonValue::keyAt(size_t index) const
 {

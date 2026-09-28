@@ -177,6 +177,14 @@ void DeviceContext::setTexture(PixelShader* pixelShader, Texture* texture)
 	mDeviceContext->PSSetShaderResources(0, 1, &texture->mShaderResourceView);
 }
 
+// Встановлює текстуру піксельного шейдера у вказаний слот; nullptr звільняє слот
+void DeviceContext::setTexture(Texture* texture, UINT slot)
+{
+	ID3D11ShaderResourceView* view = texture ? texture->mShaderResourceView : nullptr;
+
+	mDeviceContext->PSSetShaderResources(slot, 1, &view);
+}
+
 // Встановлює ресурс шейдера для піксельного шейдера у вказаний слот
 void DeviceContext::setShaderResource(ID3D11ShaderResourceView* shaderResourceView, UINT slot)
 {

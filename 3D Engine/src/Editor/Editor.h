@@ -15,6 +15,7 @@ class Component;
 class Transform;
 class Renderer;
 class Material;
+class Texture;
 class SwapChain;
 
 // Редактор сцени: показує дерево об'єктів, інспектор вибраного об'єкта та керує режимом гри
@@ -103,10 +104,16 @@ private:
 	void drawAddComponentMenu(Entity* entity);
 	// Малює вибір меша та матеріалів для рендер-компонента
 	void drawRendererAssets(Renderer* renderer);
-	// Малює поля матеріалу вказаного слота рендер-компонента
-	void drawMaterial(Renderer* renderer, int slot);
-	// Повертає матеріал слота, яким користується лише цей рендер-компонент, за потреби зробивши копію
-	Material* ownMaterial(Renderer* renderer, int slot);
+	// Малює поле матеріалу слота: вибір файлу матеріалу зі списку або перетягнутого з панелі ресурсів
+	void drawMaterialSlot(Renderer* renderer, unsigned int slot);
+	// Малює редактори всіх матеріалів об'єкта під його компонентами
+	void drawEntityMaterials(Entity* entity);
+	// Малює вибраний у панелі ресурсів файл матеріалу
+	void drawMaterialAsset();
+	// Малює налаштування матеріалу й змінює їх у самому матеріалі; instance позначає копію режиму гри
+	bool drawMaterialEditor(Material* material, bool instance);
+	// Малює вибір текстури для карти матеріалу; повертає true, якщо вибрано іншу
+	bool drawMapField(const char* label, const char* id, Texture*& map);
 
 	// Помічає, що сцену замінили, і забуває вибір, якщо вибраний об'єкт знищено
 	void trackSceneLoads();
@@ -151,7 +158,7 @@ private:
 	void selectOnly(Entity* entity);
 	// Додає об'єкт до вибору або прибирає з нього
 	void toggleSelected(Entity* entity);
-	// Вибирає рядки дерева від опорного до вказаного, як Shift у Unity
+	// Вибирає рядки дерева від опорного до вказаного, як при затиснутому Shift
 	void selectRange(Entity* entity);
 	// Обробляє клік по рядку дерева з урахуванням Ctrl та Shift
 	void clickHierarchyRow(Entity* entity);
@@ -321,4 +328,10 @@ private:
 
 	// Буфер для поля імені об'єкта
 	char mNameBuffer[128] = {};
+
+	// Файл матеріалу, вибраний у панелі ресурсів, або DefaultMaterial; інспектор показує його без вибраного об'єкта
+	std::string mInspectedMaterial;
+	// Буфери для імені вибраного матеріалу та імені нового
+	char mMaterialNameBuffer[128] = {};
+	char mNewMaterialName[128] = {};
 };

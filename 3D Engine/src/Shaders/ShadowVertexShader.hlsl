@@ -31,13 +31,26 @@ cbuffer constant : register(b0)
     unsigned int time;
 };
 
-float4 main(VS_INPUT input) : SV_POSITION
+struct VS_OUTPUT
 {
+    float4 pos : SV_POSITION;
+    float2 texCoord : TEXCOORD0;
+};
+
+VS_OUTPUT main(VS_INPUT input)
+{
+    VS_OUTPUT output;
+
     float4 pos = mul(input.pos, world);
     pos = mul(pos, model);
 
 	// Проектує вершину у простір того каскаду, який зараз рендериться
     int cascade = (int) cascadeParams.x;
 
-    return mul(pos, lightViewProjection[cascade]);
+    output.pos = mul(pos, lightViewProjection[cascade]);
+
+	// UV потрібні лише матеріалам з обрізанням за альфою
+    output.texCoord = input.texCoord;
+
+    return output;
 }

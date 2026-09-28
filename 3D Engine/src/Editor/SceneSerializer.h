@@ -9,7 +9,7 @@ class Component;
 class Renderer;
 class Material;
 
-// Незмінні номери матеріалів для історії змін: матеріал живе, поки не завантажили іншу сцену
+// Незмінні номери матеріалів для історії змін: матеріал без файлу живе, поки не завантажили іншу сцену
 struct MaterialRegistry
 {
 	std::vector<Material*> materials;
@@ -40,7 +40,7 @@ class SceneSerializer
 {
 public:
 	// Записує поточну сцену у текст. Без includePersistent об'єкти, що переживають зміну сцени,
-	// пропускаються; файл сцени та знімок режиму гри записують їх теж, як це робить і Unity
+	// пропускаються; файл сцени та знімок режиму гри записують їх теж
 	static std::string serialize(bool includePersistent = false);
 	// Відновлює сцену з тексту, знищивши те, що було у сцені до цього. Повертає false, якщо текст
 	// не вдалося прочитати, і тоді сцену не чіпає. Створені об'єкти віддає у порядку файлу.
@@ -73,6 +73,9 @@ public:
 	static JsonValue writeMaterial(Material* material);
 	// Переносить у матеріал поля з опису, замінюючи його текстури
 	static void readMaterial(Material* material, const JsonValue& data);
+
+	// Ставить рендер-компоненту матеріали слотів з опису; registry потрібен для записів історії змін
+	static void applyMaterials(Renderer* renderer, const JsonValue& data, bool asTemplate, MaterialRegistry* registry = nullptr);
 
 	// Створює компонент за описом; самі поля потім задають applyRenderer та applyProperties
 	static Component* createComponent(Entity* entity, const JsonValue& data);

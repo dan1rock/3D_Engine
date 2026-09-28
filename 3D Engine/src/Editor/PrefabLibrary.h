@@ -29,6 +29,8 @@ public:
 
 	// Повертає вміст префаба з файлу, або nullptr, якщо файлу немає чи він зіпсований
 	const JsonValue* getData(const std::string& path);
+	// Забуває прочитані файли префабів, щоб наступне звернення перечитало їх з диска
+	void forgetData();
 
 	// Повертає прихований образ префаба, на який посилаються поля компонентів гри
 	Prefab* getTemplate(const std::string& path);

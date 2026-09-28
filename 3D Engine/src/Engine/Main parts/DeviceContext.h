@@ -67,6 +67,8 @@ public:
 	void setTexture(PixelShader* pixelShader, Texture* texture);
 	// Встановлює ресурс шейдера для піксельного шейдера у вказаний слот
 	void setShaderResource(ID3D11ShaderResourceView* shaderResourceView, UINT slot);
+	// Встановлює текстуру піксельного шейдера у вказаний слот; nullptr звільняє слот
+	void setTexture(Texture* texture, UINT slot);
 
 	// Завантажує зображення в найдетальніший рівень текстури
 	void updateTexture(ID3D11Resource* texture, const void* data, UINT rowPitch);

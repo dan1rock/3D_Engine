@@ -38,6 +38,8 @@ public:
 	const JsonValue& get(const char* key) const;
 	// Додає або замінює поле об'єкта
 	void set(const char* key, const JsonValue& value);
+	// Прибирає поле об'єкта, якщо воно є
+	void remove(const char* key);
 	// Повертає ім'я та значення поля об'єкта за його номером, щоб поля можна було обійти
 	const std::string& keyAt(size_t index) const;
 	const JsonValue& valueAt(size_t index) const;

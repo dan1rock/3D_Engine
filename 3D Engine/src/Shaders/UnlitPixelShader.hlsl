@@ -1,17 +1,16 @@
-Texture2D Texture : register(t0);
-sampler TextureSampler : register(s0);
-
-struct PS_INPUT
-{
-    float4 pos : SV_POSITION0;
-    float3 normal : TEXCOORD1;
-    float2 texCoord : TEXCOORD0;
-    float3 cameraDir : TEXCOORD2;
-    float3 lightDir : TEXCOORD3;
-    float3 worldPos : TEXCOORD4;
-};
+// Unlit-матеріал: основна карта й колір без освітлення, у лінійному просторі
+#include "Lit.hlsli"
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
-    return Texture.Sample(TextureSampler, input.texCoord);
+    float4 color = sampleBaseColor(transformUv(input.texCoord, tilingOffset));
+
+    if (hasFeature(FEATURE_ALPHA_CLIP)) clip(color.a - extraParams.y);
+
+    if (!hasFeature(FEATURE_TRANSPARENT)) return float4(color.rgb, 1.0f);
+
+    if (flags.z == BLEND_PREMULTIPLY) color.rgb *= color.a;
+    if (flags.z == BLEND_MULTIPLY) color.rgb = lerp(float3(1.0f, 1.0f, 1.0f), color.rgb, color.a);
+
+    return color;
 }

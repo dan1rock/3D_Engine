@@ -14,6 +14,7 @@
 #include "PostProcessing.h"
 #include "EntityManager.h"
 #include "Material.h"
+#include "Texture.h"
 #include "DirectXTex.h"
 #include <d3dcompiler.h>
 #include "imgui_impl_dx11.h"
@@ -74,6 +75,8 @@ bool GraphicsEngine::init()
 	// Ініціалізація менеджеру глобальних ресурсів
 	mGlobalResources->init();
 
+	mShadowClipShader = getPixelShader(L"src\\Shaders\\ShadowPixelShader.hlsl", "main");
+
 	// Ініціалізація карти тіней напрямленого світла
 	mShadowMap = new ShadowMap();
 	if (!mShadowMap->init(2048))
@@ -118,6 +121,14 @@ bool GraphicsEngine::release()
 
 	mRasterStateCullFront->Release();
 	mRasterStateCullBack->Release();
+	mRasterStateCullNone->Release();
+
+	for (ID3D11BlendState* state : mBlendStates)
+	{
+		if (state) state->Release();
+	}
+
+	if (mTransparentDepthState) mTransparentDepthState->Release();
 	mSamplerWrap->Release();
 	mSamplerClamp->Release();
 
@@ -292,7 +303,8 @@ PostProcessing* GraphicsEngine::getPostProcessing()
 bool GraphicsEngine::compileVertexShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength)
 {
 	ID3DBlob* errblob = nullptr;
-	if (FAILED(D3DCompileFromFile(fileName, nullptr, nullptr, entryPoint, "vs_5_0", 0, 0, &mVSBlob, &errblob))) {
+	if (FAILED(D3DCompileFromFile(fileName, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint, "vs_5_0", 0, 0, &mVSBlob, &errblob))) {
+		if (errblob) std::cout << (const char*)errblob->GetBufferPointer() << std::endl;
 		if(errblob) errblob->Release();
 		return false;
 	};
@@ -313,7 +325,8 @@ void GraphicsEngine::releaseVertexShader()
 bool GraphicsEngine::compilePixelShader(const wchar_t* fileName, const char* entryPoint, void** shaderBytecode, SIZE_T* bytecodeLength)
 {
 	ID3DBlob* errblob = nullptr;
-	if (FAILED(D3DCompileFromFile(fileName, nullptr, nullptr, entryPoint, "ps_5_0", 0, 0, &mPSBlob, &errblob))) {
+	if (FAILED(D3DCompileFromFile(fileName, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, entryPoint, "ps_5_0", 0, 0, &mPSBlob, &errblob))) {
+		if (errblob) std::cout << (const char*)errblob->GetBufferPointer() << std::endl;
 		if (errblob) errblob->Release();
 		return false;
 	};
@@ -336,14 +349,106 @@ void GraphicsEngine::setMaterial(Material* material)
 	material->onMaterialSet();
 	mImmDeviceContext->setVertexShader(material->mVertexShader);
 	mImmDeviceContext->setPixelShader(material->mPixelShader);
-	mImmDeviceContext->setRasterizer(material->cullBack ? mRasterStateCullBack : mRasterStateCullFront);
 
-	if (material->mTextures.size() > 0)
+	const MaterialProperties& properties = material->properties;
+
+	// Передній бік малюється з відкиданням задніх граней, задній - навпаки, обидва - без відкидання
+	if (properties.renderFace == RenderFace::Front) mImmDeviceContext->setRasterizer(mRasterStateCullBack);
+	else if (properties.renderFace == RenderFace::Back) mImmDeviceContext->setRasterizer(mRasterStateCullFront);
+	else mImmDeviceContext->setRasterizer(mRasterStateCullNone);
+
+	// Прозорі змішуються з кадром і не пишуть глибину; непрозорі працюють зі стандартними станами
+	if (material->isTransparent())
 	{
-		mImmDeviceContext->setTexture(material->mPixelShader, material->mTextures[0]);
-
-		mImmDeviceContext->setSamplerState(material->clampTexture ? mSamplerClamp : mSamplerWrap);
+		mImmDeviceContext->setBlendState(mBlendStates[(int)properties.blend]);
+		mImmDeviceContext->setDepthStencilState(mTransparentDepthState);
 	}
+	else
+	{
+		mImmDeviceContext->setBlendState(nullptr);
+		mImmDeviceContext->setDepthStencilState(nullptr);
+	}
+
+	// Слот 1 зайнятий картою тіней, тож карти матеріалу йдуть у слот 0 і далі з другого
+	MaterialMap gloss = properties.workflow == MaterialWorkflow::Metallic ? MaterialMap::Metallic : MaterialMap::Specular;
+
+	mImmDeviceContext->setTexture(material->getMap(MaterialMap::Base), 0);
+	mImmDeviceContext->setTexture(material->getMap(gloss), 2);
+	mImmDeviceContext->setTexture(material->getMap(MaterialMap::Normal), 3);
+	mImmDeviceContext->setTexture(material->getMap(MaterialMap::Height), 4);
+	mImmDeviceContext->setTexture(material->getMap(MaterialMap::Occlusion), 5);
+	mImmDeviceContext->setTexture(material->getMap(MaterialMap::Emission), 6);
+	mImmDeviceContext->setTexture(material->getMap(MaterialMap::DetailMask), 7);
+	mImmDeviceContext->setTexture(material->getMap(MaterialMap::DetailAlbedo), 8);
+	mImmDeviceContext->setTexture(material->getMap(MaterialMap::DetailNormal), 9);
+
+	mImmDeviceContext->setSamplerState(mSamplerWrap);
+}
+
+// Готує матеріал для проходу тіней: обрізання за альфою потребує піксельного шейдера й основної карти
+void GraphicsEngine::setShadowMaterial(Material* material)
+{
+	if (material == nullptr || !material->properties.alphaClipping || mShadowClipShader == nullptr)
+	{
+		mImmDeviceContext->setPixelShader(nullptr);
+		return;
+	}
+
+	material->onMaterialSet();
+
+	mImmDeviceContext->setPixelShader(mShadowClipShader);
+	mImmDeviceContext->setTexture(material->getMap(MaterialMap::Base), 0);
+	mImmDeviceContext->setSamplerState(mSamplerWrap);
+}
+
+// Повертає стани змішування й глибини до стандартних після прозорих поверхонь
+void GraphicsEngine::resetRenderStates()
+{
+	mImmDeviceContext->setBlendState(nullptr);
+	mImmDeviceContext->setDepthStencilState(nullptr);
+}
+
+// Встановлює поточний прохід рендеру
+void GraphicsEngine::setRenderPass(RenderPass pass)
+{
+	mRenderPass = pass;
+}
+
+// Повертає поточний прохід рендеру
+RenderPass GraphicsEngine::getRenderPass() const
+{
+	return mRenderPass;
+}
+
+// Ставить небесну текстуру, з якої беруться навколишнє світло й відбиття; nullptr прибирає небо
+void GraphicsEngine::setEnvironmentMap(Texture* texture)
+{
+	mEnvironmentMap = texture;
+}
+
+// Повертає небесну текстуру навколишнього світла
+Texture* GraphicsEngine::getEnvironmentMap() const
+{
+	return mEnvironmentMap;
+}
+
+// Передає шейдерам небо та силу навколишнього світла на цей кадр
+void GraphicsEngine::bindEnvironment()
+{
+	constant* constantData = mGlobalResources->getConstantData();
+
+	constantData->environmentParams[0] = environmentIntensity;
+	constantData->environmentParams[1] = reflectionIntensity;
+	constantData->environmentParams[2] = mEnvironmentMap ? (float)mEnvironmentMap->getMipCount() : 0.0f;
+	constantData->environmentParams[3] = mEnvironmentMap ? 1.0f : 0.0f;
+
+	// Без неба навколишнє світло має сталий колір
+	constantData->ambientColor[0] = 0.0368f;
+	constantData->ambientColor[1] = 0.0423f;
+	constantData->ambientColor[2] = 0.0544f;
+	constantData->ambientColor[3] = 1.0f;
+
+	mImmDeviceContext->setTexture(mEnvironmentMap, 10);
 }
 
 // Встановлює рівень анізотропної фільтрації текстур (1 - фільтрація вимкнена)
@@ -413,6 +518,43 @@ bool GraphicsEngine::createRasterizerStates()
 	hr = GraphicsEngine::get()->mD3dDevice->CreateRasterizerState(&rastDesc, &mRasterStateCullFront);
 
 	if (!SUCCEEDED(hr)) return false;
+
+	rastDesc.CullMode = D3D11_CULL_NONE;
+
+	hr = GraphicsEngine::get()->mD3dDevice->CreateRasterizerState(&rastDesc, &mRasterStateCullNone);
+
+	if (!SUCCEEDED(hr)) return false;
+
+	// Способи змішування прозорих поверхонь для кожного режиму змішування матеріалу
+	D3D11_BLEND sources[4] = { D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_DEST_COLOR };
+	D3D11_BLEND destinations[4] = { D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_ZERO };
+
+	for (int i = 0; i < 4; i++)
+	{
+		D3D11_BLEND_DESC blendDesc = {};
+		blendDesc.RenderTarget[0].BlendEnable = TRUE;
+		blendDesc.RenderTarget[0].SrcBlend = sources[i];
+		blendDesc.RenderTarget[0].DestBlend = destinations[i];
+		blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+		blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+		hr = mD3dDevice->CreateBlendState(&blendDesc, &mBlendStates[i]);
+
+		if (!SUCCEEDED(hr)) return false;
+	}
+
+	D3D11_DEPTH_STENCIL_DESC depthDesc = {};
+	depthDesc.DepthEnable = TRUE;
+	depthDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	depthDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+	hr = mD3dDevice->CreateDepthStencilState(&depthDesc, &mTransparentDepthState);
+
+	if (!SUCCEEDED(hr)) return false;
+
 	return true;
 }
 

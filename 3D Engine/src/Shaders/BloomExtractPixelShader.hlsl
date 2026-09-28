@@ -23,7 +23,8 @@ float4 main(PS_INPUT input) : SV_TARGET
     float threshold = bloomParams.x;
     float knee = max(bloomParams.y, 0.0001f);
 
-    float brightness = max(color.r, max(color.g, color.b));
+	// Кадр лінійний, а поріг задано в гамма-просторі, тож яскравість переводиться туди
+    float brightness = pow(max(max(color.r, max(color.g, color.b)), 0.0f), 1.0f / 2.2f);
 
 	// М'яке коліно робить перехід до світіння плавним замість різкої межі
     float soft = clamp(brightness - threshold + knee, 0.0f, 2.0f * knee);

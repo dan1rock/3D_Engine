@@ -169,6 +169,7 @@
     <ClCompile Include="src\Editor\EditorGrid.cpp" />
     <ClCompile Include="src\Editor\SelectionOutline.cpp" />
     <ClCompile Include="src\Editor\SceneHistory.cpp" />
+    <ClCompile Include="src\Editor\MaterialLibrary.cpp" />
     <ClCompile Include="src\Editor\PrefabLibrary.cpp" />
     <ClCompile Include="src\Engine\Entity\Camera.cpp" />
     <ClCompile Include="src\Engine\Entity\Collider.cpp" />
@@ -244,6 +245,7 @@
     <ClInclude Include="src\Editor\EditorGrid.h" />
     <ClInclude Include="src\Editor\SelectionOutline.h" />
     <ClInclude Include="src\Editor\SceneHistory.h" />
+    <ClInclude Include="src\Editor\MaterialLibrary.h" />
     <ClInclude Include="src\Editor\PrefabLibrary.h" />
     <ClInclude Include="src\Engine\Entity\Camera.h" />
     <ClInclude Include="src\Engine\Entity\Collider.h" />
@@ -377,6 +379,13 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
+    <FxCompile Include="src\Shaders\ShadowPixelShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
     <FxCompile Include="src\Shaders\VertexLayoutShader.hlsl" />
     <FxCompile Include="src\Shaders\VertexShader.hlsl">
       <ShaderModel>5.0</ShaderModel>
@@ -388,6 +397,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
+    <None Include="src\Shaders\Lit.hlsli" />
     <None Include="Demo\Components\packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

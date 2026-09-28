@@ -1,6 +1,7 @@
 #include "SceneManager.h"
 #include "EntityManager.h"
 #include "SceneSerializer.h"
+#include "MaterialLibrary.h"
 #include "Entity.h"
 #include "SkySphere.h"
 #include "DirectionalLight.h"
@@ -19,7 +20,7 @@ const char* SceneManager::FOLDER = "Assets\\Scenes";
 const char* SceneManager::EXTENSION = ".scene";
 
 // Сцена без жодного об'єкта; з неї починається нова сцена
-static const char* EMPTY_SCENE = "{ \"version\": 4, \"materials\": [], \"entities\": [] }";
+static const char* EMPTY_SCENE = "{ \"version\": 6, \"entities\": [] }";
 
 SceneManager::SceneManager()
 {
@@ -98,7 +99,7 @@ bool SceneManager::loadScene(const std::string& nameOrPath)
 		return false;
 	}
 
-	// Кілька запитів за кадр: перемагає останній, як і в Unity
+	// Кілька запитів за кадр: перемагає останній
 	mRequestedPath = path;
 
 	return true;
@@ -146,7 +147,7 @@ std::string SceneManager::createScene(const std::string& name)
 	// Порожня сцена прибирає все, що було, разом з об'єктами, які переживають зміну сцени
 	SceneSerializer::deserialize(EMPTY_SCENE, nullptr, true);
 
-	// Стандартний вміст, як у новій сцені Unity: небо, напрямлене світло та камера
+	// Стандартний вміст нової сцени: небо, напрямлене світло та камера
 	Entity* sky = new Entity();
 	sky->setName("Sky");
 	sky->addComponent<SkySphere>();
@@ -244,6 +245,9 @@ void SceneManager::exit()
 // Читає файл сцени і замінює ним поточну
 bool SceneManager::loadFile(const std::string& path, bool replacePersistent)
 {
+	// Стара сцена з вбудованими матеріалами один раз переходить на файли матеріалів
+	MaterialLibrary::get()->upgradeFile(path);
+
 	std::ifstream file(path);
 
 	if (!file.is_open())

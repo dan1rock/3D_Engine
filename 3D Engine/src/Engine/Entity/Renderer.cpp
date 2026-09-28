@@ -6,13 +6,21 @@
 #include "Entity.h"
 #include "Frustum.h"
 
+// Чи отримують рендер-компоненти власні копії матеріалів
+bool Renderer::sInstancing = false;
+
 Renderer::Renderer()
 {
 }
 
-// Знімає реєстрацію рендер-компонента в EntityManager
+// Знімає реєстрацію рендер-компонента в EntityManager і звільняє власні копії матеріалів
 Renderer::~Renderer()
 {
+	for (unsigned int slot = 0; slot < (unsigned int)mInstances.size(); slot++)
+	{
+		releaseInstance(slot);
+	}
+
 	EntityManager::get()->unregisterRenderer(this);
 }
 
@@ -72,9 +80,77 @@ bool Renderer::isInsideFrustum(const Frustum& frustum, bool sidesOnly)
 // Викликається під час проходу карти тіней: рендерить лише глибину меша
 void Renderer::renderDepth()
 {
-	if (!castShadows) return;
+	if (!castShadows || mMesh == nullptr || mMesh->getIndexBuffer() == nullptr) return;
 
-	renderGeometry();
+	constant* constantData = GraphicsEngine::get()->getGlobalResources()->getConstantData();
+	constantData->model = *mOwner->getTransform()->getMatrix();
+
+	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
+
+	DeviceContext* deviceContext = GraphicsEngine::get()->getImmDeviceContext();
+
+	deviceContext->setVertexBuffer(mMesh->getVertexBuffer());
+	deviceContext->setIndexBuffer(mMesh->getIndexBuffer());
+
+	const std::vector<SubMesh>& subMeshes = mMesh->getSubMeshes();
+
+	// Частини з обрізанням за альфою кидають тінь лише там, де матеріал непрозорий
+	if (subMeshes.empty())
+	{
+		GraphicsEngine::get()->setShadowMaterial(resolveMaterial(0));
+		deviceContext->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);
+		return;
+	}
+
+	for (const SubMesh& subMesh : subMeshes)
+	{
+		GraphicsEngine::get()->setShadowMaterial(resolveMaterial(subMesh.materialSlot));
+		deviceContext->drawIndexedTriangleList(subMesh.indexCount, subMesh.indexStart, 0);
+	}
+}
+
+// Перевіряє, чи серед матеріалів є прозорі, які малюються окремим проходом
+bool Renderer::hasTransparentMaterial()
+{
+	unsigned int slots = getMaterialCount();
+
+	for (unsigned int slot = 0; slot < slots; slot++)
+	{
+		Material* material = resolveMaterial(slot);
+
+		if (material && material->isTransparent()) return true;
+	}
+
+	return false;
+}
+
+// Повертає найбільший порядок сортування серед прозорих матеріалів
+int Renderer::getSortingPriority()
+{
+	int priority = -1000;
+	unsigned int slots = getMaterialCount();
+
+	for (unsigned int slot = 0; slot < slots; slot++)
+	{
+		Material* material = resolveMaterial(slot);
+
+		if (material && material->isTransparent() && material->properties.sortingPriority > priority) priority = material->properties.sortingPriority;
+	}
+
+	return priority == -1000 ? 0 : priority;
+}
+
+// Повертає центр меж меша у світі, за відстанню до якого сортуються прозорі об'єкти
+Vector3 Renderer::getWorldBoundsCenter()
+{
+	Matrix* matrix = mOwner->getTransform()->getMatrix();
+
+	Vector3 localCenter = mMesh ? mMesh->getBoundsCenter() : Vector3();
+
+	return Vector3(
+		localCenter.x * matrix->mat[0][0] + localCenter.y * matrix->mat[1][0] + localCenter.z * matrix->mat[2][0] + matrix->mat[3][0],
+		localCenter.x * matrix->mat[0][1] + localCenter.y * matrix->mat[1][1] + localCenter.z * matrix->mat[2][1] + matrix->mat[3][1],
+		localCenter.x * matrix->mat[0][2] + localCenter.y * matrix->mat[1][2] + localCenter.z * matrix->mat[2][2] + matrix->mat[3][2]);
 }
 
 // Малює весь меш одним викликом тими шейдерами, що вже встановлені, без матеріалу
@@ -93,29 +169,51 @@ void Renderer::renderGeometry()
 	GraphicsEngine::get()->getImmDeviceContext()->drawIndexedTriangleList(mMesh->getIndexBuffer()->getVertexListSize(), 0, 0);
 }
 
-// Встановлює матеріал одразу для всіх частин меша
+// Встановлює спільний матеріал одразу для всіх частин меша
 void Renderer::setMaterial(Material* material)
 {
 	mSharedMaterial = material;
+
+	// Копії старих матеріалів більше не потрібні: наступна копія зробиться вже з нового
+	for (unsigned int slot = 0; slot < (unsigned int)mInstances.size(); slot++)
+	{
+		releaseInstance(slot);
+	}
 }
 
-// Встановлює матеріал для вказаного слота, тобто для частин меша з цим номером матеріалу
+// Встановлює спільний матеріал для вказаного слота, тобто для частин меша з цим номером матеріалу
 void Renderer::setMaterial(unsigned int slot, Material* material)
 {
 	if (mMaterials.size() <= slot) mMaterials.resize(slot + 1, nullptr);
 
 	mMaterials[slot] = material;
+
+	releaseInstance(slot);
 }
 
-// Повертає матеріал, яким слід малювати вказаний слот, з підстановкою запасних варіантів
+// Прибирає матеріали слотів, тож усі частини меша знову малюються матеріалом за замовчуванням
+void Renderer::clearMaterials()
+{
+	mMaterials.clear();
+
+	setMaterial(GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial());
+}
+
+// Повертає матеріал, яким слід малювати вказаний слот: власну копію, якщо вона є, інакше спільний
 Material* Renderer::resolveMaterial(unsigned int slot)
 {
-	if (slot < mMaterials.size() && mMaterials[slot]) return mMaterials[slot];
+	if (slot < mInstances.size() && mInstances[slot]) return mInstances[slot];
 
-	// Частини без власного матеріалу малюються спільним матеріалом
-	if (mSharedMaterial) return mSharedMaterial;
+	return getSharedMaterial(slot);
+}
 
-	return GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+// Звільняє власну копію матеріалу слота, щоб слот знову малювався спільним
+void Renderer::releaseInstance(unsigned int slot)
+{
+	if (slot >= mInstances.size() || mInstances[slot] == nullptr) return;
+
+	delete mInstances[slot];
+	mInstances[slot] = nullptr;
 }
 
 // Встановлює у конвеєр матеріал вказаного слота
@@ -136,32 +234,55 @@ Mesh* Renderer::getMesh()
 	return mMesh;
 }
 
-// Повертає вказівник на матеріал вказаного слота
+// Повертає матеріал слота; у режимі гри це власна копія цього рендер-компонента
 Material* Renderer::getMaterial(unsigned int slot)
 {
-	return resolveMaterial(slot);
+	Material* shared = getSharedMaterial(slot);
+
+	if (!sInstancing) return shared;
+
+	if (mInstances.size() <= slot) mInstances.resize(slot + 1, nullptr);
+
+	if (mInstances[slot] == nullptr)
+	{
+		// Копія належить компоненту: звільняється разом з ним, а не зі зміною сцени
+		Material* instance = new Material(*shared);
+		instance->name = (shared->name.empty() ? std::string("Material") : shared->name) + " (Instance)";
+		instance->dontDeleteOnLoad = true;
+
+		mInstances[slot] = instance;
+	}
+
+	return mInstances[slot];
+}
+
+// Повертає спільний матеріал слота, яким можуть користуватися й інші об'єкти
+Material* Renderer::getSharedMaterial(unsigned int slot)
+{
+	if (slot < mMaterials.size() && mMaterials[slot]) return mMaterials[slot];
+
+	// Частини без власного матеріалу малюються спільним матеріалом усього меша
+	if (mSharedMaterial) return mSharedMaterial;
+
+	return GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
 }
 
 // Повертає кількість слотів матеріалів, які має меш рендер-компонента
 unsigned int Renderer::getMaterialCount()
 {
-	return mMesh ? mMesh->getMaterialCount() : 1;
+	unsigned int count = mMesh ? mMesh->getMaterialCount() : 1;
+
+	return count > 0 ? count : 1;
 }
 
-// Повертає спільний матеріал як є, без підстановки матеріалу за замовчуванням
-Material* Renderer::getSharedMaterial()
+// Вмикає власні копії матеріалів у рендер-компонентів, щоб у режимі гри правки не зачіпали файли матеріалів
+void Renderer::setInstancing(bool enabled)
 {
-	return mSharedMaterial;
+	sInstancing = enabled;
 }
 
-// Повертає матеріал, заданий саме для цього слота, або nullptr, якщо слот бере спільний
-Material* Renderer::getSlotMaterial(unsigned int slot)
+// Перевіряє, чи рендер-компоненти зараз отримують власні копії матеріалів
+bool Renderer::isInstancing()
 {
-	return slot < mMaterials.size() ? mMaterials[slot] : nullptr;
-}
-
-// Повертає кількість слотів, для яких матеріал може бути заданий окремо
-unsigned int Renderer::getSlotMaterialCount()
-{
-	return (unsigned int)mMaterials.size();
+	return sInstancing;
 }

@@ -3,6 +3,7 @@
 #include "SceneSerializer.h"
 #include "InspectorVisitor.h"
 #include "PrefabLibrary.h"
+#include "MaterialLibrary.h"
 #include "SceneManager.h"
 
 #include "EntityManager.h"
@@ -16,6 +17,7 @@
 #include "Mesh.h"
 #include "MeshManager.h"
 #include "TextureManager.h"
+#include "Texture.h"
 #include "GraphicsEngine.h"
 #include "GlobalResources.h"
 #include "ShadowMap.h"
@@ -37,6 +39,8 @@ namespace filesystem = std::experimental::filesystem;
 static const char* HIERARCHY_PAYLOAD = "HIERARCHY_ENTITY";
 // Тип вмісту, що переносить шлях до префаба з панелі ресурсів
 static const char* PREFAB_PAYLOAD = "PREFAB_ASSET";
+// Тип вмісту, що переносить посилання на матеріал з панелі ресурсів
+static const char* MATERIAL_PAYLOAD = "MATERIAL_ASSET";
 
 // Колір префабів у вигляді, зручному для ImGui
 static ImVec4 prefabColor(float alpha = 1.0f)
@@ -215,7 +219,7 @@ void Editor::update()
 		if (Input::getKeyDown('F')) focusSelected();
 		if (Input::getKeyDown(VK_DELETE)) deleteSelected();
 
-		// W, E, R перемикають режим маніпулятора, як у Unity. Поки тримають праву кнопку,
+		// W, E, R перемикають режим маніпулятора. Поки тримають праву кнопку,
 		// ці ж клавіші ведуть камеру, тому режим тоді не міняється
 		if (!Input::getMouseButton(MB_Right))
 		{
@@ -241,6 +245,9 @@ void Editor::update()
 	{
 		recordUndo();
 		mUndoCheckFrames--;
+
+		// Завершена правка матеріалу одразу потрапляє в його файл
+		MaterialLibrary::get()->saveChanged();
 	}
 }
 
@@ -458,7 +465,7 @@ void Editor::drawToolbar()
 	ImGui::SameLine();
 
 	// Пауза має зміст лише під час гри, тож поза нею кнопка сіра. Натиснута пауза підсвічена,
-	// як кнопка-перемикач у Unity
+	// як кнопка-перемикач
 	ImGui::BeginDisabled(!mPlaying);
 
 	if (mPaused) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
@@ -476,7 +483,7 @@ void Editor::drawToolbar()
 
 	ImGui::Separator();
 
-	// Зірочка позначає незбережені зміни, як у заголовку сцени в Unity
+	// Зірочка позначає незбережені зміни сцени
 	if (!mPlaying && !isPrefabMode() && ++mDirtyCheckFrame >= 15)
 	{
 		mDirtyCheckFrame = 0;
@@ -534,6 +541,10 @@ void Editor::drawToolbar()
 		{
 			GraphicsEngine::get()->setAnisotropy((UINT)level);
 		}
+
+		// Сила навколишнього світла й відбиттів неба
+		ImGui::SliderFloat("Environment Intensity", &GraphicsEngine::get()->environmentIntensity, 0.0f, 8.0f);
+		ImGui::SliderFloat("Reflection Intensity", &GraphicsEngine::get()->reflectionIntensity, 0.0f, 1.0f);
 	}
 
 	ImGui::Separator();
@@ -598,7 +609,7 @@ void Editor::drawHierarchy()
 
 	mHierarchyRows = mHierarchyRowsBuilding;
 
-	// Клік по одному з кількох вибраних без перетягування лишає вибраним лише його, як у Unity
+	// Клік по одному з кількох вибраних без перетягування лишає вибраним лише його
 	if (mPendingSingleSelect && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 	{
 		ImGuiIO& io = ImGui::GetIO();
@@ -623,7 +634,7 @@ void Editor::drawEntityNode(Entity* entity)
 	mHierarchyRowsBuilding.push_back(entity);
 	if (entity->getChildren()->empty()) flags |= ImGuiTreeNodeFlags_Leaf;
 
-	// Неактивні об'єкти показуються приглушеним кольором, а частини префабів — блакитним, як в Unity
+	// Неактивні об'єкти показуються приглушеним кольором, а частини префабів — блакитним
 	bool active = entity->isActiveSelf;
 	bool inPrefab = PrefabLibrary::findInstanceRoot(entity) != nullptr;
 	bool colored = !active || inPrefab;
@@ -681,7 +692,7 @@ void Editor::drawDropTarget(Entity* target)
 	float height = max.y - min.y;
 	float mouseY = ImGui::GetIO().MousePos.y;
 
-	// Як у Unity: верхня й нижня чверті рядка ставлять об'єкт поруч, а середина — всередину
+	// Верхня й нижня чверті рядка ставлять об'єкт поруч, а середина — всередину
 	DropZone zone = DropZone::Inside;
 
 	if (mouseY < min.y + height * 0.25f) zone = DropZone::Before;
@@ -858,7 +869,7 @@ void Editor::applyDrop()
 	{
 		if (!canDrop(item, newParent)) continue;
 
-		// Об'єкт лишається там, де був у світі, як у Unity, змінюється лише його батько
+		// Об'єкт лишається там, де був у світі, змінюється лише його батько
 		item->setParent(newParent, true);
 
 		if (newParent) newParent->moveChildBefore(item, before);
@@ -920,7 +931,7 @@ void Editor::drawPrefabBar()
 
 	ImGui::Separator();
 
-	// Керувати префабом можна лише з кореня екземпляра, як і в Unity
+	// Керувати префабом можна лише з кореня екземпляра
 	if (mInstanceRoot != mSelected)
 	{
 		ImGui::TextColored(prefabColor(), "Part of prefab %s", name.c_str());
@@ -961,12 +972,12 @@ void Editor::drawPrefabBar()
 
 	ImGui::SameLine();
 
-	// Відкриває сам префаб для редагування, як кнопка Open в Unity
+	// Відкриває сам префаб для редагування
 	ImGui::BeginDisabled(mPlaying);
 	if (ImGui::Button("Open")) mOpenPrefabRequest = mInstanceRoot->prefabAsset;
 	ImGui::EndDisabled();
 
-	// Перелік змін, як меню Overrides в Unity
+	// Перелік змінених полів екземпляра
 	if (!mOverrides.empty() && ImGui::TreeNode("Overrides"))
 	{
 		for (const std::string& key : mOverrides)
@@ -1172,7 +1183,7 @@ void Editor::drawPrefabModeBar()
 
 	ImVec2 display = ImGui::GetIO().DisplaySize;
 
-	// Смуга стоїть угорі посередині сцени, як смуга режиму префаба в Unity
+	// Смуга стоїть угорі посередині сцени
 	ImGui::SetNextWindowPos(ImVec2(display.x * 0.5f, 10.0f), ImGuiCond_Always, ImVec2(0.5f, 0.0f));
 	ImGui::Begin("Prefab Mode", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize
 		| ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoCollapse);
@@ -1349,10 +1360,16 @@ void Editor::drawInspector()
 
 	if (mSelected == nullptr)
 	{
-		ImGui::TextUnformatted("Nothing selected");
+		// Без вибраного об'єкта інспектор показує вибраний у панелі ресурсів матеріал
+		if (!mInspectedMaterial.empty()) drawMaterialAsset();
+		else ImGui::TextUnformatted("Nothing selected");
+
 		ImGui::End();
 		return;
 	}
+
+	// Вибраний об'єкт заміняє в інспекторі вибраний раніше матеріал
+	mInspectedMaterial.clear();
 
 	// Перевірка, що вибраний об'єкт ще існує у сцені
 	bool alive = false;
@@ -1447,6 +1464,9 @@ void Editor::drawInspector()
 
 		ImGui::PopID();
 	}
+
+	// Матеріали об'єкта редагуються під компонентами
+	drawEntityMaterials(mSelected);
 
 	ImGui::Separator();
 
@@ -1552,158 +1572,428 @@ void Editor::drawRendererAssets(Renderer* renderer)
 	inspectorLabel("Cast Shadows", isOverridden(mComponentKey + "castShadows"));
 	ImGui::Checkbox("##castShadows", &renderer->castShadows);
 
-	// Кожен слот матеріалу редагується окремо
+	ImGui::SeparatorText("Materials");
+
+	// Кожен слот меша має власне поле матеріалу
 	unsigned int slots = renderer->getMaterialCount();
 
 	for (unsigned int slot = 0; slot < slots; slot++)
 	{
-		drawMaterial(renderer, (int)slot);
+		drawMaterialSlot(renderer, slot);
 	}
 }
 
-// Перевіряє, чи матеріалом користується ще хтось, крім вказаного рендер-компонента
-static bool isMaterialShared(Material* material, Renderer* owner)
+// Повертає ім'я матеріалу, яке показує редактор
+static std::string materialName(Material* material)
 {
-	// Матеріал рушія за замовчуванням спільний для всіх об'єктів без власного
-	if (material == GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial()) return true;
+	if (material == nullptr) return "None";
 
-	for (Renderer* other : EntityManager::get()->getRenderers())
+	return material->name.empty() ? std::string("Material") : material->name;
+}
+
+// Малює поле матеріалу слота: вибір файлу матеріалу зі списку або перетягнутого з панелі ресурсів
+void Editor::drawMaterialSlot(Renderer* renderer, unsigned int slot)
+{
+	// Підпис - ім'я частини з файлу моделі, а без нього номер елемента
+	Mesh* mesh = renderer->getMesh();
+	std::string label = "Element " + std::to_string(slot);
+
+	if (mesh && slot < mesh->getMaterialCount() && !mesh->getMaterialName(slot).empty()) label = mesh->getMaterialName(slot);
+
+	Material* shared = renderer->getSharedMaterial(slot);
+
+	// У режимі гри слот показує власну копію матеріалу цього об'єкта
+	Material* shown = mPlaying ? renderer->getMaterial(slot) : shared;
+
+	ImGui::PushID((int)slot);
+
+	inspectorLabel(label.c_str(), isOverridden(mComponentKey + "materials"));
+
+	MaterialLibrary* library = MaterialLibrary::get();
+
+	if (ImGui::BeginCombo("##material", materialName(shown).c_str()))
 	{
-		if (other == owner) continue;
-
-		if (other->getSharedMaterial() == material) return true;
-
-		for (unsigned int slot = 0; slot < other->getSlotMaterialCount(); slot++)
+		if (ImGui::Selectable(MaterialLibrary::DEFAULT_NAME, MaterialLibrary::isDefault(shared)))
 		{
-			if (other->getSlotMaterial(slot) == material) return true;
+			renderer->setMaterial(slot, GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial());
 		}
+
+		for (const std::string& path : library->getPaths())
+		{
+			if (ImGui::Selectable(MaterialLibrary::getName(path).c_str(), shared->assetPath == path))
+			{
+				if (Material* material = library->load(path)) renderer->setMaterial(slot, material);
+			}
+		}
+
+		ImGui::EndCombo();
 	}
 
-	return false;
-}
-
-// Повертає матеріал слота, яким користується лише цей рендер-компонент, за потреби зробивши копію.
-// Інакше правка в інспекторі змінила б усі об'єкти зі спільним матеріалом, зокрема й матеріал рушія
-// за замовчуванням, а в екземплярі префаба не стала б його власною зміною
-Material* Editor::ownMaterial(Renderer* renderer, int slot)
-{
-	Material* material = renderer->getMaterial((unsigned int)slot);
-
-	if (!isMaterialShared(material, renderer)) return material;
-
-	Material* copy = new Material(*material);
-
-	// Слот із власним матеріалом отримує копію сам; інакше він бере спільний матеріал об'єкта,
-	// і копія стає спільною для всіх таких його слотів, як і було до правки
-	if (renderer->getSlotMaterial((unsigned int)slot) == material) renderer->setMaterial((unsigned int)slot, copy);
-	else renderer->setMaterial(copy);
-
-	return copy;
-}
-
-// Малює поля матеріалу
-void Editor::drawMaterial(Renderer* renderer, int slot)
-{
-	Material* material = renderer->getMaterial((unsigned int)slot);
-
-	if (material == nullptr) return;
-
-	ImGui::PushID(slot);
-
-	char label[64] = {};
-	sprintf_s(label, sizeof(label), "Material %d", slot);
-
-	// Матеріал порівнюється з префабом цілим, тож і позначається цілим вузлом
-	bool overridden = isOverridden(mComponentKey + "material") || isOverridden(mComponentKey + "slotMaterials");
-
-	if (overridden) ImGui::PushStyleColor(ImGuiCol_Text, prefabColor());
-
-	bool open = ImGui::TreeNode(label);
-
-	if (overridden) ImGui::PopStyleColor();
-
-	if (open)
+	// Матеріал з панелі ресурсів можна просто покласти на поле
+	if (ImGui::BeginDragDropTarget())
 	{
-		// Поля правляться на копії значень і переносяться в матеріал лише після зміни: спільний
-		// матеріал перед цим замінюється власною копією, щоб правка не зачепила інших
-		float color[4] = { material->color[0], material->color[1], material->color[2], material->color[3] };
-		float ambient = material->ambient;
-		float smoothness = material->smoothness;
-		float shininess = material->shininess;
-		float textureScale = material->textureScale;
-		bool cullBack = material->cullBack;
-		bool clampTexture = material->clampTexture;
-
-		bool changed = false;
-
-		inspectorLabel("Color");
-		changed |= ImGui::ColorEdit4("##color", color);
-		inspectorLabel("Ambient");
-		changed |= ImGui::DragFloat("##ambient", &ambient, 0.01f, 0.0f, 2.0f);
-		inspectorLabel("Smoothness");
-		changed |= ImGui::DragFloat("##smoothness", &smoothness, 0.01f, 0.0f, 1.0f);
-		inspectorLabel("Shininess");
-		changed |= ImGui::DragFloat("##shininess", &shininess, 0.5f, 1.0f, 256.0f);
-		inspectorLabel("Texture Scale");
-		changed |= ImGui::DragFloat("##textureScale", &textureScale, 0.1f, 0.01f, 200.0f);
-		inspectorLabel("Cull Back");
-		changed |= ImGui::Checkbox("##cullBack", &cullBack);
-		inspectorLabel("Clamp");
-		changed |= ImGui::Checkbox("##clamp", &clampTexture);
-
-		int chosenTexture = -1;
-
-		std::wstring texture = material->getTexturePath();
-		std::string current = texture.empty() ? "none" : std::string(texture.begin(), texture.end());
-
-		size_t slash = current.find_last_of("\\/");
-		if (slash != std::string::npos) current = current.substr(slash + 1);
-
-		inspectorLabel("Texture");
-		if (ImGui::BeginCombo("##texture", current.c_str()))
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(MATERIAL_PAYLOAD))
 		{
-			for (size_t i = 0; i < mTexturePaths.size(); i++)
-			{
-				std::string name = mTextureNames[i];
-
-				size_t nameSlash = name.find_last_of("\\/");
-				if (nameSlash != std::string::npos) name = name.substr(nameSlash + 1);
-
-				if (ImGui::Selectable(name.c_str())) chosenTexture = (int)i;
-			}
-
-			ImGui::EndCombo();
+			renderer->setMaterial(slot, library->find((const char*)payload->Data));
 		}
 
-		if (changed || chosenTexture >= 0)
-		{
-			material = ownMaterial(renderer, slot);
-
-			for (int channel = 0; channel < 4; channel++)
-			{
-				material->color[channel] = color[channel];
-			}
-
-			material->ambient = ambient;
-			material->smoothness = smoothness;
-			material->shininess = shininess;
-			material->textureScale = textureScale;
-			material->cullBack = cullBack;
-			material->clampTexture = clampTexture;
-
-			if (chosenTexture >= 0)
-			{
-				// Матеріал показує лише першу текстуру, тому стару треба прибрати
-				while (material->getTextureCount() > 0) material->removeTexture(0);
-
-				material->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(mTexturePaths[(size_t)chosenTexture].c_str()));
-			}
-		}
-
-		ImGui::TreePop();
+		ImGui::EndDragDropTarget();
 	}
 
 	ImGui::PopID();
+}
+
+// Малює редактори всіх матеріалів об'єкта під його компонентами
+void Editor::drawEntityMaterials(Entity* entity)
+{
+	std::vector<Material*> shown;
+
+	for (Component* component : entity->getComponentList())
+	{
+		Renderer* renderer = dynamic_cast<Renderer*>(component);
+
+		if (renderer == nullptr) continue;
+
+		for (unsigned int slot = 0; slot < renderer->getMaterialCount(); slot++)
+		{
+			// У режимі гри правляться власні копії, тож файли матеріалів лишаються як були
+			Material* material = mPlaying ? renderer->getMaterial(slot) : renderer->getSharedMaterial(slot);
+
+			if (std::find(shown.begin(), shown.end(), material) == shown.end()) shown.push_back(material);
+		}
+	}
+
+	for (Material* material : shown)
+	{
+		ImGui::PushID(material);
+		ImGui::Separator();
+
+		std::string title = materialName(material) + " (Material)###material";
+
+		if (ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) drawMaterialEditor(material, mPlaying);
+
+		ImGui::PopID();
+	}
+}
+
+// Малює вибраний у панелі ресурсів файл матеріалу
+void Editor::drawMaterialAsset()
+{
+	MaterialLibrary* library = MaterialLibrary::get();
+
+	Material* material = mInspectedMaterial == MaterialLibrary::DEFAULT_NAME ? GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial() : library->load(mInspectedMaterial);
+
+	if (material == nullptr)
+	{
+		ImGui::TextDisabled("Material file is missing");
+		return;
+	}
+
+	ImGui::Text("%s (Material)", materialName(material).c_str());
+
+	if (!material->assetPath.empty())
+	{
+		// Ім'я поля заповнюється лише тоді, коли його не редагують
+		if (!ImGui::IsAnyItemActive()) strncpy_s(mMaterialNameBuffer, sizeof(mMaterialNameBuffer), material->name.c_str(), _TRUNCATE);
+
+		inspectorLabel("Name");
+
+		// Файл перейменовується, коли ім'я підтвердили клавішею Enter
+		if (ImGui::InputText("##materialName", mMaterialNameBuffer, sizeof(mMaterialNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+		{
+			std::string oldReference = MaterialLibrary::quotedReference(material->assetPath);
+			std::string newPath = library->rename(material, mMaterialNameBuffer);
+
+			if (!newPath.empty())
+			{
+				mInspectedMaterial = newPath;
+
+				// Файл відкритої сцени вже виправлено, тож і збережений стан для порівняння має посилатися на новий шлях
+				std::string newReference = MaterialLibrary::quotedReference(newPath);
+
+				for (size_t at = mSavedScene.find(oldReference); at != std::string::npos; at = mSavedScene.find(oldReference, at + newReference.size()))
+				{
+					mSavedScene.replace(at, oldReference.size(), newReference);
+				}
+			}
+		}
+
+		ImGui::TextDisabled("%s", material->assetPath.c_str());
+	}
+
+	ImGui::Separator();
+
+	drawMaterialEditor(material, false);
+}
+
+// Шейдери, які можна вибрати для матеріалу, як Universal Render Pipeline/Lit, Unlit і прототипна сітка
+static const wchar_t* SHADER_PATHS[] = { L"src\\Shaders\\PixelShader.hlsl", L"src\\Shaders\\UnlitPixelShader.hlsl", L"src\\Shaders\\PrototypePixelShader.hlsl" };
+
+// Повертає номер шейдера матеріалу серед тих, що пропонує інспектор
+static int shaderIndex(Material* material)
+{
+	std::wstring path = material->getPixelShaderPath();
+
+	if (path.find(L"Unlit") != std::wstring::npos) return 1;
+	if (path.find(L"Prototype") != std::wstring::npos) return 2;
+
+	return 0;
+}
+
+// Малює налаштування матеріалу й змінює їх у самому матеріалі; повертає, чи щось змінилося
+bool Editor::drawMaterialEditor(Material* material, bool instance)
+{
+	bool editable = !MaterialLibrary::isDefault(material);
+
+	// Вбудований матеріал спільний для всіх об'єктів без власного, тож його не редагують
+	if (!editable)
+	{
+		ImGui::TextDisabled("Built-in material, can't be edited.");
+		ImGui::TextDisabled("Create one in Assets > Materials and assign it.");
+		ImGui::BeginDisabled();
+	}
+	else if (instance)
+	{
+		ImGui::TextDisabled("Instance: changes are discarded on Stop.");
+	}
+	else if (material->assetPath.empty())
+	{
+		// Матеріал без файлу, створений кодом, можна перетворити на файл матеріалу
+		ImGui::TextDisabled("Saved inside the scene.");
+
+		if (ImGui::Button("Save as Material Asset"))
+		{
+			std::string path = MaterialLibrary::get()->createAsset(material->name.empty() ? "New Material" : material->name, material);
+
+			if (Material* asset = MaterialLibrary::get()->load(path))
+			{
+				for (Renderer* renderer : EntityManager::get()->getRenderers())
+				{
+					for (unsigned int slot = 0; slot < renderer->getMaterialCount(); slot++)
+					{
+						if (renderer->getSharedMaterial(slot) == material) renderer->setMaterial(slot, asset);
+					}
+				}
+			}
+		}
+	}
+
+	// Правки йдуть у копію налаштувань і переносяться в матеріал, лише коли щось справді змінили
+	MaterialProperties p = material->properties;
+
+	Texture* maps[(int)MaterialMap::Count] = {};
+
+	for (int i = 0; i < (int)MaterialMap::Count; i++)
+	{
+		maps[i] = material->getMap((MaterialMap)i);
+	}
+
+	int shader = shaderIndex(material);
+	int originalShader = shader;
+
+	bool changed = false;
+
+	// Перелік режиму малюється як випадний список над цілим числом
+	auto combo = [&](const char* name, const char* id, int& value, const char* items) {
+		inspectorLabel(name);
+		changed |= ImGui::Combo(id, &value, items);
+	};
+
+	combo("Shader", "##shader", shader, "Lit\0Unlit\0Prototype\0");
+
+	bool lit = shader != 1;
+
+	int workflow = (int)p.workflow;
+	int surface = (int)p.surface;
+	int blend = (int)p.blend;
+	int face = (int)p.renderFace;
+	int source = (int)p.smoothnessSource;
+
+	ImGui::SeparatorText("Surface Options");
+
+	if (lit) combo("Workflow Mode", "##workflow", workflow, "Metallic\0Specular\0");
+
+	combo("Surface Type", "##surface", surface, "Opaque\0Transparent\0");
+
+	if (surface == (int)SurfaceType::Transparent) combo("Blending Mode", "##blend", blend, "Alpha\0Premultiply\0Additive\0Multiply\0");
+
+	combo("Render Face", "##face", face, "Front\0Back\0Both\0");
+
+	inspectorLabel("Alpha Clipping");
+	changed |= ImGui::Checkbox("##alphaClipping", &p.alphaClipping);
+
+	if (p.alphaClipping)
+	{
+		inspectorLabel("Threshold");
+		changed |= ImGui::SliderFloat("##cutoff", &p.alphaCutoff, 0.0f, 1.0f);
+	}
+
+	if (lit)
+	{
+		inspectorLabel("Receive Shadows");
+		changed |= ImGui::Checkbox("##receiveShadows", &p.receiveShadows);
+	}
+
+	ImGui::SeparatorText("Surface Inputs");
+
+	changed |= drawMapField("Base Map", "##baseMap", maps[(int)MaterialMap::Base]);
+	inspectorLabel("Base Color");
+	changed |= ImGui::ColorEdit4("##baseColor", p.baseColor);
+
+	if (lit)
+	{
+		// Повзунок металевості чи колір відблиску ховаються, коли їх замінює карта
+		if (workflow == (int)MaterialWorkflow::Metallic)
+		{
+			changed |= drawMapField("Metallic Map", "##metallicMap", maps[(int)MaterialMap::Metallic]);
+
+			if (maps[(int)MaterialMap::Metallic] == nullptr)
+			{
+				inspectorLabel("Metallic");
+				changed |= ImGui::SliderFloat("##metallic", &p.metallic, 0.0f, 1.0f);
+			}
+		}
+		else
+		{
+			changed |= drawMapField("Specular Map", "##specularMap", maps[(int)MaterialMap::Specular]);
+
+			if (maps[(int)MaterialMap::Specular] == nullptr)
+			{
+				inspectorLabel("Specular");
+				changed |= ImGui::ColorEdit3("##specular", p.specularColor);
+			}
+		}
+
+		inspectorLabel("Smoothness");
+		changed |= ImGui::SliderFloat("##smoothness", &p.smoothness, 0.0f, 1.0f);
+
+		combo("Source", "##source", source, workflow == (int)MaterialWorkflow::Metallic ? "Metallic Alpha\0Albedo Alpha\0" : "Specular Alpha\0Albedo Alpha\0");
+
+		changed |= drawMapField("Normal Map", "##normalMap", maps[(int)MaterialMap::Normal]);
+		inspectorLabel("Scale");
+		changed |= ImGui::DragFloat("##normalScale", &p.normalScale, 0.01f);
+
+		changed |= drawMapField("Height Map", "##heightMap", maps[(int)MaterialMap::Height]);
+		inspectorLabel("Scale");
+		changed |= ImGui::SliderFloat("##heightScale", &p.heightScale, 0.005f, 0.08f);
+
+		changed |= drawMapField("Occlusion Map", "##occlusionMap", maps[(int)MaterialMap::Occlusion]);
+		inspectorLabel("Strength");
+		changed |= ImGui::SliderFloat("##occlusion", &p.occlusionStrength, 0.0f, 1.0f);
+
+		inspectorLabel("Emission");
+		changed |= ImGui::Checkbox("##emission", &p.emission);
+
+		if (p.emission)
+		{
+			changed |= drawMapField("Emission Map", "##emissionMap", maps[(int)MaterialMap::Emission]);
+			inspectorLabel("Color");
+			changed |= ImGui::ColorEdit3("##emissionColor", p.emissionColor, ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+		}
+	}
+
+	inspectorLabel("Tiling");
+	changed |= ImGui::DragFloat2("##tiling", p.tiling, 0.05f);
+	inspectorLabel("Offset");
+	changed |= ImGui::DragFloat2("##offset", p.offset, 0.01f);
+
+	if (lit)
+	{
+		ImGui::SeparatorText("Detail Inputs");
+
+		changed |= drawMapField("Mask", "##detailMask", maps[(int)MaterialMap::DetailMask]);
+		changed |= drawMapField("Base Map", "##detailAlbedo", maps[(int)MaterialMap::DetailAlbedo]);
+		inspectorLabel("Scale");
+		changed |= ImGui::SliderFloat("##detailAlbedoScale", &p.detailAlbedoScale, 0.0f, 2.0f);
+		changed |= drawMapField("Normal Map", "##detailNormal", maps[(int)MaterialMap::DetailNormal]);
+		inspectorLabel("Scale");
+		changed |= ImGui::DragFloat("##detailNormalScale", &p.detailNormalScale, 0.01f);
+		inspectorLabel("Tiling");
+		changed |= ImGui::DragFloat2("##detailTiling", p.detailTiling, 0.05f);
+		inspectorLabel("Offset");
+		changed |= ImGui::DragFloat2("##detailOffset", p.detailOffset, 0.01f);
+	}
+
+	ImGui::SeparatorText("Advanced Options");
+
+	if (lit)
+	{
+		inspectorLabel("Spec. Highlights");
+		changed |= ImGui::Checkbox("##specularHighlights", &p.specularHighlights);
+		inspectorLabel("Env. Reflections");
+		changed |= ImGui::Checkbox("##environmentReflections", &p.environmentReflections);
+	}
+
+	inspectorLabel("Sorting Priority");
+	changed |= ImGui::SliderInt("##sortingPriority", &p.sortingPriority, -50, 50);
+
+	if (changed && editable)
+	{
+		p.workflow = (MaterialWorkflow)workflow;
+		p.surface = (SurfaceType)surface;
+		p.blend = (BlendMode)blend;
+		p.renderFace = (RenderFace)face;
+		p.smoothnessSource = (SmoothnessSource)source;
+
+		material->properties = p;
+
+		for (int i = 0; i < (int)MaterialMap::Count; i++)
+		{
+			material->setMap((MaterialMap)i, maps[i]);
+		}
+
+		if (shader != originalShader) material->setPixelShader(GraphicsEngine::get()->getPixelShader(SHADER_PATHS[shader], "main"));
+	}
+
+	if (!editable) ImGui::EndDisabled();
+
+	return changed && editable;
+}
+
+// Малює вибір текстури для карти матеріалу; повертає true, якщо вибрано іншу
+bool Editor::drawMapField(const char* label, const char* id, Texture*& map)
+{
+	std::string current = "None";
+
+	if (map)
+	{
+		std::wstring path = map->getFullPath();
+		current = std::string(path.begin(), path.end());
+
+		size_t slash = current.find_last_of("\\/");
+		if (slash != std::string::npos) current = current.substr(slash + 1);
+	}
+
+	inspectorLabel(label);
+
+	bool changed = false;
+
+	if (ImGui::BeginCombo(id, current.c_str()))
+	{
+		if (ImGui::Selectable("None", map == nullptr))
+		{
+			map = nullptr;
+			changed = true;
+		}
+
+		for (size_t i = 0; i < mTexturePaths.size(); i++)
+		{
+			std::string name = mTextureNames[i];
+
+			size_t slash = name.find_last_of("\\/");
+			if (slash != std::string::npos) name = name.substr(slash + 1);
+
+			if (ImGui::Selectable(name.c_str()))
+			{
+				map = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(mTexturePaths[i].c_str());
+				changed = true;
+			}
+		}
+
+		ImGui::EndCombo();
+	}
+
+	return changed;
 }
 
 // Малює список ресурсів проєкту
@@ -1725,7 +2015,7 @@ void Editor::drawAssets()
 		{
 			ImGui::PushID(path.c_str());
 
-			// Подвійний клік відкриває сцену, як в Unity; відкрита сцена підсвічена
+			// Подвійний клік відкриває сцену; відкрита сцена підсвічена
 			if (ImGui::Selectable(SceneManager::getSceneName(path).c_str(), path == scenes->getActiveScenePath(), ImGuiSelectableFlags_AllowDoubleClick)
 				&& ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 			{
@@ -1751,11 +2041,11 @@ void Editor::drawAssets()
 			ImGui::PushID(path.c_str());
 			ImGui::PushStyleColor(ImGuiCol_Text, prefabColor());
 
-			// Екземпляр створюється перетягуванням, як в Unity. Подвійного кліку тут немає: другий клік
+			// Екземпляр створюється перетягуванням. Подвійного кліку тут немає: другий клік
 			// одразу перед перетягуванням зараховувався б як подвійний і ставив би зайвий екземпляр
 			ImGui::Selectable(name.c_str());
 
-			// Подвійний клік відкриває префаб для редагування, як в Unity; сам перехід чекає,
+			// Подвійний клік відкриває префаб для редагування; сам перехід чекає,
 			// поки кнопку відпустять, щоб не спрацювати на початку перетягування
 			if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) mPendingPrefabOpen = path;
 
@@ -1793,6 +2083,76 @@ void Editor::drawAssets()
 			}
 
 			ImGui::EndDragDropTarget();
+		}
+	}
+
+	if (ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		MaterialLibrary* library = MaterialLibrary::get();
+
+		// Вбудований матеріал видно разом з файлами, але він лише для перегляду
+		std::vector<std::string> entries(1, MaterialLibrary::DEFAULT_NAME);
+		entries.insert(entries.end(), library->getPaths().begin(), library->getPaths().end());
+
+		for (const std::string& entry : entries)
+		{
+			bool builtIn = entry == MaterialLibrary::DEFAULT_NAME;
+			std::string name = builtIn ? entry : MaterialLibrary::getName(entry);
+
+			ImGui::PushID(entry.c_str());
+
+			if (builtIn) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+
+			// Клік показує матеріал в інспекторі замість вибраного об'єкта
+			if (ImGui::Selectable(name.c_str(), mInspectedMaterial == entry && mSelected == nullptr))
+			{
+				selectOnly(nullptr);
+				mInspectedMaterial = entry;
+			}
+
+			if (builtIn) ImGui::PopStyleColor();
+
+			// Матеріал перетягують на поле слота в інспекторі
+			if (ImGui::BeginDragDropSource())
+			{
+				ImGui::SetDragDropPayload(MATERIAL_PAYLOAD, entry.c_str(), entry.size() + 1);
+				ImGui::TextUnformatted(name.c_str());
+				ImGui::EndDragDropSource();
+			}
+
+			ImGui::PopID();
+		}
+
+		if (ImGui::Button("Create Material", ImVec2(-1.0f, 0.0f)))
+		{
+			strcpy_s(mNewMaterialName, sizeof(mNewMaterialName), "New Material");
+			ImGui::OpenPopup("Create Material");
+		}
+
+		// Новий матеріал отримує типові значення і одразу відкривається в інспекторі
+		if (ImGui::BeginPopup("Create Material"))
+		{
+			if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+
+			bool create = ImGui::InputText("##newMaterial", mNewMaterialName, sizeof(mNewMaterialName), ImGuiInputTextFlags_EnterReturnsTrue);
+
+			ImGui::SameLine();
+			create |= ImGui::Button("Create");
+
+			if (create)
+			{
+				std::string path = library->createAsset(mNewMaterialName);
+
+				if (!path.empty())
+				{
+					selectOnly(nullptr);
+					mInspectedMaterial = path;
+				}
+
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
 		}
 	}
 
@@ -1864,6 +2224,9 @@ void Editor::play()
 
 	mPlayView = mCamera.getView();
 
+	// У режимі гри кожен рендер-компонент отримує власні копії матеріалів
+	Renderer::setInstancing(true);
+
 	mPlaying = true;
 	mPaused = false;
 }
@@ -1873,6 +2236,9 @@ void Editor::stop()
 {
 	mPlaying = false;
 	mPaused = false;
+
+	// Копії матеріалів зникають разом з об'єктами гри, а відновлена сцена знову малюється спільними
+	Renderer::setInstancing(false);
 
 	// На паузі камеру редактора могли відвести; редагування продовжується з того місця, де його лишили
 	mCamera.setView(mPlayView);
@@ -1945,7 +2311,7 @@ void Editor::updateSelection()
 	{
 		Entity* picked = Gizmo::pick(io.MousePos.x, io.MousePos.y);
 
-		// Ctrl чи Shift додають об'єкт до вибору або прибирають з нього, як у сцені Unity
+		// Ctrl чи Shift додають об'єкт до вибору або прибирають з нього
 		if (io.KeyCtrl || io.KeyShift)
 		{
 			if (picked) toggleSelected(picked);
@@ -1964,7 +2330,7 @@ void Editor::renderOverlay(SwapChain* swapChain, unsigned int width, unsigned in
 	// Поки гра йде, допоміжна геометрія заважала б; на паузі редагують, тож вона потрібна
 	if (!mEnabled || (mPlaying && !mPaused)) return;
 
-	// Префаб показується без сцени навколо, тож сітка дає відчуття землі та масштабу, як у Unity
+	// Префаб показується без сцени навколо, тож сітка дає відчуття землі та масштабу
 	if (isPrefabMode()) mGrid.render(swapChain);
 
 	syncSelection();
@@ -2112,7 +2478,7 @@ void Editor::toggleSelected(Entity* entity)
 	updateSelectionSet();
 }
 
-// Вибирає рядки дерева від опорного до вказаного, як Shift у Unity
+// Вибирає рядки дерева від опорного до вказаного, як при затиснутому Shift
 void Editor::selectRange(Entity* entity)
 {
 	auto from = std::find(mHierarchyRows.begin(), mHierarchyRows.end(), mSelectionAnchor);
@@ -2223,7 +2589,7 @@ void Editor::handleShortcuts()
 	if (ImGui::IsKeyPressed(ImGuiKey_V, false)) pasteClipboard(mClipboard);
 	if (ImGui::IsKeyPressed(ImGuiKey_A, false)) selectAll();
 
-	// Гра запускається й зупиняється так само, як у Unity; у режимі префаба гри немає
+	// Ctrl+P запускає й зупиняє гру, Ctrl+Shift+P ставить на паузу; у режимі префаба гри немає
 	if (ImGui::IsKeyPressed(ImGuiKey_P, false) && !isPrefabMode())
 	{
 		if (shift) setPaused(!mPaused);
@@ -2309,6 +2675,9 @@ void Editor::undo()
 
 	if (!mHistory.undo(selection, active)) return;
 
+	// Скасована правка матеріалу теж записується в його файл
+	MaterialLibrary::get()->saveChanged();
+
 	// Знищені й відновлені об'єкти мають нові адреси, тож старі джерела копіювання вже не ті
 	mSceneGeneration++;
 
@@ -2326,6 +2695,8 @@ void Editor::redo()
 	int active = -1;
 
 	if (!mHistory.redo(selection, active)) return;
+
+	MaterialLibrary::get()->saveChanged();
 
 	mSceneGeneration++;
 
@@ -2520,7 +2891,7 @@ void Editor::duplicateSelection()
 {
 	syncSelection();
 
-	// Буфер копіювання при цьому не змінюється, як у Unity
+	// Буфер копіювання при цьому не змінюється
 	Clipboard clipboard;
 	copySelection(clipboard);
 

@@ -13,6 +13,9 @@ public:
 	// Створює текстуру з файлу
 	Texture(const wchar_t* fullPath);
 	~Texture();
+
+	// Повертає кількість mip-рівнів текстури
+	unsigned int getMipCount() const;
 private:
 	// Створює текстуру з повним ланцюжком mip-рівнів, згенерованим відеокартою
 	bool createWithMipMaps(const DirectX::ScratchImage& imageData);

@@ -15,6 +15,7 @@ void GlobalResources::init()
 
     mDefaultMaterial = new Material();
 	mDefaultMaterial->dontDeleteOnLoad = true;
+	mDefaultMaterial->name = "DefaultMaterial";
 }
 
 // Звільняє глобальний константний буфер

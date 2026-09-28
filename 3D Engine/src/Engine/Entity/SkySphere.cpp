@@ -12,6 +12,8 @@ SkySphere::SkySphere()
 
 SkySphere::~SkySphere()
 {
+	// Знищене небо більше не освітлює сцену
+	if (mSkyTexture && GraphicsEngine::get()->getEnvironmentMap() == mSkyTexture) GraphicsEngine::get()->setEnvironmentMap(nullptr);
 }
 
 // Викликається при активації компонента: створює матеріал, завантажує текстуру та меш, масштабує об'єкт
@@ -19,8 +21,16 @@ void SkySphere::awake()
 {
 	Material* material = new Material();
 	material->setPixelShader(GraphicsEngine::get()->getPixelShader(L"src\\Shaders\\UnlitPixelShader.hlsl", "main"));
-	material->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\HDR_029_Sky_Cloudy_Bg.jpg"));
-	material->cullBack = false;
+
+	mSkyTexture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(L"Assets\\Textures\\HDR_029_Sky_Cloudy_Bg.jpg");
+
+	material->setMap(MaterialMap::Base, mSkyTexture);
+
+	// Камера всередині сфери, тож видно її внутрішній бік
+	material->properties.renderFace = RenderFace::Back;
+
+	// Небо освітлює сцену й відбивається в ній
+	GraphicsEngine::get()->setEnvironmentMap(mSkyTexture);
 
 	setMaterial(material);
 
@@ -40,6 +50,9 @@ void SkySphere::awake()
 // Викликається для рендеру: тимчасово зміщує камеру в центр, рендерить небо, повертає камеру назад
 void SkySphere::render()
 {
+	// Небо непрозоре, тож у проході прозорих його немає
+	if (GraphicsEngine::get()->getRenderPass() != RenderPass::Opaque) return;
+
 	Vector3 cameraTranslation = GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.getTranslation();
 	GraphicsEngine::get()->getGlobalResources()->getConstantData()->view.setTranslation(Vector3());
 

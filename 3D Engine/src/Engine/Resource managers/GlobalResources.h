@@ -31,6 +31,11 @@ struct constant {
 	// Номер каскаду, який зараз рендериться, та ширина зони змішування каскадів
 	float cascadeParams[4];
 	unsigned int time;
+	float timePadding[3];
+	// Сила навколишнього світла, сила відбиттів, кількість mip-рівнів неба і чи є небо
+	float environmentParams[4];
+	// Навколишнє світло без неба, вже в лінійному просторі
+	float ambientColor[4];
 };
 
 class GlobalResources

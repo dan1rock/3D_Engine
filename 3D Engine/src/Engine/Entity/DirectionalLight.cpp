@@ -1,4 +1,5 @@
 #include "DirectionalLight.h"
+#include <cmath>
 #include "Entity.h"
 #include "GraphicsEngine.h"
 #include "GlobalResources.h"
@@ -54,9 +55,14 @@ void DirectionalLight::updateLight()
 	constantData->lightPos[1] = position.y;
 	constantData->lightPos[2] = position.z;
 
-	constantData->lightColor[0] = color[0] * intensity;
-	constantData->lightColor[1] = color[1] * intensity;
-	constantData->lightColor[2] = color[2] * intensity;
+	// Колір задано в sRGB, а освітлення рахується в лінійному просторі
+	for (int i = 0; i < 3; i++)
+	{
+		float c = color[i];
+		float linear = c <= 0.04045f ? c / 12.92f : powf((c + 0.055f) / 1.055f, 2.4f);
+
+		constantData->lightColor[i] = linear * intensity;
+	}
 
 	GraphicsEngine::get()->getGlobalResources()->updateConstantBuffer();
 }

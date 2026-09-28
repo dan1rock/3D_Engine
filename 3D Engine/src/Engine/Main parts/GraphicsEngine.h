@@ -20,6 +20,9 @@ class GlobalResources;
 class ShadowMap;
 class PostProcessing;
 
+// Прохід рендеру: спершу непрозорі поверхні, потім прозорі
+enum class RenderPass { Opaque, Transparent };
+
 class GraphicsEngine
 {
 public:
@@ -74,6 +77,26 @@ public:
 
 	// Встановлює матеріал в шейдерах
 	void setMaterial(Material* material);
+	// Готує матеріал для проходу тіней: обрізання за альфою потребує піксельного шейдера й основної карти
+	void setShadowMaterial(Material* material);
+	// Повертає стани змішування й глибини до стандартних після прозорих поверхонь
+	void resetRenderStates();
+
+	// Встановлює поточний прохід рендеру
+	void setRenderPass(RenderPass pass);
+	// Повертає поточний прохід рендеру
+	RenderPass getRenderPass() const;
+
+	// Ставить небесну текстуру, з якої беруться навколишнє світло й відбиття; nullptr прибирає небо
+	void setEnvironmentMap(Texture* texture);
+	// Повертає небесну текстуру навколишнього світла
+	Texture* getEnvironmentMap() const;
+	// Передає шейдерам небо та силу навколишнього світла на цей кадр
+	void bindEnvironment();
+
+	// Сила навколишнього світла й відбиттів неба
+	float environmentIntensity = 1.0f;
+	float reflectionIntensity = 1.0f;
 
 	// Встановлює рівень анізотропної фільтрації текстур (1 - фільтрація вимкнена)
 	void setAnisotropy(UINT level);
@@ -101,6 +124,17 @@ private:
 
 	ID3D11RasterizerState* mRasterStateCullFront = nullptr;
 	ID3D11RasterizerState* mRasterStateCullBack = nullptr;
+	ID3D11RasterizerState* mRasterStateCullNone = nullptr;
+
+	// Стани змішування прозорих матеріалів у порядку BlendMode
+	ID3D11BlendState* mBlendStates[4] = {};
+	// Прозорі поверхні перевіряють глибину, але не записують її
+	ID3D11DepthStencilState* mTransparentDepthState = nullptr;
+	// Піксельний шейдер тіней для матеріалів з обрізанням за альфою
+	PixelShader* mShadowClipShader = nullptr;
+
+	Texture* mEnvironmentMap = nullptr;
+	RenderPass mRenderPass = RenderPass::Opaque;
 
 	ID3D11SamplerState* mSamplerWrap = nullptr;
 	ID3D11SamplerState* mSamplerClamp = nullptr;

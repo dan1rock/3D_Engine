@@ -12,10 +12,12 @@
 #include "Mesh.h"
 #include "MeshManager.h"
 #include "TextureManager.h"
+#include "Texture.h"
 #include "DirectionalLight.h"
 #include "RigidBody.h"
 #include "GraphicsEngine.h"
 #include "GlobalResources.h"
+#include "MaterialLibrary.h"
 
 #include <fstream>
 #include <sstream>
@@ -25,7 +27,7 @@
 #include <iostream>
 
 // Номер формату: змінюється, коли файли старих версій більше не читаються так само
-static const int SCENE_VERSION = 4;
+static const int SCENE_VERSION = MaterialLibrary::REFERENCE_VERSION;
 
 // Переводить вузький рядок у широкий, бо шляхи ресурсів рушій приймає як wchar_t
 static std::wstring toWide(const std::string& text)
@@ -56,31 +58,99 @@ static std::string toRelativePath(const std::wstring& fullPath)
 	return path;
 }
 
+// Назви режимів матеріалу у файлі; збігаються з назвами в інспекторі
+static const char* WORKFLOW_NAMES[] = { "Metallic", "Specular" };
+static const char* SURFACE_NAMES[] = { "Opaque", "Transparent" };
+static const char* BLEND_NAMES[] = { "Alpha", "Premultiply", "Additive", "Multiply" };
+static const char* FACE_NAMES[] = { "Front", "Back", "Both" };
+static const char* SMOOTHNESS_SOURCE_NAMES[] = { "MetallicAlpha", "AlbedoAlpha" };
+
+// Ключі карт матеріалу у файлі в порядку MaterialMap
+static const char* MAP_KEYS[] = { "baseMap", "metallicMap", "specularMap", "normalMap", "heightMap", "occlusionMap", "emissionMap", "detailMask", "detailAlbedoMap", "detailNormalMap" };
+
+// Повертає номер назви режиму, або запасний, якщо назву не впізнано
+static int indexOfName(const JsonValue& value, const char* const* names, int count, int fallback)
+{
+	std::string name = value.asString();
+
+	for (int i = 0; i < count; i++)
+	{
+		if (name == names[i]) return i;
+	}
+
+	return fallback;
+}
+
+// Записує кілька чисел масивом в один рядок
+static JsonValue floatsToJson(const float* values, int count)
+{
+	JsonValue out = JsonValue::array();
+
+	for (int i = 0; i < count; i++)
+	{
+		out.push(values[i]);
+	}
+
+	return out;
+}
+
+// Читає масив чисел, лишаючи поточні значення там, де їх немає
+static void jsonToFloats(const JsonValue& value, float* values, int count)
+{
+	if (value.getType() != JsonValue::Type::Array) return;
+
+	for (int i = 0; i < count && (size_t)i < value.size(); i++)
+	{
+		values[i] = value.at((size_t)i).asFloat(values[i]);
+	}
+}
+
 // Складає опис одного матеріалу
 JsonValue SceneSerializer::writeMaterial(Material* material)
 {
+	const MaterialProperties& p = material->properties;
+
 	JsonValue out = JsonValue::object();
 
-	JsonValue color = JsonValue::array();
-	color.push(material->color[0]);
-	color.push(material->color[1]);
-	color.push(material->color[2]);
-	color.push(material->color[3]);
+	out.set("workflow", WORKFLOW_NAMES[(int)p.workflow]);
+	out.set("surface", SURFACE_NAMES[(int)p.surface]);
+	out.set("blend", BLEND_NAMES[(int)p.blend]);
+	out.set("renderFace", FACE_NAMES[(int)p.renderFace]);
+	out.set("alphaClipping", p.alphaClipping);
+	out.set("alphaCutoff", p.alphaCutoff);
+	out.set("receiveShadows", p.receiveShadows);
 
-	out.set("color", color);
-	out.set("ambient", material->ambient);
-	out.set("smoothness", material->smoothness);
-	out.set("shininess", material->shininess);
-	out.set("textureScale", material->textureScale);
-	out.set("cullBack", material->cullBack);
-	out.set("clampTexture", material->clampTexture);
+	out.set("baseColor", floatsToJson(p.baseColor, 4));
+	out.set("metallic", p.metallic);
+	out.set("smoothness", p.smoothness);
+	out.set("smoothnessSource", SMOOTHNESS_SOURCE_NAMES[(int)p.smoothnessSource]);
+	out.set("specularColor", floatsToJson(p.specularColor, 3));
+	out.set("normalScale", p.normalScale);
+	out.set("heightScale", p.heightScale);
+	out.set("occlusionStrength", p.occlusionStrength);
+	out.set("emission", p.emission);
+	out.set("emissionColor", floatsToJson(p.emissionColor, 3));
+	out.set("tiling", floatsToJson(p.tiling, 2));
+	out.set("offset", floatsToJson(p.offset, 2));
 
-	std::wstring texturePath = material->getTexturePath();
+	out.set("detailAlbedoScale", p.detailAlbedoScale);
+	out.set("detailNormalScale", p.detailNormalScale);
+	out.set("detailTiling", floatsToJson(p.detailTiling, 2));
+	out.set("detailOffset", floatsToJson(p.detailOffset, 2));
 
-	if (!texturePath.empty()) out.set("texture", toRelativePath(texturePath));
+	out.set("specularHighlights", p.specularHighlights);
+	out.set("environmentReflections", p.environmentReflections);
+	out.set("sortingPriority", p.sortingPriority);
 
-	// Нестандартний піксельний шейдер треба зберегти: інакше матеріал відновиться зі звичайним,
-	// а той по-іншому змішує текстуру з кольором і малює, наприклад, прототипну сітку чорною
+	// Карти пишуться шляхами файлів; відсутня карта в описі не з'являється
+	for (int i = 0; i < (int)MaterialMap::Count; i++)
+	{
+		Texture* texture = material->getMap((MaterialMap)i);
+
+		if (texture) out.set(MAP_KEYS[i], toRelativePath(texture->getFullPath()));
+	}
+
+	// Нестандартний піксельний шейдер треба зберегти: інакше матеріал відновиться зі звичайним
 	std::wstring shaderPath = material->getPixelShaderPath();
 
 	if (!shaderPath.empty()) out.set("shader", toRelativePath(shaderPath));
@@ -88,37 +158,64 @@ JsonValue SceneSerializer::writeMaterial(Material* material)
 	return out;
 }
 
-// Переносить у матеріал поля з опису, замінюючи його текстури
+// Переносить у матеріал поля з опису, замінюючи всі його налаштування й карти
 void SceneSerializer::readMaterial(Material* material, const JsonValue& data)
 {
-	const JsonValue& color = data.get("color");
+	// Відсутнє в описі поле отримує типове значення, а не лишається від попереднього стану
+	MaterialProperties p;
 
-	if (color.getType() == JsonValue::Type::Array && color.size() >= 4)
+	p.workflow = (MaterialWorkflow)indexOfName(data.get("workflow"), WORKFLOW_NAMES, 2, 0);
+	p.surface = (SurfaceType)indexOfName(data.get("surface"), SURFACE_NAMES, 2, 0);
+	p.blend = (BlendMode)indexOfName(data.get("blend"), BLEND_NAMES, 4, 0);
+	p.renderFace = (RenderFace)indexOfName(data.get("renderFace"), FACE_NAMES, 3, 0);
+	p.alphaClipping = data.get("alphaClipping").asBool(p.alphaClipping);
+	p.alphaCutoff = data.get("alphaCutoff").asFloat(p.alphaCutoff);
+	p.receiveShadows = data.get("receiveShadows").asBool(p.receiveShadows);
+
+	jsonToFloats(data.get("baseColor"), p.baseColor, 4);
+	p.metallic = data.get("metallic").asFloat(p.metallic);
+	p.smoothness = data.get("smoothness").asFloat(p.smoothness);
+	p.smoothnessSource = (SmoothnessSource)indexOfName(data.get("smoothnessSource"), SMOOTHNESS_SOURCE_NAMES, 2, 0);
+	jsonToFloats(data.get("specularColor"), p.specularColor, 3);
+	p.normalScale = data.get("normalScale").asFloat(p.normalScale);
+	p.heightScale = data.get("heightScale").asFloat(p.heightScale);
+	p.occlusionStrength = data.get("occlusionStrength").asFloat(p.occlusionStrength);
+	p.emission = data.get("emission").asBool(p.emission);
+	jsonToFloats(data.get("emissionColor"), p.emissionColor, 3);
+	jsonToFloats(data.get("tiling"), p.tiling, 2);
+	jsonToFloats(data.get("offset"), p.offset, 2);
+
+	p.detailAlbedoScale = data.get("detailAlbedoScale").asFloat(p.detailAlbedoScale);
+	p.detailNormalScale = data.get("detailNormalScale").asFloat(p.detailNormalScale);
+	jsonToFloats(data.get("detailTiling"), p.detailTiling, 2);
+	jsonToFloats(data.get("detailOffset"), p.detailOffset, 2);
+
+	p.specularHighlights = data.get("specularHighlights").asBool(p.specularHighlights);
+	p.environmentReflections = data.get("environmentReflections").asBool(p.environmentReflections);
+	p.sortingPriority = data.get("sortingPriority").asInt(p.sortingPriority);
+
+	// Старі файли мали один колір, одну текстуру з масштабом і прапорець відкидання граней
+	if (!data.has("baseColor"))
 	{
-		for (int channel = 0; channel < 4; channel++)
-		{
-			material->color[channel] = color.at((size_t)channel).asFloat(material->color[channel]);
-		}
+		jsonToFloats(data.get("color"), p.baseColor, 4);
+
+		float scale = data.get("textureScale").asFloat(1.0f);
+		p.tiling[0] = scale;
+		p.tiling[1] = scale;
+
+		if (!data.get("cullBack").asBool(true)) p.renderFace = RenderFace::Back;
 	}
 
-	material->ambient = data.get("ambient").asFloat(material->ambient);
-	material->smoothness = data.get("smoothness").asFloat(material->smoothness);
-	material->shininess = data.get("shininess").asFloat(material->shininess);
-	material->textureScale = data.get("textureScale").asFloat(material->textureScale);
-	material->cullBack = data.get("cullBack").asBool(material->cullBack);
-	material->clampTexture = data.get("clampTexture").asBool(material->clampTexture);
+	material->properties = p;
 
-	// Матеріал можуть оновлювати на місці, тож старі текстури прибираються, а не доповнюються
-	while (material->getTextureCount() > 0)
+	for (int i = 0; i < (int)MaterialMap::Count; i++)
 	{
-		material->removeTexture(0);
-	}
+		std::string path = data.get(MAP_KEYS[i]).asString();
 
-	std::string texture = data.get("texture").asString();
+		// Стара єдина текстура стає основною картою
+		if (i == (int)MaterialMap::Base && path.empty()) path = data.get("texture").asString();
 
-	if (!texture.empty())
-	{
-		material->addTexture(GraphicsEngine::get()->getTextureManager()->createTextureFromFile(toWide(texture).c_str()));
+		material->setMap((MaterialMap)i, path.empty() ? nullptr : GraphicsEngine::get()->getTextureManager()->createTextureFromFile(toWide(path).c_str()));
 	}
 
 	std::string shader = data.get("shader").asString();
@@ -129,29 +226,28 @@ void SceneSerializer::readMaterial(Material* material, const JsonValue& data)
 	}
 }
 
-// Номери об'єктів і спільна таблиця матеріалів, які набираються під час запису
+// Номери об'єктів, які набираються під час запису, та реєстр матеріалів без файлу для історії змін
 struct WriteContext
 {
 	std::unordered_map<Entity*, int> indices;
-	std::unordered_map<Material*, int> materialIndices;
-	JsonValue materials = JsonValue::array();
-	Material* defaultMaterial = nullptr;
+	MaterialRegistry* registry = nullptr;
+	std::vector<Material*> embedded;
 
-	// Повертає номер матеріалу в таблиці, а -1 означає спільний матеріал рушія за замовчуванням
-	int materialIndex(Material* material)
+	// Повертає посилання на матеріал: DefaultMaterial, шлях файлу, або сам матеріал без файлу; для історії змін - номер у реєстрі
+	JsonValue materialReference(Material* material)
 	{
-		if (material == defaultMaterial) return -1;
+		std::string reference = MaterialLibrary::referenceOf(material);
 
-		auto it = materialIndices.find(material);
+		if (!reference.empty()) return JsonValue(reference);
 
-		if (it != materialIndices.end()) return it->second;
+		if (registry == nullptr) return SceneSerializer::writeMaterial(material);
 
-		int newIndex = (int)materials.size();
+		embedded.push_back(material);
 
-		materialIndices[material] = newIndex;
-		materials.push(SceneSerializer::writeMaterial(material));
+		JsonValue out = JsonValue::object();
+		out.set("embedded", registry->idOf(material));
 
-		return newIndex;
+		return out;
 	}
 };
 
@@ -237,29 +333,15 @@ static JsonValue writeEntity(Entity* entity, WriteContext& context, bool prefabR
 
 			componentValue.set("castShadows", renderer->castShadows);
 
-			// Спільний матеріал і лише ті слоти, яким задано власний, як і в самому компоненті
-			if (Material* shared = renderer->getSharedMaterial())
+			// Спільний матеріал кожного слота; копії режиму гри не записуються
+			JsonValue materialList = JsonValue::array();
+
+			for (unsigned int slot = 0; slot < renderer->getMaterialCount(); slot++)
 			{
-				componentValue.set("material", context.materialIndex(shared));
+				materialList.push(context.materialReference(renderer->getSharedMaterial(slot)));
 			}
 
-			JsonValue slotList = JsonValue::array();
-
-			for (unsigned int slot = 0; slot < renderer->getSlotMaterialCount(); slot++)
-			{
-				Material* material = renderer->getSlotMaterial(slot);
-
-				if (material == nullptr) continue;
-
-				JsonValue slotValue = JsonValue::object();
-
-				slotValue.set("slot", (int)slot);
-				slotValue.set("material", context.materialIndex(material));
-
-				slotList.push(slotValue);
-			}
-
-			if (slotList.size() > 0) componentValue.set("slotMaterials", slotList);
+			componentValue.set("materials", materialList);
 		}
 
 		// Решту полів компонент записує сам, бо лише він знає, що саме варто зберігати
@@ -289,44 +371,6 @@ int MaterialRegistry::idOf(Material* material)
 	return id;
 }
 
-// Замінює в описі рендер-компонентів номери з таблиці запису на номери реєстру
-static void remapMaterials(JsonValue& entityValue, const std::vector<Material*>& table, MaterialRegistry& registry)
-{
-	if (!entityValue.has("components")) return;
-
-	// -1 лишається спільним матеріалом рушія за замовчуванням
-	auto remap = [&](int index) { return index >= 0 && index < (int)table.size() ? registry.idOf(table[index]) : index; };
-
-	const JsonValue& components = entityValue.get("components");
-	JsonValue remapped = JsonValue::array();
-
-	for (size_t i = 0; i < components.size(); i++)
-	{
-		JsonValue component = components.at(i);
-
-		if (component.has("material")) component.set("material", remap(component.get("material").asInt(-1)));
-
-		if (component.has("slotMaterials"))
-		{
-			const JsonValue& slots = component.get("slotMaterials");
-			JsonValue slotList = JsonValue::array();
-
-			for (size_t s = 0; s < slots.size(); s++)
-			{
-				JsonValue slot = slots.at(s);
-				slot.set("material", remap(slot.get("material").asInt(-1)));
-				slotList.push(slot);
-			}
-
-			component.set("slotMaterials", slotList);
-		}
-
-		remapped.push(component);
-	}
-
-	entityValue.set("components", remapped);
-}
-
 // Дописує номер об'єкта і номери його нащадків у порядку дерева
 static void appendOrder(Entity* entity, std::vector<int>& order)
 {
@@ -348,7 +392,7 @@ void SceneSerializer::captureRecords(SceneRecords& out, MaterialRegistry& regist
 	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
 
 	WriteContext context;
-	context.defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+	context.registry = &registry;
 
 	// Посилання й батьки пишуться незмінними номерами об'єктів, а не місцем у переліку
 	for (Entity* entity : entities)
@@ -356,67 +400,25 @@ void SceneSerializer::captureRecords(SceneRecords& out, MaterialRegistry& regist
 		context.indices[entity] = (int)entity->getId();
 	}
 
-	std::vector<JsonValue> values;
-
 	for (Entity* entity : entities)
 	{
-		values.push_back(writeEntity(entity, context, false, true));
+		out.entities[(int)entity->getId()] = writeEntity(entity, context, false, true).toString();
 	}
 
-	// Таблиця запису нумерує матеріали по-своєму, тож її номери переводяться в номери реєстру
-	std::vector<Material*> table(context.materials.size(), nullptr);
-
-	for (const auto& entry : context.materialIndices)
+	// Значення матеріалів з файлів теж входять у крок, тож правку матеріалу можна скасувати
+	for (Material* material : MaterialLibrary::get()->getLoaded())
 	{
-		table[entry.second] = entry.first;
+		out.materials[registry.idOf(material)] = writeMaterial(material).toString();
 	}
 
-	size_t index = 0;
-
-	for (Entity* entity : entities)
+	for (Material* material : context.embedded)
 	{
-		remapMaterials(values[index], table, registry);
-		out.entities[(int)entity->getId()] = values[index].toString();
-
-		index++;
-	}
-
-	for (size_t i = 0; i < table.size(); i++)
-	{
-		out.materials[registry.idOf(table[i])] = context.materials.at(i).toString();
+		out.materials[registry.idOf(material)] = writeMaterial(material).toString();
 	}
 
 	for (Entity* entity : entities)
 	{
 		if (entity->getParent() == nullptr) appendOrder(entity, out.order);
-	}
-}
-
-// Ставить рендер-компоненту матеріали з запису історії змін
-static void assignRecordMaterials(Renderer* renderer, const JsonValue& data, MaterialRegistry& registry)
-{
-	Material* defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
-
-	auto lookup = [&](int id) -> Material* {
-		if (id == -1) return defaultMaterial;
-		return id >= 0 && id < (int)registry.materials.size() ? registry.materials[id] : nullptr;
-	};
-
-	renderer->setMaterial(data.has("material") ? lookup(data.get("material").asInt(-2)) : nullptr);
-
-	// Слоти без власного матеріалу в записі повертаються до спільного
-	for (unsigned int slot = 0; slot < renderer->getSlotMaterialCount(); slot++)
-	{
-		renderer->setMaterial(slot, nullptr);
-	}
-
-	const JsonValue& slotList = data.get("slotMaterials");
-
-	for (size_t i = 0; i < slotList.size(); i++)
-	{
-		const JsonValue& slotValue = slotList.at(i);
-
-		renderer->setMaterial((unsigned int)slotValue.get("slot").asInt(0), lookup(slotValue.get("material").asInt(-2)));
 	}
 }
 
@@ -460,7 +462,7 @@ static void syncRecordComponents(Entity* entity, const JsonValue& components, Ma
 		if (Renderer* renderer = dynamic_cast<Renderer*>(component))
 		{
 			SceneSerializer::applyRenderer(renderer, data);
-			assignRecordMaterials(renderer, data, registry);
+			SceneSerializer::applyMaterials(renderer, data, false, &registry);
 		}
 
 		SceneReadVisitor reader(data);
@@ -602,7 +604,6 @@ std::string SceneSerializer::serialize(bool includePersistent)
 	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
 
 	WriteContext context;
-	context.defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
 
 	// Індекс кожного об'єкта потрібен, щоб зберегти зв'язки батько-дитина та посилання компонентів
 	int index = 0;
@@ -624,13 +625,10 @@ std::string SceneSerializer::serialize(bool includePersistent)
 		entityList.push(writeEntity(entity, context, false, true));
 	}
 
-	// Матеріали пишуться однією таблицею, а рендер-компоненти посилаються на них номером.
-	// Інакше спільний матеріал записався б окремо для кожного слота та об'єкта і після
-	// завантаження розпався б на копії: правка одного вже не змінювала б решту
+	// Матеріали лежать у власних файлах, а рендер-компоненти посилаються на них шляхом
 	JsonValue scene = JsonValue::object();
 
 	scene.set("version", SCENE_VERSION);
-	scene.set("materials", context.materials);
 	scene.set("entities", entityList);
 
 	return scene.toString();
@@ -654,7 +652,6 @@ JsonValue SceneSerializer::serializeSubtree(Entity* root)
 	collectSubtree(root, entities);
 
 	WriteContext context;
-	context.defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
 
 	for (size_t i = 0; i < entities.size(); i++)
 	{
@@ -671,7 +668,6 @@ JsonValue SceneSerializer::serializeSubtree(Entity* root)
 	JsonValue data = JsonValue::object();
 
 	data.set("version", SCENE_VERSION);
-	data.set("materials", context.materials);
 	data.set("entities", entityList);
 
 	return data;
@@ -688,7 +684,6 @@ std::string SceneSerializer::serializeEntities(const std::vector<Entity*>& roots
 	}
 
 	WriteContext context;
-	context.defaultMaterial = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
 
 	for (size_t i = 0; i < entities.size(); i++)
 	{
@@ -705,20 +700,9 @@ std::string SceneSerializer::serializeEntities(const std::vector<Entity*>& roots
 	JsonValue data = JsonValue::object();
 
 	data.set("version", SCENE_VERSION);
-	data.set("materials", context.materials);
 	data.set("entities", entityList);
 
 	return data.toString();
-}
-
-// Повертає матеріал з таблиці за номером; -1 означає спільний матеріал рушія за замовчуванням
-static Material* lookupMaterial(int index, const std::vector<Material*>& materials)
-{
-	if (index == -1) return GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
-
-	if (index >= 0 && index < (int)materials.size()) return materials[index];
-
-	return nullptr;
 }
 
 // Створює компонент за описом; самі поля потім задають applyRenderer та applyProperties
@@ -774,45 +758,41 @@ void SceneSerializer::applyProperties(Component* component, const JsonValue& dat
 	component->visitProperties(reader);
 }
 
-// Призначає рендер-компоненту матеріали з таблиці, як їх записано в описі
-static void assignMaterials(Renderer* renderer, const JsonValue& data, const std::vector<Material*>& materials, bool asTemplate)
+// Ставить рендер-компоненту матеріали слотів з опису: файли матеріалів за шляхом, а матеріали без файлу - з їхніх налаштувань
+void SceneSerializer::applyMaterials(Renderer* renderer, const JsonValue& data, bool asTemplate, MaterialRegistry* registry)
 {
-	if (data.has("material"))
+	if (!data.has("materials")) return;
+
+	const JsonValue& list = data.get("materials");
+
+	// Слоти, яких немає в описі, малюються матеріалом за замовчуванням, як і в щойно доданого компонента
+	renderer->clearMaterials();
+
+	for (size_t i = 0; i < list.size(); i++)
 	{
-		if (Material* shared = lookupMaterial(data.get("material").asInt(-2), materials))
+		const JsonValue& reference = list.at(i);
+
+		Material* material = nullptr;
+
+		if (reference.getType() == JsonValue::Type::String)
 		{
-			renderer->setMaterial(shared);
+			material = MaterialLibrary::get()->find(reference.asString());
 		}
-	}
+		else if (registry && reference.has("embedded"))
+		{
+			int id = reference.get("embedded").asInt(-1);
 
-	const JsonValue& slotList = data.get("slotMaterials");
+			if (id >= 0 && id < (int)registry->materials.size()) material = registry->materials[(size_t)id];
+		}
+		else if (reference.getType() == JsonValue::Type::Object)
+		{
+			// Образ префаба живе між сценами, тож і його власний матеріал не має зникати при їх зміні
+			material = new Material();
+			readMaterial(material, reference);
+			material->dontDeleteOnLoad = asTemplate;
+		}
 
-	for (size_t i = 0; i < slotList.size(); i++)
-	{
-		const JsonValue& slotValue = slotList.at(i);
-
-		Material* material = lookupMaterial(slotValue.get("material").asInt(-2), materials);
-
-		if (material) renderer->setMaterial((unsigned int)slotValue.get("slot").asInt(0), material);
-	}
-
-	// Файли третьої версії тримали матеріали прямо в компоненті, окремо для кожного слота
-	const JsonValue& legacyMaterials = data.get("materials");
-
-	for (size_t i = 0; i < legacyMaterials.size(); i++)
-	{
-		const JsonValue& materialValue = legacyMaterials.at(i);
-
-		Material* material = new Material();
-		SceneSerializer::readMaterial(material, materialValue);
-
-		material->dontDeleteOnLoad = asTemplate;
-
-		unsigned int slot = (unsigned int)materialValue.get("slot").asInt(0);
-
-		renderer->setMaterial(slot, material);
-
-		if (slot == 0) renderer->setMaterial(material);
+		if (material) renderer->setMaterial((unsigned int)i, material);
 	}
 }
 
@@ -820,22 +800,6 @@ static void assignMaterials(Renderer* renderer, const JsonValue& data, const std
 static std::vector<Entity*> buildEntities(const JsonValue& data, Entity* parent, bool asTemplate)
 {
 	const JsonValue& parsed = data.get("entities");
-
-	// Матеріали створюються першими, щоб рендер-компоненти одразу могли на них посилатися.
-	// Образ префаба живе між сценами, тож і його матеріали не мають зникати при їх зміні
-	std::vector<Material*> materials;
-
-	const JsonValue& materialList = data.get("materials");
-
-	for (size_t i = 0; i < materialList.size(); i++)
-	{
-		Material* material = new Material();
-		SceneSerializer::readMaterial(material, materialList.at(i));
-
-		material->dontDeleteOnLoad = asTemplate;
-
-		materials.push_back(material);
-	}
 
 	// Спершу створюються всі об'єкти, щоб посилання компонентів було на що розв'язувати
 	std::vector<Entity*> created;
@@ -935,7 +899,7 @@ static std::vector<Entity*> buildEntities(const JsonValue& data, Entity* parent,
 			if (Renderer* renderer = dynamic_cast<Renderer*>(component))
 			{
 				SceneSerializer::applyRenderer(renderer, componentData);
-				assignMaterials(renderer, componentData, materials, asTemplate);
+				SceneSerializer::applyMaterials(renderer, componentData, asTemplate);
 			}
 
 			SceneSerializer::applyProperties(component, componentData, created);
@@ -973,6 +937,9 @@ bool SceneSerializer::deserialize(const std::string& text, std::vector<Entity*>*
 		std::cout << "Scene is not valid JSON: " << error << std::endl;
 		return false;
 	}
+
+	// Старі сцени тримали матеріали в собі; тепер вони переходять у файли матеріалів
+	MaterialLibrary::get()->upgrade(scene);
 
 	const JsonValue& parsed = scene.get("entities");
 
@@ -1079,7 +1046,7 @@ bool SceneSerializer::saveToFile(const std::string& path)
 	if (!file.is_open()) return false;
 
 	// Під час гри такий об'єкт з файлу, завантаженого вдруге, стає копією вже наявного; компоненти-
-	// одинаки на кшталт SceneChanger прибирають свою копію самі, як DontDestroyOnLoad у Unity
+	// одинаки на кшталт SceneChanger прибирають свою копію самі
 	file << serialize(true);
 
 	return true;

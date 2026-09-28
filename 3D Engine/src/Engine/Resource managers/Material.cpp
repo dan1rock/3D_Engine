@@ -7,16 +7,42 @@
 #include "Texture.h"
 #include <iostream>
 
+// Дані матеріалу для шейдера; кожне поле займає цілий регістр із чотирьох чисел, як у cbuffer
 __declspec(align(16))
 struct material {
-	float ambient;
-	float diffuse;
-	float specular;
-	float shininess;
-	float textureScale[4];
-	float color[4];
-	bool isTextured;
+	float baseColor[4];
+	float specularColor[4];
+	float emissionColor[4];
+	float tilingOffset[4];
+	float detailTilingOffset[4];
+	// Металевість, гладкість, сила нормалей і висота паралаксу
+	float surface[4];
+	// Сила затінення, поріг альфи, сила деталей кольору й нормалей
+	float extra[4];
+	// Наявні карти, увімкнені можливості, режим змішування
+	unsigned int flags[4];
 };
+
+// Біти наявних карт; мають збігатися з Lit.hlsli
+static const unsigned int MAP_BASE = 1;
+static const unsigned int MAP_GLOSS = 2;
+static const unsigned int MAP_NORMAL = 4;
+static const unsigned int MAP_HEIGHT = 8;
+static const unsigned int MAP_OCCLUSION = 16;
+static const unsigned int MAP_EMISSION = 32;
+static const unsigned int MAP_DETAIL_MASK = 64;
+static const unsigned int MAP_DETAIL_ALBEDO = 128;
+static const unsigned int MAP_DETAIL_NORMAL = 256;
+
+// Біти можливостей матеріалу; мають збігатися з Lit.hlsli
+static const unsigned int FEATURE_SPECULAR_WORKFLOW = 1;
+static const unsigned int FEATURE_SMOOTHNESS_ALBEDO_ALPHA = 2;
+static const unsigned int FEATURE_ALPHA_CLIP = 4;
+static const unsigned int FEATURE_EMISSION = 8;
+static const unsigned int FEATURE_RECEIVE_SHADOWS = 16;
+static const unsigned int FEATURE_SPECULAR_HIGHLIGHTS = 32;
+static const unsigned int FEATURE_ENVIRONMENT_REFLECTIONS = 64;
+static const unsigned int FEATURE_TRANSPARENT = 128;
 
 material materialData = {};
 
@@ -42,16 +68,20 @@ Material::~Material()
 	EntityManager::get()->unregisterMaterial(this);
 }
 
-// Копіює налаштування матеріалу, створюючи копії власний константний буфер та реєстрацію
+// Копіює налаштування матеріалу, створюючи копії власний константний буфер та реєстрацію; копія не є файлом матеріалу
 Material::Material(const Material& material)
 {
 	mVertexShader = material.mVertexShader;
 	mPixelShader = material.mPixelShader;
 
 	// Текстури належать менеджеру текстур, тому копія користується тими самими
-	mTextures = material.mTextures;
+	for (int i = 0; i < (int)MaterialMap::Count; i++)
+	{
+		mMaps[i] = material.mMaps[i];
+	}
 
-	copySettings(material);
+	properties = material.properties;
+	name = material.name;
 
 	// Копія завжди належить сцені: інакше скопійований позначений матеріал ніколи б не звільнився
 	dontDeleteOnLoad = false;
@@ -74,16 +104,20 @@ Material::Material(const Material& material)
 	EntityManager::get()->registerMaterial(this);
 }
 
-// Копіює налаштування іншого матеріалу, зберігаючи власний константний буфер
+// Копіює налаштування іншого матеріалу, зберігаючи власний константний буфер, ім'я та файл
 Material& Material::operator=(const Material& material)
 {
 	if (this == &material) return *this;
 
 	mVertexShader = material.mVertexShader;
 	mPixelShader = material.mPixelShader;
-	mTextures = material.mTextures;
 
-	copySettings(material);
+	for (int i = 0; i < (int)MaterialMap::Count; i++)
+	{
+		mMaps[i] = material.mMaps[i];
+	}
+
+	properties = material.properties;
 
 	// Нульовий та перший слоти лишаються власними, решту можна перенести
 	int count = sizeof(mConstantBuffers) / sizeof(mConstantBuffers[0]);
@@ -94,22 +128,6 @@ Material& Material::operator=(const Material& material)
 	}
 
 	return *this;
-}
-
-// Переносить налаштування іншого матеріалу, не торкаючись власних ресурсів
-void Material::copySettings(const Material& material)
-{
-	cullBack = material.cullBack;
-	clampTexture = material.clampTexture;
-	ambient = material.ambient;
-	smoothness = material.smoothness;
-	shininess = material.shininess;
-	textureScale = material.textureScale;
-
-	color[0] = material.color[0];
-	color[1] = material.color[1];
-	color[2] = material.color[2];
-	color[3] = material.color[3];
 }
 
 // Встановлює вершинний шейдер для матеріалу
@@ -124,36 +142,29 @@ void Material::setPixelShader(PixelShader* pixelShader)
 	mPixelShader = pixelShader;
 }
 
-// Додає текстуру до матеріалу
-void Material::addTexture(Texture* texture)
+// Ставить текстуру карти; nullptr прибирає карту
+void Material::setMap(MaterialMap map, Texture* texture)
 {
-	if (texture == nullptr) return;
-	mTextures.push_back(texture);
+	if (map == MaterialMap::Count) return;
+
+	mMaps[(int)map] = texture;
 }
 
-// Видаляє текстуру з матеріалу за індексом
-void Material::removeTexture(unsigned int id)
+// Повертає текстуру карти, або nullptr, якщо її немає
+Texture* Material::getMap(MaterialMap map) const
 {
-	if (id >= mTextures.size()) return;
+	if (map == MaterialMap::Count) return nullptr;
 
-	mTextures.erase(mTextures.begin() + id);
+	return mMaps[(int)map];
 }
 
-// Встановлює колір матеріалу
+// Встановлює основний колір матеріалу
 void Material::setColor(float r, float g, float b, float a)
 {
-	color[0] = r;
-	color[1] = g;
-	color[2] = b;
-	color[3] = a;
-}
-
-// Повертає шлях до першої текстури матеріалу, або порожній рядок, якщо текстур немає
-std::wstring Material::getTexturePath() const
-{
-	if (mTextures.empty() || mTextures[0] == nullptr) return std::wstring();
-
-	return mTextures[0]->getFullPath();
+	properties.baseColor[0] = r;
+	properties.baseColor[1] = g;
+	properties.baseColor[2] = b;
+	properties.baseColor[3] = a;
 }
 
 // Повертає шлях до піксельного шейдера матеріалу, щоб сцена не втрачала нестандартний шейдер
@@ -164,16 +175,10 @@ std::wstring Material::getPixelShaderPath() const
 	return GraphicsEngine::get()->getPixelShaderPath(mPixelShader);
 }
 
-// Повертає кількість текстур матеріалу
-unsigned int Material::getTextureCount() const
+// Перевіряє, чи матеріал прозорий і малюється після непрозорих
+bool Material::isTransparent() const
 {
-	return (unsigned int)mTextures.size();
-}
-
-// Повертає текстуру за номером
-Texture* Material::getTexture(unsigned int index) const
-{
-	return index < mTextures.size() ? mTextures[index] : nullptr;
+	return properties.surface == SurfaceType::Transparent;
 }
 
 // Встановлює константний буфер для матеріалу у відповідний слот
@@ -186,18 +191,67 @@ void Material::setConstantBuffer(ConstantBuffer* constantBuffer, int slot)
 // Оновлює дані матеріалу та встановлює константні буфери для шейдерів
 void Material::onMaterialSet()
 {
-	materialData.ambient = ambient;
-	materialData.diffuse = 1.0f - smoothness;
-	materialData.specular = smoothness;
-	materialData.shininess = shininess;
-	materialData.textureScale[0] = textureScale;
+	const MaterialProperties& p = properties;
 
-	materialData.color[0] = color[0];
-	materialData.color[1] = color[1];
-	materialData.color[2] = color[2];
-	materialData.color[3] = color[3];
+	for (int i = 0; i < 4; i++)
+	{
+		materialData.baseColor[i] = p.baseColor[i];
+	}
 
-	materialData.isTextured = mTextures.size() > 0;
+	for (int i = 0; i < 3; i++)
+	{
+		materialData.specularColor[i] = p.specularColor[i];
+		materialData.emissionColor[i] = p.emissionColor[i];
+	}
+
+	materialData.tilingOffset[0] = p.tiling[0];
+	materialData.tilingOffset[1] = p.tiling[1];
+	materialData.tilingOffset[2] = p.offset[0];
+	materialData.tilingOffset[3] = p.offset[1];
+
+	materialData.detailTilingOffset[0] = p.detailTiling[0];
+	materialData.detailTilingOffset[1] = p.detailTiling[1];
+	materialData.detailTilingOffset[2] = p.detailOffset[0];
+	materialData.detailTilingOffset[3] = p.detailOffset[1];
+
+	materialData.surface[0] = p.metallic;
+	materialData.surface[1] = p.smoothness;
+	materialData.surface[2] = p.normalScale;
+	materialData.surface[3] = p.heightScale;
+
+	materialData.extra[0] = p.occlusionStrength;
+	materialData.extra[1] = p.alphaCutoff;
+	materialData.extra[2] = p.detailAlbedoScale;
+	materialData.extra[3] = p.detailNormalScale;
+
+	// Карта відблиску залежить від обраного способу: металевість чи колір відблиску
+	MaterialMap glossMap = p.workflow == MaterialWorkflow::Metallic ? MaterialMap::Metallic : MaterialMap::Specular;
+
+	unsigned int maps = 0;
+	if (getMap(MaterialMap::Base)) maps |= MAP_BASE;
+	if (getMap(glossMap)) maps |= MAP_GLOSS;
+	if (getMap(MaterialMap::Normal)) maps |= MAP_NORMAL;
+	if (getMap(MaterialMap::Height)) maps |= MAP_HEIGHT;
+	if (getMap(MaterialMap::Occlusion)) maps |= MAP_OCCLUSION;
+	if (getMap(MaterialMap::Emission)) maps |= MAP_EMISSION;
+	if (getMap(MaterialMap::DetailMask)) maps |= MAP_DETAIL_MASK;
+	if (getMap(MaterialMap::DetailAlbedo)) maps |= MAP_DETAIL_ALBEDO;
+	if (getMap(MaterialMap::DetailNormal)) maps |= MAP_DETAIL_NORMAL;
+
+	unsigned int features = 0;
+	if (p.workflow == MaterialWorkflow::Specular) features |= FEATURE_SPECULAR_WORKFLOW;
+	if (p.smoothnessSource == SmoothnessSource::AlbedoAlpha) features |= FEATURE_SMOOTHNESS_ALBEDO_ALPHA;
+	if (p.alphaClipping) features |= FEATURE_ALPHA_CLIP;
+	if (p.emission) features |= FEATURE_EMISSION;
+	if (p.receiveShadows) features |= FEATURE_RECEIVE_SHADOWS;
+	if (p.specularHighlights) features |= FEATURE_SPECULAR_HIGHLIGHTS;
+	if (p.environmentReflections) features |= FEATURE_ENVIRONMENT_REFLECTIONS;
+	if (p.surface == SurfaceType::Transparent) features |= FEATURE_TRANSPARENT;
+
+	materialData.flags[0] = maps;
+	materialData.flags[1] = features;
+	materialData.flags[2] = (unsigned int)p.blend;
+	materialData.flags[3] = 0;
 
 	mConstantBuffer->update(GraphicsEngine::get()->getImmDeviceContext(), &materialData);
 	mConstantBuffers[1] = mConstantBuffer;

@@ -9,6 +9,7 @@
 #include "Material.h"
 #include "GraphicsEngine.h"
 #include "GlobalResources.h"
+#include "MaterialLibrary.h"
 
 #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #include <experimental/filesystem>
@@ -60,44 +61,12 @@ static TreeInfo buildTree(const JsonValue& data)
 	return tree;
 }
 
-// Повертає матеріал з таблиці опису текстом; -1 означає матеріал рушія за замовчуванням
-static std::string materialText(const JsonValue& materials, int index)
-{
-	if (index == -1) return "default";
-
-	return materials.at((size_t)(index < 0 ? materials.size() : index)).toString();
-}
-
-// Повертає значення поля компонента текстом. Номери матеріалів у різних описах різні,
-// тому для порівняння замість номера підставляється сам матеріал
-static std::string fieldText(const std::string& key, const JsonValue& value, const JsonValue& materials)
-{
-	if (key == "material") return materialText(materials, value.asInt(-2));
-
-	if (key == "slotMaterials")
-	{
-		std::string text;
-
-		for (size_t i = 0; i < value.size(); i++)
-		{
-			const JsonValue& slot = value.at(i);
-
-			text += std::to_string(slot.get("slot").asInt(0)) + ":" + materialText(materials, slot.get("material").asInt(-2)) + ";";
-		}
-
-		return text;
-	}
-
-	return value.toString();
-}
-
 // Розкладає опис піддерева на окремі властивості, щоб два описи можна було порівняти поштучно
 static FlatData flatten(const JsonValue& data)
 {
 	FlatData flat;
 
 	const JsonValue& entities = data.get("entities");
-	const JsonValue& materials = data.get("materials");
 
 	TreeInfo tree = buildTree(data);
 
@@ -106,7 +75,7 @@ static FlatData flatten(const JsonValue& data)
 		const JsonValue& entity = entities.at(i);
 		const std::string& path = tree.paths[i];
 
-		// Ім'я кореня в кожного екземпляра своє, як в Unity: інакше застосування змін з одного
+		// Ім'я кореня в кожного екземпляра своє: інакше застосування змін з одного
 		// екземпляра перейменувало б усі інші, яких ніхто не перейменовував
 		if (i != 0) flat[PrefabLibrary::entityKey(path, "name")] = entity.get("name").toString();
 
@@ -145,7 +114,8 @@ static FlatData flatten(const JsonValue& data)
 
 				if (key == "type") continue;
 
-				flat[PrefabLibrary::componentKey(path, type, occurrence, key)] = fieldText(key, component.valueAt(f), materials);
+				// Матеріали записані посиланнями на файли, тож і вони порівнюються просто текстом
+				flat[PrefabLibrary::componentKey(path, type, occurrence, key)] = component.valueAt(f).toString();
 			}
 		}
 
@@ -163,12 +133,10 @@ static std::string lookup(const FlatData& flat, const std::string& key)
 	return it == flat.end() ? std::string() : it->second;
 }
 
-// Виносить піддерево одного об'єкта в окремий опис: номери об'єктів і матеріалів стискаються,
-// а до таблиці потрапляють лише ті матеріали, якими піддерево справді користується
+// Виносить піддерево одного об'єкта в окремий опис, стискаючи номери об'єктів
 static JsonValue extractSubtree(const JsonValue& data, int index)
 {
 	const JsonValue& entities = data.get("entities");
-	const JsonValue& materials = data.get("materials");
 
 	// Нащадки об'єкта в описі йдуть одразу за ним, тож досить пройти список уперед
 	std::map<int, int> entityRemap;
@@ -186,26 +154,6 @@ static JsonValue extractSubtree(const JsonValue& data, int index)
 		entityRemap[(int)j] = (int)members.size();
 		members.push_back((int)j);
 	}
-
-	std::map<int, int> materialRemap;
-	JsonValue materialList = JsonValue::array();
-
-	// Повертає новий номер матеріалу, переносячи його до нової таблиці за потреби
-	auto remapMaterial = [&](int oldIndex) -> int
-	{
-		if (oldIndex < 0 || oldIndex >= (int)materials.size()) return oldIndex;
-
-		auto it = materialRemap.find(oldIndex);
-
-		if (it != materialRemap.end()) return it->second;
-
-		int newIndex = (int)materialList.size();
-
-		materialRemap[oldIndex] = newIndex;
-		materialList.push(materials.at((size_t)oldIndex));
-
-		return newIndex;
-	};
 
 	JsonValue entityList = JsonValue::array();
 
@@ -229,58 +177,15 @@ static JsonValue extractSubtree(const JsonValue& data, int index)
 		copy.set("index", entityRemap[member]);
 		copy.set("parent", member == index ? -1 : entityRemap[parent]);
 
-		const JsonValue& components = entity.get("components");
-
-		JsonValue componentList = JsonValue::array();
-
-		for (size_t c = 0; c < components.size(); c++)
-		{
-			const JsonValue& component = components.at(c);
-
-			JsonValue componentCopy = JsonValue::object();
-
-			for (size_t f = 0; f < component.size(); f++)
-			{
-				const std::string& key = component.keyAt(f);
-				const JsonValue& value = component.valueAt(f);
-
-				if (key == "material")
-				{
-					componentCopy.set("material", remapMaterial(value.asInt(-2)));
-				}
-				else if (key == "slotMaterials")
-				{
-					JsonValue slots = JsonValue::array();
-
-					for (size_t s = 0; s < value.size(); s++)
-					{
-						JsonValue slot = JsonValue::object();
-
-						slot.set("slot", value.at(s).get("slot").asInt(0));
-						slot.set("material", remapMaterial(value.at(s).get("material").asInt(-2)));
-
-						slots.push(slot);
-					}
-
-					componentCopy.set("slotMaterials", slots);
-				}
-				else
-				{
-					componentCopy.set(key.c_str(), value);
-				}
-			}
-
-			componentList.push(componentCopy);
-		}
-
-		if (componentList.size() > 0) copy.set("components", componentList);
+		// Компоненти посилаються на матеріали шляхами файлів, тож переносяться як є
+		if (entity.has("components")) copy.set("components", entity.get("components"));
 
 		entityList.push(copy);
 	}
 
 	JsonValue sub = JsonValue::object();
 
-	sub.set("materials", materialList);
+	sub.set("version", MaterialLibrary::REFERENCE_VERSION);
 	sub.set("entities", entityList);
 
 	return sub;
@@ -299,31 +204,6 @@ static Component* findComponent(Entity* entity, const std::string& type, int occ
 	}
 
 	return nullptr;
-}
-
-// Ставить рендер-компоненту матеріал з опису префаба. Наявний матеріал не змінюється, а
-// замінюється новим: ним можуть користуватися й інші об'єкти, яких префаб не стосується
-static void syncMaterial(Renderer* renderer, int slot, int index, const JsonValue& materials, bool isTemplate)
-{
-	Material* material = nullptr;
-
-	if (index == -1)
-	{
-		material = GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
-	}
-	else if (index >= 0 && index < (int)materials.size())
-	{
-		material = new Material();
-		SceneSerializer::readMaterial(material, materials.at((size_t)index));
-
-		// Образ префаба живе між сценами, тож і його матеріал не має зникати при їх зміні
-		material->dontDeleteOnLoad = isTemplate;
-	}
-
-	if (material == nullptr) return;
-
-	if (slot < 0) renderer->setMaterial(material);
-	else renderer->setMaterial((unsigned int)slot, material);
 }
 
 // Стан однієї синхронізації: що з чим зіставлено і що довелося створити заново
@@ -493,7 +373,6 @@ struct Synchronizer
 	void syncFields()
 	{
 		const JsonValue& entities = data.get("entities");
-		const JsonValue& materials = data.get("materials");
 
 		for (size_t i = 0; i < entities.size(); i++)
 		{
@@ -539,18 +418,7 @@ struct Synchronizer
 				if (Renderer* renderer = dynamic_cast<Renderer*>(component))
 				{
 					SceneSerializer::applyRenderer(renderer, partial);
-
-					if (partial.has("material"))
-					{
-						syncMaterial(renderer, -1, partial.get("material").asInt(-2), materials, isTemplate);
-					}
-
-					const JsonValue& slots = partial.get("slotMaterials");
-
-					for (size_t s = 0; s < slots.size(); s++)
-					{
-						syncMaterial(renderer, slots.at(s).get("slot").asInt(0), slots.at(s).get("material").asInt(-2), materials, isTemplate);
-					}
+					SceneSerializer::applyMaterials(renderer, partial, isTemplate);
 				}
 
 				// Посилання в описі префаба — номери його власних об'єктів, тож шукаються вони
@@ -628,7 +496,20 @@ const JsonValue* PrefabLibrary::getData(const std::string& path)
 		return nullptr;
 	}
 
+	// Старі префаби тримали матеріали в собі; вони переходять у файли матеріалів, і префаб перезаписується
+	if (MaterialLibrary::get()->upgrade(data))
+	{
+		writeFile(path, data);
+		std::cout << "Moved materials of " << path << " to " << MaterialLibrary::FOLDER << std::endl;
+	}
+
 	return &(mData[path] = data);
+}
+
+// Забуває прочитані файли префабів, щоб наступне звернення перечитало їх з диска
+void PrefabLibrary::forgetData()
+{
+	mData.clear();
 }
 
 // Записує вміст префаба у файл

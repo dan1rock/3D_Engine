@@ -6,7 +6,7 @@ struct PS_INPUT
     float2 texCoord : TEXCOORD0;
 };
 
-// Кольори обведення, як у Unity: помаранчевий для вибраного об'єкта, синій для його нащадків
+// Кольори обведення: помаранчевий для вибраного об'єкта, синій для його нащадків
 static const float4 SELECTED_COLOR = float4(1.0f, 0.4f, 0.0f, 1.0f);
 static const float4 CHILDREN_COLOR = float4(0.37f, 0.58f, 1.0f, 1.0f);
 
@@ -36,7 +36,7 @@ float4 main(PS_INPUT input) : SV_TARGET
         }
     }
 
-	// Сам силует лишається незафарбованим, як у Unity, видно лише його край
+	// Сам силует лишається незафарбованим, видно лише його край
     if (self.r < 0.5f && nearby.r > 0.5f) return SELECTED_COLOR;
     if (self.r < 0.5f && self.g < 0.5f && nearby.g > 0.5f) return CHILDREN_COLOR;
 

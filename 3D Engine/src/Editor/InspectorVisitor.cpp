@@ -33,7 +33,7 @@ void inspectorLabel(const char* label, bool overridden)
 {
 	float available = ImGui::GetContentRegionAvail().x;
 
-	// Змінене в екземплярі поле позначається смужкою ліворуч і кольором підпису, як в Unity
+	// Змінене в екземплярі поле позначається смужкою ліворуч і кольором підпису
 	if (overridden)
 	{
 		ImVec2 start = ImGui::GetCursorScreenPos();

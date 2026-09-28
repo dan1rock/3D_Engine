@@ -97,6 +97,20 @@ bool Texture::createWithMipMaps(const DirectX::ScratchImage& imageData)
 	return true;
 }
 
+// Повертає кількість mip-рівнів текстури
+unsigned int Texture::getMipCount() const
+{
+	ID3D11Texture2D* texture = nullptr;
+
+	if (FAILED(mTexture->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&texture))) return 1;
+
+	D3D11_TEXTURE2D_DESC desc = {};
+	texture->GetDesc(&desc);
+	texture->Release();
+
+	return desc.MipLevels;
+}
+
 Texture::~Texture()
 {
 	mTexture->Release();
