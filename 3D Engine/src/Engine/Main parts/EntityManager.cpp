@@ -457,6 +457,9 @@ void EntityManager::onSceneLoadFinished()
 		}
 	}
 
+	// Модель, прочитана заради окремих вузлів, після завантаження сцени вже не потрібна
+	Mesh::releaseImportCache();
+
 	GraphicsEngine::get()->getTextureManager()->unloadUnusedResources();
 	GraphicsEngine::get()->getMeshManager()->unloadUnusedResources();
 	PhysicsEngine::get()->getConvexMeshManager()->unloadUnusedResources();

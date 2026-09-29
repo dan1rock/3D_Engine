@@ -1,4 +1,7 @@
 #include "TextureManager.h"
+#include "GraphicsEngine.h"
+#include "MeshManager.h"
+#include "Mesh.h"
 #include <iostream>
 
 TextureManager::TextureManager(): ResourceManager()
@@ -22,7 +25,21 @@ Resource* TextureManager::createResourceFromFileConcrete(const wchar_t* filePath
 
 	try
 	{
-		tex = new Texture(filePath);
+		// Назва модель::*номер означає текстуру, вбудовану у файл моделі
+		std::wstring path(filePath);
+		size_t separator = path.find(L"::");
+
+		if (separator == std::wstring::npos)
+		{
+			tex = new Texture(filePath);
+		}
+		else
+		{
+			Mesh* model = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(path.substr(0, separator).c_str());
+			const EmbeddedTexture* source = model ? model->findEmbeddedTexture(path.substr(separator + 2)) : nullptr;
+
+			if (source) tex = new Texture(filePath, *source);
+		}
 	}
 	catch (...) 
 	{

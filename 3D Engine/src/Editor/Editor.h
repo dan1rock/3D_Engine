@@ -73,6 +73,8 @@ private:
 	bool canDropPrefab(Entity* newParent) const;
 	// Виконує відкладене перетягування, коли дерево вже намальоване
 	void applyDrop();
+	// Створює в сцені об'єкти за вузлами моделі: кожен вузол стає об'єктом, а його сітки - рендер-компонентом з матеріалами моделі
+	Entity* instantiateModel(const std::wstring& path, Entity* parent);
 
 	// Малює панель префаба у вибраного екземпляра: застосувати, скасувати зміни, розірвати зв'язок
 	void drawPrefabBar();
@@ -110,6 +112,10 @@ private:
 	void drawEntityMaterials(Entity* entity);
 	// Малює вибраний у панелі ресурсів файл матеріалу
 	void drawMaterialAsset();
+	// Малює налаштування імпорту моделі, вибраної в панелі ресурсів: її матеріали, заміни та витягування у файли
+	void drawModelAsset();
+	// Перечитує перелік мешів і текстур у теках ресурсів
+	void refreshAssetLists();
 	// Малює налаштування матеріалу й змінює їх у самому матеріалі; instance позначає копію режиму гри
 	bool drawMaterialEditor(Material* material, bool instance);
 	// Малює вибір текстури для карти матеріалу; повертає true, якщо вибрано іншу
@@ -244,6 +250,8 @@ private:
 		DropZone zone = DropZone::Root;
 		// Шлях префаба, якщо перетягнули не об'єкт, а префаб з панелі ресурсів
 		std::string prefab;
+		// Шлях моделі, якщо перетягнули модель з панелі ресурсів
+		std::wstring model;
 	};
 
 	PendingDrop mPendingDrop;
@@ -331,6 +339,12 @@ private:
 
 	// Файл матеріалу, вибраний у панелі ресурсів, або DefaultMaterial; інспектор показує його без вибраного об'єкта
 	std::string mInspectedMaterial;
+	// Модель, вибрана в панелі ресурсів; інспектор показує її налаштування імпорту без вибраного об'єкта
+	std::string mInspectedModel;
+	// Модель, до налаштувань якої перейти на початку наступного малювання інспектора
+	std::string mOpenModelRequest;
+	// Повідомлення про останнє витягування матеріалів моделі
+	std::string mModelStatus;
 	// Буфери для імені вибраного матеріалу та імені нового
 	char mMaterialNameBuffer[128] = {};
 	char mNewMaterialName[128] = {};

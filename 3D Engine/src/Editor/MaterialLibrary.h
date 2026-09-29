@@ -5,6 +5,8 @@
 #include <map>
 
 class Material;
+class Mesh;
+class Renderer;
 
 // Матеріали у вигляді файлів .mat: рендер-компоненти посилаються на них шляхом
 class MaterialLibrary
@@ -39,6 +41,28 @@ public:
 	static std::string quotedReference(const std::string& reference);
 	// Перевіряє, чи це вбудований матеріал за замовчуванням, який не редагується
 	static bool isDefault(Material* material);
+	// Перевіряє, чи матеріал вбудований у файл моделі й тому лише для перегляду
+	static bool isEmbedded(Material* material);
+	// Повертає шлях моделі, у яку вбудовано матеріал, або порожній рядок
+	static std::string embeddedModel(Material* material);
+
+	// Повертає шлях файлу моделі меша відносно теки проєкту, без імені вузла
+	static std::string modelPathOf(Mesh* mesh);
+	// Повертає імена матеріалів моделі за слотами; порожнє ім'я означає слот, якого модель не описує
+	std::vector<std::string> modelMaterialNames(Mesh* mesh);
+	// Повертає матеріал слота моделі: заміну з налаштувань імпорту або вбудований; nullptr, якщо модель слота не описує
+	Material* modelMaterial(Mesh* mesh, unsigned int slot);
+	// Повертає вбудований матеріал моделі за іменем, не зважаючи на заміну
+	Material* embeddedMaterial(const std::string& modelPath, const std::string& name);
+	// Ставить рендер-компоненту матеріали моделі в усі слоти, як їх описує її файл
+	void applyModelMaterials(Renderer* renderer);
+
+	// Повертає файл матеріалу, яким замінено вбудований матеріал моделі, або порожній рядок
+	std::string getRemap(const std::string& modelPath, const std::string& name);
+	// Замінює вбудований матеріал моделі файлом матеріалу і оновлює об'єкти сцени; порожній шлях прибирає заміну
+	void setRemap(const std::string& modelPath, const std::string& name, const std::string& materialPath);
+	// Витягує вбудовані матеріали моделі у файли разом з вбудованими текстурами й замінює ними вбудовані; повертає кількість
+	int extractMaterials(const std::string& modelPath);
 	// Повертає всі вже завантажені матеріали з файлів
 	std::vector<Material*> getLoaded() const;
 
@@ -63,6 +87,8 @@ private:
 	bool write(Material* material);
 	// Повертає файл матеріалу з такими самими налаштуваннями, як в описі, або створює новий з вказаним ім'ям
 	std::string adopt(const JsonValue& materialData, const std::string& name);
+	// Повертає заміни вбудованих матеріалів моделі, прочитавши її файл налаштувань імпорту за потреби
+	std::map<std::string, std::string>& remapsOf(const std::string& modelPath);
 
 	std::vector<std::string> mPaths;
 	std::map<std::string, Material*> mLoaded;
@@ -70,4 +96,8 @@ private:
 	std::map<Material*, std::string> mSaved;
 	// Старі шляхи перейменованих матеріалів, щоб давні посилання, як-от в історії змін, досі знаходили матеріал
 	std::map<std::string, std::string> mRenamed;
+	// Вбудовані матеріали моделей за посиланням модель::ім'я
+	std::map<std::string, Material*> mEmbedded;
+	// Заміни вбудованих матеріалів кожної моделі: ім'я матеріалу моделі -> файл матеріалу
+	std::map<std::string, std::map<std::string, std::string>> mRemaps;
 };

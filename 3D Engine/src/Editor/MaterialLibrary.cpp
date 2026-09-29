@@ -7,6 +7,10 @@
 #include "MeshManager.h"
 #include "GraphicsEngine.h"
 #include "GlobalResources.h"
+#include "TextureManager.h"
+#include "Texture.h"
+#include "Renderer.h"
+#include "EntityManager.h"
 
 #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #include <experimental/filesystem>
@@ -23,6 +27,22 @@ const char* MaterialLibrary::FOLDER = "Assets\\Materials";
 const char* MaterialLibrary::EXTENSION = ".mat";
 // Назва вбудованого матеріалу за замовчуванням, якою на нього посилаються файли сцен
 const char* MaterialLibrary::DEFAULT_NAME = "DefaultMaterial";
+
+// Роздільник між шляхом моделі та іменем її матеріалу в посиланні, як-от Assets\Meshes\Car.fbx::Body
+static const char* MODEL_SEPARATOR = "::";
+// Розширення файлу налаштувань імпорту, що лежить поруч з моделлю
+static const char* IMPORT_EXTENSION = ".import";
+// Тека, у яку витягуються вбудовані текстури моделей
+static const char* TEXTURE_FOLDER = "Assets\\Textures";
+
+// Повертає шлях відносно теки проєкту, починаючи з Assets
+static std::string relativePath(const std::wstring& fullPath)
+{
+	std::string path(fullPath.begin(), fullPath.end());
+	size_t assets = path.rfind("Assets\\");
+
+	return assets != std::string::npos ? path.substr(assets) : path;
+}
 
 // Читає весь файл у рядок; повертає false, якщо файл не відкрився
 static bool readText(const std::string& path, std::string& text)
@@ -179,7 +199,26 @@ Material* MaterialLibrary::find(const std::string& reference)
 
 	if (reference.empty() || reference == DEFAULT_NAME) return defaultMaterial;
 
-	if (Material* material = load(reference)) return material;
+	// Посилання модель::ім'я веде до матеріалу моделі або до файлу, яким його замінили
+	size_t separator = reference.find(MODEL_SEPARATOR);
+
+	if (separator != std::string::npos)
+	{
+		std::string modelPath = reference.substr(0, separator);
+		std::string name = reference.substr(separator + 2);
+		std::string remap = getRemap(modelPath, name);
+
+		if (!remap.empty())
+		{
+			if (Material* material = load(remap)) return material;
+		}
+
+		if (Material* material = embeddedMaterial(modelPath, name)) return material;
+	}
+	else if (Material* material = load(reference))
+	{
+		return material;
+	}
 
 	std::cout << "Missing material " << reference << ", using " << DEFAULT_NAME << std::endl;
 
@@ -209,6 +248,293 @@ std::string MaterialLibrary::quotedReference(const std::string& reference)
 bool MaterialLibrary::isDefault(Material* material)
 {
 	return material != nullptr && material == GraphicsEngine::get()->getGlobalResources()->getDefaultMaterial();
+}
+
+// Перевіряє, чи матеріал вбудований у файл моделі й тому лише для перегляду
+bool MaterialLibrary::isEmbedded(Material* material)
+{
+	return material != nullptr && material->assetPath.find(MODEL_SEPARATOR) != std::string::npos;
+}
+
+// Повертає шлях моделі, у яку вбудовано матеріал, або порожній рядок
+std::string MaterialLibrary::embeddedModel(Material* material)
+{
+	if (!isEmbedded(material)) return std::string();
+
+	return material->assetPath.substr(0, material->assetPath.find(MODEL_SEPARATOR));
+}
+
+// Повертає шлях файлу моделі меша відносно теки проєкту, без імені вузла
+std::string MaterialLibrary::modelPathOf(Mesh* mesh)
+{
+	if (mesh == nullptr) return std::string();
+
+	std::string path = relativePath(mesh->getFullPath());
+
+	return path.substr(0, path.find(MODEL_SEPARATOR));
+}
+
+// Повертає імена матеріалів моделі за слотами; порожнє ім'я означає слот, якого модель не описує
+std::vector<std::string> MaterialLibrary::modelMaterialNames(Mesh* mesh)
+{
+	std::vector<std::string> names;
+
+	if (mesh == nullptr) return names;
+
+	const std::vector<ModelMaterial>& materials = mesh->getModelMaterials();
+
+	for (unsigned int slot = 0; slot < (unsigned int)materials.size(); slot++)
+	{
+		if (!materials[slot].imported)
+		{
+			names.push_back(std::string());
+			continue;
+		}
+
+		// Ключ матеріалу однаковий у всій моделі і в кожному її вузлі, тож посилання ведуть до того самого матеріалу
+		std::string name = sanitizeName(materials[slot].key);
+
+		names.push_back(name.empty() ? std::string("Material") : name);
+	}
+
+	return names;
+}
+
+// Повертає матеріал слота моделі: заміну з налаштувань імпорту або вбудований; nullptr, якщо модель слота не описує
+Material* MaterialLibrary::modelMaterial(Mesh* mesh, unsigned int slot)
+{
+	std::vector<std::string> names = modelMaterialNames(mesh);
+
+	if (slot >= names.size() || names[slot].empty()) return nullptr;
+
+	return find(modelPathOf(mesh) + MODEL_SEPARATOR + names[slot]);
+}
+
+// Повертає вбудований матеріал моделі за іменем, не зважаючи на заміну
+Material* MaterialLibrary::embeddedMaterial(const std::string& modelPath, const std::string& name)
+{
+	std::string reference = modelPath + MODEL_SEPARATOR + name;
+
+	auto cached = mEmbedded.find(reference);
+
+	if (cached != mEmbedded.end()) return cached->second;
+
+	std::wstring wide(modelPath.begin(), modelPath.end());
+	Mesh* mesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(wide.c_str());
+
+	std::vector<std::string> names = modelMaterialNames(mesh);
+	auto found = std::find(names.begin(), names.end(), name);
+
+	if (found == names.end()) return nullptr;
+
+	const ModelMaterial& source = mesh->getModelMaterials()[found - names.begin()];
+
+	// Матеріал моделі живе, поки живе проєкт, і не редагується, як файл моделі
+	Material* material = new Material();
+	material->properties = source.properties;
+	material->name = name;
+	material->assetPath = reference;
+	material->dontDeleteOnLoad = true;
+
+	for (int i = 0; i < (int)MaterialMap::Count; i++)
+	{
+		if (!source.maps[i].empty()) material->setMap((MaterialMap)i, GraphicsEngine::get()->getTextureManager()->createTextureFromFile(source.maps[i].c_str()));
+	}
+
+	mEmbedded[reference] = material;
+
+	return material;
+}
+
+// Ставить рендер-компоненту матеріали моделі в усі слоти, як їх описує її файл
+void MaterialLibrary::applyModelMaterials(Renderer* renderer)
+{
+	renderer->clearMaterials();
+
+	for (unsigned int slot = 0; slot < renderer->getMaterialCount(); slot++)
+	{
+		if (Material* material = modelMaterial(renderer->getMesh(), slot)) renderer->setMaterial(slot, material);
+	}
+}
+
+// Повертає заміни вбудованих матеріалів моделі, прочитавши її файл налаштувань імпорту за потреби
+std::map<std::string, std::string>& MaterialLibrary::remapsOf(const std::string& modelPath)
+{
+	auto cached = mRemaps.find(modelPath);
+
+	if (cached != mRemaps.end()) return cached->second;
+
+	std::map<std::string, std::string>& remaps = mRemaps[modelPath];
+
+	std::string text;
+
+	if (readText(modelPath + IMPORT_EXTENSION, text))
+	{
+		const JsonValue& materials = JsonValue::parse(text).get("materials");
+
+		for (size_t i = 0; i < materials.size(); i++)
+		{
+			remaps[materials.keyAt(i)] = materials.valueAt(i).asString();
+		}
+	}
+
+	return remaps;
+}
+
+// Повертає файл матеріалу, яким замінено вбудований матеріал моделі, або порожній рядок
+std::string MaterialLibrary::getRemap(const std::string& modelPath, const std::string& name)
+{
+	std::map<std::string, std::string>& remaps = remapsOf(modelPath);
+	auto found = remaps.find(name);
+
+	if (found == remaps.end()) return std::string();
+
+	// Заміна, чий файл перейменували, веде до нового імені
+	auto renamed = mRenamed.find(found->second);
+
+	return renamed != mRenamed.end() ? renamed->second : found->second;
+}
+
+// Замінює вбудований матеріал моделі файлом матеріалу і оновлює об'єкти сцени; порожній шлях прибирає заміну
+void MaterialLibrary::setRemap(const std::string& modelPath, const std::string& name, const std::string& materialPath)
+{
+	std::map<std::string, std::string>& remaps = remapsOf(modelPath);
+
+	std::string previous = getRemap(modelPath, name);
+
+	if (materialPath.empty()) remaps.erase(name);
+	else remaps[name] = materialPath;
+
+	// Налаштування імпорту лежать поруч з моделлю, як і в будь-якого ресурсу, що має власні налаштування
+	JsonValue materials = JsonValue::object();
+
+	for (const auto& entry : remaps)
+	{
+		materials.set(entry.first.c_str(), entry.second);
+	}
+
+	JsonValue data = JsonValue::object();
+	data.set("version", 1);
+	data.set("materials", materials);
+
+	std::error_code error;
+
+	if (remaps.empty()) filesystem::remove(modelPath + IMPORT_EXTENSION, error);
+	else writeText(modelPath + IMPORT_EXTENSION, data.toString());
+
+	// Об'єкти сцени, що малювались вбудованим чи попереднім матеріалом слота, переходять на новий
+	Material* embedded = embeddedMaterial(modelPath, name);
+	Material* old = previous.empty() ? embedded : load(previous);
+	Material* wanted = find(modelPath + MODEL_SEPARATOR + name);
+
+	for (Renderer* renderer : EntityManager::get()->getRenderers())
+	{
+		for (unsigned int slot = 0; slot < renderer->getMaterialCount(); slot++)
+		{
+			Material* current = renderer->getSharedMaterial(slot);
+
+			if (current == embedded || (old && current == old && modelPathOf(renderer->getMesh()) == modelPath)) renderer->setMaterial(slot, wanted);
+		}
+	}
+}
+
+// Витягує вбудовані матеріали моделі у файли разом з вбудованими текстурами й замінює ними вбудовані; повертає кількість
+int MaterialLibrary::extractMaterials(const std::string& modelPath)
+{
+	std::wstring wide(modelPath.begin(), modelPath.end());
+	Mesh* mesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(wide.c_str());
+
+	if (mesh == nullptr) return 0;
+
+	std::string modelName = sanitizeName(getName(modelPath));
+
+	// Кожна вбудована текстура записується у файл лише раз, навіть якщо нею користуються кілька матеріалів
+	std::map<Texture*, Texture*> extractedTextures;
+	int count = 0;
+
+	for (const std::string& name : modelMaterialNames(mesh))
+	{
+		if (name.empty() || !getRemap(modelPath, name).empty()) continue;
+
+		Material* embedded = embeddedMaterial(modelPath, name);
+
+		if (embedded == nullptr) continue;
+
+		std::string path = createAsset(name, embedded);
+		Material* asset = load(path);
+
+		if (asset == nullptr) continue;
+
+		// Текстури з файлу моделі стають звичайними файлами текстур, щоб матеріал не залежав від моделі
+		for (int i = 0; i < (int)MaterialMap::Count; i++)
+		{
+			Texture* texture = asset->getMap((MaterialMap)i);
+
+			if (texture == nullptr) continue;
+
+			std::wstring texturePath = texture->getFullPath();
+			size_t separator = texturePath.find(L"::");
+
+			// Текстура з-поза проєкту копіюється в теку текстур, бо файл матеріалу посилається лише на файли проєкту
+			if (separator == std::wstring::npos)
+			{
+				std::error_code error;
+				std::wstring projectAssets = filesystem::absolute(L"Assets").wstring() + L"\\";
+
+				if (texturePath.compare(0, projectAssets.size(), projectAssets) == 0) continue;
+
+				if (extractedTextures.count(texture) == 0)
+				{
+					filesystem::create_directories(TEXTURE_FOLDER, error);
+
+					std::wstring folder(TEXTURE_FOLDER, TEXTURE_FOLDER + strlen(TEXTURE_FOLDER));
+					std::wstring copy = folder + L"\\" + filesystem::path(texturePath).filename().wstring();
+
+					if (!filesystem::exists(copy, error)) filesystem::copy_file(texturePath, copy, error);
+
+					extractedTextures[texture] = filesystem::exists(copy, error) ? GraphicsEngine::get()->getTextureManager()->createTextureFromFile(copy.c_str()) : nullptr;
+				}
+
+				if (extractedTextures[texture]) asset->setMap((MaterialMap)i, extractedTextures[texture]);
+
+				continue;
+			}
+
+			if (extractedTextures.count(texture) == 0)
+			{
+				const EmbeddedTexture* source = mesh->findEmbeddedTexture(texturePath.substr(separator + 2));
+
+				if (source == nullptr) continue;
+
+				// Ім'я файлу береться з імені, під яким текстуру вбудували, або з імені моделі та номера
+				std::string stem = source->name.empty() ? modelName + " " + std::string(texturePath.begin() + separator + 3, texturePath.end()) : sanitizeName(filesystem::path(source->name).stem().string());
+
+				std::error_code error;
+				filesystem::create_directories(TEXTURE_FOLDER, error);
+
+				std::wstring extension = Texture::embeddedExtension(*source);
+				std::wstring base = std::wstring(stem.begin(), stem.end());
+				std::wstring folder(TEXTURE_FOLDER, TEXTURE_FOLDER + strlen(TEXTURE_FOLDER));
+				std::wstring file = folder + L"\\" + base + extension;
+
+				for (int number = 1; filesystem::exists(file, error); number++)
+				{
+					file = folder + L"\\" + base + L" " + std::to_wstring(number) + extension;
+				}
+
+				extractedTextures[texture] = Texture::writeEmbedded(*source, file) ? GraphicsEngine::get()->getTextureManager()->createTextureFromFile(file.c_str()) : nullptr;
+			}
+
+			if (extractedTextures[texture]) asset->setMap((MaterialMap)i, extractedTextures[texture]);
+		}
+
+		saveChanged();
+
+		setRemap(modelPath, name, path);
+		count++;
+	}
+
+	return count;
 }
 
 // Повертає всі вже завантажені матеріали з файлів

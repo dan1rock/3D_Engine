@@ -17,7 +17,13 @@ ResourceManager::~ResourceManager()
 // Створює або повертає ресурс з файлу, використовуючи кешування
 Resource* ResourceManager::createResourceFromFile(const wchar_t* path)
 {
-	std::wstring fullPath = std::experimental::filesystem::absolute(path);
+	// Шлях частини файлу, як-от модель::вузол, стає повним лише у файловій частині: двокрапки бібліотека шляхів сприйняла б як диск
+	std::wstring requested(path);
+	size_t separator = requested.find(L"::");
+
+	std::wstring fullPath = std::experimental::filesystem::absolute(requested.substr(0, separator)).wstring();
+
+	if (separator != std::wstring::npos) fullPath += requested.substr(separator);
 
 	// Перевіряємо, чи ресурс вже є в кеші
 	auto it = resourceMap.find(fullPath);

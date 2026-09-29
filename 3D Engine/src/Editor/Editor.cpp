@@ -123,7 +123,17 @@ void Editor::init()
 	mGrid.init();
 	mOutline.init();
 
-	// Перелік ресурсів читається один раз під час запуску
+	refreshAssetLists();
+}
+
+// Перечитує перелік мешів і текстур у теках ресурсів
+void Editor::refreshAssetLists()
+{
+	mMeshPaths.clear();
+	mMeshNames.clear();
+	mTexturePaths.clear();
+	mTextureNames.clear();
+
 	struct Folder { const wchar_t* path; std::vector<std::wstring>* paths; std::vector<std::string>* names; };
 
 	Folder folders[] = {
@@ -142,9 +152,10 @@ void Editor::init()
 			if (!filesystem::is_regular_file(entry.path(), error)) continue;
 
 			std::wstring extension = entry.path().extension().wstring();
+			std::transform(extension.begin(), extension.end(), extension.begin(), ::towlower);
 
 			// До списку потрапляють лише ті типи файлів, які рушій уміє завантажити
-			bool isMesh = extension == L".obj";
+			bool isMesh = extension == L".obj" || extension == L".fbx" || extension == L".dae" || extension == L".gltf" || extension == L".glb";
 			bool isTexture = extension == L".png" || extension == L".jpg"
 				|| extension == L".jpeg" || extension == L".bmp";
 
@@ -597,6 +608,15 @@ void Editor::drawHierarchy()
 			mPendingDrop = { nullptr, nullptr, DropZone::Root, std::string((const char*)payload->Data) };
 		}
 
+		// У режимі префаба кореневого місця для моделі немає: у префабі лише один корінь
+		if (!isPrefabMode())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(MESH_PAYLOAD))
+			{
+				mPendingDrop = { nullptr, nullptr, DropZone::Root, std::string(), std::wstring((const wchar_t*)payload->Data) };
+			}
+		}
+
 		ImGui::EndDragDropTarget();
 	}
 
@@ -741,6 +761,26 @@ void Editor::drawDropTarget(Entity* target)
 		}
 	}
 
+	// Модель з панелі ресурсів кладеться так само, а в режимі префаба - лише всередину його частин
+	const ImGuiPayload* modelPayload = ImGui::AcceptDragDropPayload(MESH_PAYLOAD,
+		ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+
+	if (modelPayload)
+	{
+		Entity* newParent = zone == DropZone::Inside ? target : target->getParent();
+
+		if (!isPrefabMode() || newParent != nullptr)
+		{
+			ImDrawList* draw = ImGui::GetWindowDrawList();
+			ImU32 color = ImGui::GetColorU32(ImGuiCol_DragDropTarget);
+
+			if (zone == DropZone::Inside) draw->AddRect(min, max, color, 0.0f, 0, 2.0f);
+			else draw->AddLine(ImVec2(min.x, zone == DropZone::Before ? min.y : max.y), ImVec2(max.x, zone == DropZone::Before ? min.y : max.y), color, 2.0f);
+
+			if (modelPayload->IsDelivery()) mPendingDrop = { nullptr, target, zone, std::string(), std::wstring((const wchar_t*)modelPayload->Data) };
+		}
+	}
+
 	ImGui::EndDragDropTarget();
 }
 
@@ -780,6 +820,126 @@ bool Editor::canDropPrefab(Entity* newParent) const
 	return true;
 }
 
+// Складає матрицю з положення, повороту й масштабу так само, як трансформація об'єкта
+static Matrix composeTransform(const Vector3& position, const Vector3& rotation, const Vector3& scale)
+{
+	Matrix matrix;
+	matrix.setIdentity();
+	matrix.setScale(scale);
+	matrix.setRotation(rotation);
+	matrix.setTranslation(position);
+
+	return matrix;
+}
+
+// Створює в сцені об'єкти за вузлами моделі: кожен вузол стає об'єктом, а його сітки - рендер-компонентом з матеріалами моделі
+Entity* Editor::instantiateModel(const std::wstring& path, Entity* parent)
+{
+	Mesh* model = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(path.c_str());
+
+	if (model == nullptr) return nullptr;
+
+	std::string name = filesystem::path(path).stem().string();
+	const std::vector<ModelNode>& nodes = model->getModelNodes();
+	MaterialLibrary* library = MaterialLibrary::get();
+
+	// Модель без вузлів стає одним об'єктом з цілим мешем
+	if (nodes.empty())
+	{
+		Entity* entity = new Entity();
+		entity->setName(name);
+
+		if (parent) entity->setParent(parent);
+
+		MeshRenderer* renderer = entity->addComponent<MeshRenderer>();
+		renderer->setMesh(model);
+		library->applyModelMaterials(renderer);
+
+		return entity;
+	}
+
+	// Корінь без сіток з єдиною дитиною зливається з нею, щоб модель з одного об'єкта не мала зайвого рівня
+	int rootChildren = 0;
+
+	for (const ModelNode& node : nodes)
+	{
+		if (node.parent == 0) rootChildren++;
+	}
+
+	bool merge = !nodes[0].hasMeshes && rootChildren == 1;
+
+	std::vector<Entity*> created(nodes.size(), nullptr);
+	Entity* root = nullptr;
+
+	for (size_t i = 0; i < nodes.size(); i++)
+	{
+		const ModelNode& node = nodes[i];
+
+		if (merge && i == 0) continue;
+
+		bool isRoot = i == 0 || (merge && node.parent == 0);
+
+		Vector3 position = node.position;
+		Vector3 rotation = node.rotation;
+		Vector3 scale = node.scale;
+
+		// Злитий корінь несе й перетворення кореня моделі, тож частина стоїть так само, як у файлі
+		if (isRoot && merge)
+		{
+			Matrix combined = composeTransform(node.position, node.rotation, node.scale);
+			combined *= composeTransform(nodes[0].position, nodes[0].rotation, nodes[0].scale);
+
+			rotation = combined.getRotation();
+			scale = combined.getScale();
+		}
+
+		// Корінь стає туди, куди поклали модель, тож зсув кореня з файлу не береться
+		if (isRoot) position = Vector3(0.0f, 0.0f, 0.0f);
+
+		Entity* entity = new Entity();
+		entity->setName(isRoot ? name : node.name);
+
+		Entity* entityParent = isRoot ? parent : created[node.parent];
+
+		if (entityParent) entity->setParent(entityParent);
+
+		// Дочірній зберігає розташування відносно батька, корінь без батька - у світі
+		Transform* transform = entity->getTransform();
+
+		if (entityParent)
+		{
+			transform->setLocalScale(scale);
+			transform->setLocalRotation(rotation);
+			transform->setLocalPosition(position);
+		}
+		else
+		{
+			transform->setScale(scale);
+			transform->setRotation(rotation);
+			transform->setPosition(position);
+		}
+
+		// Сітки вузла - окремий меш модель::вузол з матеріалами моделі в його слотах
+		if (node.hasMeshes)
+		{
+			MeshRenderer* renderer = entity->addComponent<MeshRenderer>();
+			renderer->setMesh(GraphicsEngine::get()->getMeshManager()->createMeshFromFile((path + L"::" + std::wstring(node.key.begin(), node.key.end())).c_str()));
+			library->applyModelMaterials(renderer);
+		}
+
+		created[i] = entity;
+
+		if (isRoot) root = entity;
+	}
+
+	// Усі вузли вже прочитано, тож збережена для них модель більше не потрібна
+	Mesh::releaseImportCache();
+
+	EntityManager::get()->sortByHierarchy();
+
+	return root;
+}
+
 // Виконує відкладене перетягування, коли дерево вже намальоване
 void Editor::applyDrop()
 {
@@ -787,8 +947,9 @@ void Editor::applyDrop()
 	mPendingDrop = PendingDrop();
 
 	bool isPrefab = !drop.prefab.empty();
+	bool isModel = !drop.model.empty();
 
-	if (drop.dragged == nullptr && !isPrefab) return;
+	if (drop.dragged == nullptr && !isPrefab && !isModel) return;
 
 	// Під час перетягування гра могла знищити будь-який з цих об'єктів
 	if (drop.dragged && !isAlive(drop.dragged)) return;
@@ -802,7 +963,7 @@ void Editor::applyDrop()
 
 	items.erase(std::remove(items.begin(), items.end(), drop.target), items.end());
 
-	if (!isPrefab && items.empty()) return;
+	if (!isPrefab && !isModel && items.empty()) return;
 
 	Entity* newParent = nullptr;
 	Entity* before = nullptr;
@@ -851,6 +1012,21 @@ void Editor::applyDrop()
 		if (drop.dragged == nullptr) return;
 
 		// Дочірній екземпляр стоїть у початку координат батька, а кореневий — перед камерою
+		if (newParent == nullptr) drop.dragged->getTransform()->setPosition(mCamera.getSpawnPoint());
+
+		mSelected = drop.dragged;
+		items.assign(1, drop.dragged);
+	}
+
+	if (isModel)
+	{
+		if (isPrefabMode() && newParent == nullptr) return;
+
+		// Модель стає на місце в дереві так само, як новий екземпляр префаба
+		drop.dragged = instantiateModel(drop.model, newParent);
+
+		if (drop.dragged == nullptr) return;
+
 		if (newParent == nullptr) drop.dragged->getTransform()->setPosition(mCamera.getSpawnPoint());
 
 		mSelected = drop.dragged;
@@ -990,18 +1166,20 @@ void Editor::drawPrefabBar()
 // Створює екземпляр префаба, відпущеного над самою сценою, у точці під курсором
 void Editor::dropPrefabIntoScene()
 {
-	// Вкладених префабів немає, тож у режимі префаба інші префаби не кладуться
-	if (isPrefabMode()) return;
-
 	const ImGuiPayload* payload = ImGui::GetDragDropPayload();
 
-	if (payload == nullptr || !payload->IsDataType(PREFAB_PAYLOAD)) return;
+	if (payload == nullptr) return;
+
+	bool isModel = payload->IsDataType(MESH_PAYLOAD);
+
+	if (!isModel && !payload->IsDataType(PREFAB_PAYLOAD)) return;
+
+	// Вкладених префабів немає, тож у режимі префаба інші префаби не кладуться, а модель стає частиною префаба
+	if (!isModel && isPrefabMode()) return;
 
 	// Кнопку відпустили саме зараз і не над панеллю редактора: інакше це не скидання на сцену
 	if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left)) return;
 	if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) return;
-
-	std::string path((const char*)payload->Data);
 
 	ImVec2 mouse = ImGui::GetIO().MousePos;
 
@@ -1017,11 +1195,13 @@ void Editor::dropPrefabIntoScene()
 		position = ray.origin + ray.direction * distance;
 	}
 
-	Entity* instance = PrefabLibrary::get()->instantiate(path, nullptr);
+	Entity* instance = isModel ? instantiateModel((const wchar_t*)payload->Data, nullptr) : PrefabLibrary::get()->instantiate((const char*)payload->Data, nullptr);
 
 	if (instance == nullptr) return;
 
 	instance->getTransform()->setPosition(position);
+
+	if (isModel) adoptIntoPrefab(instance);
 
 	mSelected = instance;
 }
@@ -1351,18 +1531,29 @@ void Editor::drawInspector()
 	ImGui::Begin("Inspector");
 	keepWindowOnScreen();
 
+	// Перехід до налаштувань моделі з редактора матеріалу виконується тут, до того як інспектор почне малювати вибраний об'єкт
+	if (!mOpenModelRequest.empty())
+	{
+		selectOnly(nullptr);
+		mInspectedMaterial.clear();
+		mInspectedModel = mOpenModelRequest;
+		mOpenModelRequest.clear();
+	}
+
 	if (mSelected == nullptr)
 	{
-		// Без вибраного об'єкта інспектор показує вибраний у панелі ресурсів матеріал
-		if (!mInspectedMaterial.empty()) drawMaterialAsset();
+		// Без вибраного об'єкта інспектор показує вибрані в панелі ресурсів модель чи матеріал
+		if (!mInspectedModel.empty()) drawModelAsset();
+		else if (!mInspectedMaterial.empty()) drawMaterialAsset();
 		else ImGui::TextUnformatted("Nothing selected");
 
 		ImGui::End();
 		return;
 	}
 
-	// Вибраний об'єкт заміняє в інспекторі вибраний раніше матеріал
+	// Вибраний об'єкт заміняє в інспекторі вибрані раніше модель чи матеріал
 	mInspectedMaterial.clear();
+	mInspectedModel.clear();
 
 	// Перевірка, що вибраний об'єкт ще існує у сцені
 	bool alive = false;
@@ -1556,6 +1747,7 @@ void Editor::drawRendererAssets(Renderer* renderer)
 			if (ImGui::Selectable(name.c_str()))
 			{
 				renderer->setMesh(GraphicsEngine::get()->getMeshManager()->createMeshFromFile(mMeshPaths[i].c_str()));
+				MaterialLibrary::get()->applyModelMaterials(renderer);
 			}
 		}
 
@@ -1567,6 +1759,7 @@ void Editor::drawRendererAssets(Renderer* renderer)
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(MESH_PAYLOAD))
 		{
 			renderer->setMesh(GraphicsEngine::get()->getMeshManager()->createMeshFromFile((const wchar_t*)payload->Data));
+			MaterialLibrary::get()->applyModelMaterials(renderer);
 		}
 
 		ImGui::EndDragDropTarget();
@@ -1629,6 +1822,19 @@ void Editor::drawMaterialSlot(Renderer* renderer, unsigned int slot)
 			}
 		}
 
+		// Матеріали, вбудовані у модель цього меша, підписано іменем моделі
+		std::string modelPath = MaterialLibrary::modelPathOf(mesh);
+		std::string modelName = MaterialLibrary::getName(modelPath);
+
+		for (const std::string& name : library->modelMaterialNames(mesh))
+		{
+			if (name.empty()) continue;
+
+			Material* embedded = library->embeddedMaterial(modelPath, name);
+
+			if (ImGui::Selectable((name + " (" + modelName + ")").c_str(), shared == embedded)) renderer->setMaterial(slot, embedded);
+		}
+
 		ImGui::EndCombo();
 	}
 
@@ -1674,6 +1880,112 @@ void Editor::drawEntityMaterials(Entity* entity)
 		std::string title = materialName(material) + " (Material)###material";
 
 		if (ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) drawMaterialEditor(material, mPlaying);
+
+		ImGui::PopID();
+	}
+}
+
+// Малює налаштування імпорту моделі, вибраної в панелі ресурсів: її матеріали, заміни та витягування у файли
+void Editor::drawModelAsset()
+{
+	std::wstring wide(mInspectedModel.begin(), mInspectedModel.end());
+	Mesh* mesh = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(wide.c_str());
+
+	ImGui::Text("%s (Model)", filesystem::path(mInspectedModel).filename().string().c_str());
+	ImGui::TextDisabled("%s", mInspectedModel.c_str());
+
+	if (mesh == nullptr)
+	{
+		ImGui::TextDisabled("The model can't be loaded.");
+		return;
+	}
+
+	ImGui::TextDisabled("%d vertices, %d triangles, %u material slots", (int)mesh->getPositions().size(), (int)mesh->getIndices().size() / 3, mesh->getMaterialCount());
+
+	MaterialLibrary* library = MaterialLibrary::get();
+	std::vector<std::string> names = library->modelMaterialNames(mesh);
+
+	names.erase(std::remove(names.begin(), names.end(), std::string()), names.end());
+
+	ImGui::SeparatorText("Materials");
+
+	if (names.empty())
+	{
+		ImGui::TextDisabled("The model file has no materials of its own.");
+		return;
+	}
+
+	inspectorLabel("Location");
+	ImGui::TextUnformatted("Use Embedded Materials");
+
+	// Кожен вбудований матеріал можна замінити файлом матеріалу; без заміни діє вбудований
+	ImGui::SeparatorText("Remapped Materials");
+
+	bool anyEmbedded = false;
+
+	for (const std::string& name : names)
+	{
+		ImGui::PushID(name.c_str());
+
+		std::string remap = library->getRemap(mInspectedModel, name);
+
+		if (remap.empty()) anyEmbedded = true;
+
+		inspectorLabel(name.c_str());
+
+		if (ImGui::BeginCombo("##remap", remap.empty() ? "None (embedded)" : MaterialLibrary::getName(remap).c_str()))
+		{
+			if (ImGui::Selectable("None (embedded)", remap.empty())) library->setRemap(mInspectedModel, name, std::string());
+
+			for (const std::string& path : library->getPaths())
+			{
+				if (ImGui::Selectable(MaterialLibrary::getName(path).c_str(), path == remap)) library->setRemap(mInspectedModel, name, path);
+			}
+
+			ImGui::EndCombo();
+		}
+		else if (ImGui::BeginDragDropTarget())
+		{
+			// Замінити можна лише файлом матеріалу, а не вбудованим
+			const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+			std::string dragged = payload && payload->IsDataType(MATERIAL_PAYLOAD) ? (const char*)payload->Data : "";
+
+			if (!dragged.empty() && dragged != MaterialLibrary::DEFAULT_NAME && ImGui::AcceptDragDropPayload(MATERIAL_PAYLOAD)) library->setRemap(mInspectedModel, name, dragged);
+
+			ImGui::EndDragDropTarget();
+		}
+
+		ImGui::PopID();
+	}
+
+	// Витягування записує кожен вбудований матеріал у файл і одразу ставить його заміною
+	ImGui::BeginDisabled(!anyEmbedded);
+
+	if (ImGui::Button("Extract Materials", ImVec2(-1.0f, 0.0f)))
+	{
+		int count = library->extractMaterials(mInspectedModel);
+
+		refreshAssetLists();
+
+		mModelStatus = "Extracted " + std::to_string(count) + " material(s) to " + MaterialLibrary::FOLDER;
+	}
+
+	ImGui::EndDisabled();
+
+	if (!mModelStatus.empty()) ImGui::TextDisabled("%s", mModelStatus.c_str());
+
+	// Самі вбудовані матеріали видно, але не редагуються
+	ImGui::SeparatorText("Embedded Materials");
+
+	for (const std::string& name : names)
+	{
+		Material* material = library->embeddedMaterial(mInspectedModel, name);
+
+		if (material == nullptr) continue;
+
+		ImGui::PushID(material);
+
+		if (ImGui::CollapsingHeader((name + "###embedded").c_str())) drawMaterialEditor(material, false);
 
 		ImGui::PopID();
 	}
@@ -1746,10 +2058,23 @@ static int shaderIndex(Material* material)
 // Малює налаштування матеріалу й змінює їх у самому матеріалі; повертає, чи щось змінилося
 bool Editor::drawMaterialEditor(Material* material, bool instance)
 {
-	bool editable = !MaterialLibrary::isDefault(material);
+	bool embedded = MaterialLibrary::isEmbedded(material);
+	bool editable = !MaterialLibrary::isDefault(material) && !embedded;
 
+	// Матеріал з файлу моделі змінюється лише разом з моделлю, тож його спершу витягують у файл матеріалу
+	if (embedded)
+	{
+		std::string model = MaterialLibrary::embeddedModel(material);
+
+		ImGui::TextDisabled("Embedded in %s, can't be edited.", filesystem::path(model).filename().string().c_str());
+		ImGui::TextDisabled("Extract materials in the model import settings.");
+
+		if (ImGui::Button("Open Model Import Settings")) mOpenModelRequest = model;
+
+		ImGui::BeginDisabled();
+	}
 	// Вбудований матеріал спільний для всіх об'єктів без власного, тож його не редагують
-	if (!editable)
+	else if (!editable)
 	{
 		ImGui::TextDisabled("Built-in material, can't be edited.");
 		ImGui::TextDisabled("Create one in Assets > Materials and assign it.");
@@ -2121,6 +2446,7 @@ void Editor::drawAssets()
 			if (ImGui::Selectable(name.c_str(), mInspectedMaterial == entry && mSelected == nullptr))
 			{
 				selectOnly(nullptr);
+				mInspectedModel.clear();
 				mInspectedMaterial = entry;
 			}
 
@@ -2160,6 +2486,7 @@ void Editor::drawAssets()
 				if (!path.empty())
 				{
 					selectOnly(nullptr);
+					mInspectedModel.clear();
 					mInspectedMaterial = path;
 				}
 
@@ -2182,18 +2509,28 @@ void Editor::drawAssets()
 			// Подвійний клік створює у сцені об'єкт з цим мешем
 			ImGui::PushID((int)i);
 
-			if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick)
-				&& ImGui::IsMouseDoubleClicked(0))
+			std::string modelPath(mMeshPaths[i].begin(), mMeshPaths[i].end());
+
+			// Клік показує налаштування імпорту моделі, подвійний створює у сцені об'єкт з нею
+			bool clicked = ImGui::Selectable(name.c_str(), mInspectedModel == modelPath && mSelected == nullptr, ImGuiSelectableFlags_AllowDoubleClick);
+
+			if (clicked)
 			{
-				Entity* entity = new Entity(mCamera.getSpawnPoint());
-				entity->setName(name);
+				selectOnly(nullptr);
+				mInspectedMaterial.clear();
+				mInspectedModel = modelPath;
+			}
 
-				MeshRenderer* renderer = entity->addComponent<MeshRenderer>();
-				renderer->setMesh(GraphicsEngine::get()->getMeshManager()->createMeshFromFile(mMeshPaths[i].c_str()));
+			if (clicked && ImGui::IsMouseDoubleClicked(0))
+			{
+				if (Entity* entity = instantiateModel(mMeshPaths[i], nullptr))
+				{
+					entity->getTransform()->setPosition(mCamera.getSpawnPoint());
 
-				adoptIntoPrefab(entity);
+					adoptIntoPrefab(entity);
 
-				mSelected = entity;
+					mSelected = entity;
+				}
 			}
 
 			// Меш перетягують на поле меша в інспекторі

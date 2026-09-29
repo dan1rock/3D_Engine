@@ -1,8 +1,7 @@
 #include "ConvexMesh.h"
 #include "PhysicsEngine.h"
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+#include "GraphicsEngine.h"
+#include "MeshManager.h"
 #include "Vector3.h"
 #include "Vector2.h"
 #include "Mesh.h"
@@ -41,7 +40,7 @@ void* ConvexMesh::getTriangleMesh(Mesh* sourceMesh)
 	return mTriangleMesh;
 }
 
-// Створює опуклий меш з геометрії вказаного меша або з моделі, завантаженої через Assimp
+// Створює опуклий меш з геометрії вказаного меша або з моделі з того самого файлу
 void ConvexMesh::createConvexMesh(Mesh* sourceMesh)
 {
 	std::vector<PxVec3> points;
@@ -61,37 +60,13 @@ void ConvexMesh::createConvexMesh(Mesh* sourceMesh)
 		return;
 	}
 
-	std::wstring ws = getFullPath();
-	std::string filePath(ws.begin(), ws.end());
+	// Без готового меша геометрію дає той самий завантажувач моделей, що й для малювання, з перетвореннями вузлів
+	Mesh* loaded = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(getFullPath().c_str());
 
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(
-		filePath,
-		aiProcess_Triangulate
-		| aiProcess_JoinIdenticalVertices);
-
-	if (!scene || !scene->HasMeshes())
-	{
-		return;
-	}
-
-	for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
-		aiMesh* mesh = scene->mMeshes[m];
-
-		points.reserve(points.size() + mesh->mNumVertices);
-
-		for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
-			points.emplace_back(PxVec3(
-				mesh->mVertices[i].x,
-				mesh->mVertices[i].y,
-				mesh->mVertices[i].z));
-		}
-	}
-
-	mConvexMesh = PhysicsEngine::get()->cookConvexMesh(points);
+	if (loaded && !loaded->getPositions().empty()) createConvexMesh(loaded);
 }
 
-// Створює трикутний меш з геометрії вказаного меша або з моделі, завантаженої через Assimp
+// Створює трикутний меш з геометрії вказаного меша або з моделі з того самого файлу
 void ConvexMesh::createTriangleMesh(Mesh* sourceMesh)
 {
 	std::vector<PxVec3> points;
@@ -117,41 +92,8 @@ void ConvexMesh::createTriangleMesh(Mesh* sourceMesh)
 		return;
 	}
 
-	std::wstring ws = getFullPath();
-	std::string filePath(ws.begin(), ws.end());
+	// Без готового меша геометрію дає той самий завантажувач моделей, що й для малювання, з перетвореннями вузлів
+	Mesh* loaded = GraphicsEngine::get()->getMeshManager()->createMeshFromFile(getFullPath().c_str());
 
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(
-		filePath,
-		aiProcess_Triangulate);
-
-	if (!scene || !scene->HasMeshes())
-	{
-		return;
-	}
-
-	for (unsigned m = 0; m < scene->mNumMeshes; ++m) {
-		aiMesh* mesh = scene->mMeshes[m];
-
-		// Індекси кожної сітки нумеруються з нуля, тому зміщуємо їх на вже зібрані вершини
-		PxU32 baseVertex = static_cast<PxU32>(points.size());
-
-		points.reserve(points.size() + mesh->mNumVertices);
-		indices.reserve(indices.size() + mesh->mNumFaces * 3);
-
-		for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
-			points.emplace_back(PxVec3(
-				mesh->mVertices[i].x,
-				mesh->mVertices[i].y,
-				mesh->mVertices[i].z));
-		}
-		for (unsigned i = 0; i < mesh->mNumFaces; ++i) {
-			const aiFace& face = mesh->mFaces[i];
-			for (unsigned j = 0; j < face.mNumIndices; ++j) {
-				indices.push_back(baseVertex + face.mIndices[j]);
-			}
-		}
-	}
-
-	mTriangleMesh = PhysicsEngine::get()->cookTriangleMesh(points, indices);
+	if (loaded && !loaded->getPositions().empty()) createTriangleMesh(loaded);
 }
