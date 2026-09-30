@@ -42,6 +42,9 @@ public:
 	// Встановлює центр мас тіла
 	void setCenterOfMass(const Vector3& com);
 
+	// Додає актора до сцени PhysX або прибирає з неї, щоб неактивний об'єкт не брав участі у фізиці
+	void syncActivity();
+
 	// Перевіряє, чи тіло нерухоме
 	bool isStatic() const;
 	// Повертає масу тіла
@@ -87,6 +90,8 @@ private:
 	float mMass = 1.0f;
 	bool mIsStatic = false;
 	bool mCcd = false;
+	// Чи актор зараз у сцені PhysX; неактивний об'єкт тримає актора поза нею
+	bool mInScene = false;
 
 	friend class Transform;
 	friend class Collider;

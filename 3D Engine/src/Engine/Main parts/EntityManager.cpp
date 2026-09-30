@@ -198,6 +198,15 @@ void EntityManager::unregisterRigidBody(RigidBody* rigidBody)
 	}
 }
 
+// Узгоджує присутність фізичних тіл у сцені PhysX з активністю їхніх об'єктів
+void EntityManager::syncPhysicsActivity()
+{
+	for (auto& entry : mRigidBodies)
+	{
+		entry.second->syncActivity();
+	}
+}
+
 // Повертає фізичне тіло за вказаним актором
 RigidBody* EntityManager::getRigidBody(void* actor)
 {
@@ -227,6 +236,9 @@ void EntityManager::updateComponents()
 // Виконує фіксоване оновлення для всіх компонентів
 void EntityManager::fixedUpdateComponents()
 {
+	// Об'єкт, який вимкнули чи ввімкнули, виходить із фізики або повертається в неї ще до кроку симуляції
+	syncPhysicsActivity();
+
 	for (auto* c : mComponents) {
 		if (!c->getOwner()->isActive()) continue;
 		c->fixedUpdate();

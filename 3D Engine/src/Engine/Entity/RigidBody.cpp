@@ -137,6 +137,9 @@ void RigidBody::setStatic(bool isStatic)
 	// Поза береться з самого актора: вона свіжіша за Transform у момент перемикання
 	PxTransform pose = mActor->getGlobalPose();
 
+	// Менеджер знаходить тіло за актором, тож старий актор забувається до звільнення
+	EntityManager::get()->unregisterRigidBody(this);
+
 	releaseShapes();
 	mActor->release();
 	mActor = nullptr;
@@ -160,7 +163,11 @@ void RigidBody::setStatic(bool isStatic)
 		dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, mCcd);
 	}
 
-	physics->getScene()->addActor(*mActor);
+	EntityManager::get()->registerRigidBody(this);
+
+	// Новий актор стає до сцени лише тоді, коли об'єкт активний
+	mInScene = false;
+	syncActivity();
 }
 void RigidBody::setMass(float mass)
 {
@@ -231,9 +238,26 @@ void RigidBody::awake()
 		dynamicActor->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, mCcd);
 	}
 
-	// Реєструємо фізичне тіло в PhysX сцені та в EntityManager
-    physics->getScene()->addActor(*mActor);
+	// Реєструємо фізичне тіло в EntityManager, а в сцену PhysX воно потрапляє, лише якщо об'єкт активний
 	EntityManager::get()->registerRigidBody(this);
+	syncActivity();
+}
+
+// Додає актора до сцени PhysX або прибирає з неї, щоб неактивний об'єкт не брав участі у фізиці
+void RigidBody::syncActivity()
+{
+	if (!mActor) return;
+
+	bool active = mOwner->isActive();
+
+	if (active == mInScene) return;
+
+	PxScene* scene = PhysicsEngine::get()->getScene();
+
+	if (active) scene->addActor(*mActor);
+	else scene->removeActor(*mActor);
+
+	mInScene = active;
 }
 
 void RigidBody::update()

@@ -44,6 +44,8 @@ public:
 	// Видаляє фізичне тіло з менеджера
 	void unregisterRigidBody(RigidBody* rigidBody);
 
+	// Узгоджує присутність фізичних тіл у сцені PhysX з активністю їхніх об'єктів
+	void syncPhysicsActivity();
 	// Повертає фізичне тіло за вказаним актором
 	RigidBody* getRigidBody(void* actor);
 
