@@ -313,12 +313,17 @@ static float unitScale(const aiScene* scene)
 // Розкладає перетворення вузла на положення, поворот і масштаб так, як їх складає трансформація рушія
 static void decompose(const aiMatrix4x4& source, Vector3& position, Vector3& rotation, Vector3& scale)
 {
-	// Рушій множить рядок вершини на матрицю, тож його матриця - транспонована матриця бібліотеки
+	// Рушій множить рядок вершини на матрицю, тож його матриця транспонована; віддзеркалення X переносить вузол у лівосторонні осі
     Matrix matrix;
 
     for (int row = 0; row < 4; ++row)
     {
-        for (int column = 0; column < 4; ++column) matrix.mat[row][column] = source[column][row];
+        for (int column = 0; column < 4; ++column)
+        {
+            float sign = (row == 0) != (column == 0) ? -1.0f : 1.0f;
+
+            matrix.mat[row][column] = sign * source[column][row];
+        }
     }
 
     position = matrix.getTranslation();
@@ -487,6 +492,10 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
             aiVector3D normal = normalMatrix * mesh->mNormals[i];
             normal.Normalize();
 
+			// Файли моделей записані в правосторонніх осях, а рушій лівосторонній, тож вісь X віддзеркалюється
+            position.x = -position.x;
+            normal.x = -normal.x;
+
             v.pos.x = position.x;
             v.pos.y = position.y;
             v.pos.z = position.z;
@@ -514,11 +523,14 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
             mPositions.push_back(v.pos);
         }
 
+		// Віддзеркалення міняє обхід трикутників, тож порядок вершин обертається, щоб лицьові грані лишились лицьовими
         for (unsigned f = 0; f < mesh->mNumFaces; ++f) {
             const aiFace& face = mesh->mFaces[f];
             for (unsigned j = 0; j < face.mNumIndices; ++j) {
-                outIndices.push_back(baseVertex + face.mIndices[j]);
-                mIndices.push_back(baseVertex + face.mIndices[j]);
+                unsigned int index = face.mNumIndices == 3 && j > 0 ? face.mIndices[3 - j] : face.mIndices[j];
+
+                outIndices.push_back(baseVertex + index);
+                mIndices.push_back(baseVertex + index);
             }
         }
 

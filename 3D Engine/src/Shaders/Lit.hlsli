@@ -133,7 +133,7 @@ float2 transformUv(float2 uv, float4 scaleOffset)
 // Переводить напрямок у координати небесної текстури так само, як її накладає меш неба
 float2 directionToSky(float3 direction)
 {
-    return float2(atan2(-direction.z, direction.x) / (2.0f * PI) + 0.5f, acos(clamp(direction.y, -1.0f, 1.0f)) / PI);
+    return float2(atan2(-direction.z, -direction.x) / (2.0f * PI) + 0.5f, acos(clamp(direction.y, -1.0f, 1.0f)) / PI);
 }
 
 // Будує дотичний базис з похідних позиції та UV, тож мешу не потрібні збережені дотичні
