@@ -1643,14 +1643,12 @@ void Editor::drawInspector()
 			if (Renderer* renderer = dynamic_cast<Renderer*>(component))
 			{
 				drawRendererAssets(renderer);
+				drawRendererMaterials(renderer);
 			}
 		}
 
 		ImGui::PopID();
 	}
-
-	// Матеріали об'єкта редагуються під компонентами
-	drawEntityMaterials(mSelected);
 
 	ImGui::Separator();
 
@@ -1852,37 +1850,41 @@ void Editor::drawMaterialSlot(Renderer* renderer, unsigned int slot)
 	ImGui::PopID();
 }
 
-// Малює редактори всіх матеріалів об'єкта під його компонентами
-void Editor::drawEntityMaterials(Entity* entity)
+// Малює редактори матеріалів рендер-компонента вкладеними вузлами під ним самим
+void Editor::drawRendererMaterials(Renderer* renderer)
 {
 	std::vector<Material*> shown;
 
-	for (Component* component : entity->getComponentList())
+	for (unsigned int slot = 0; slot < renderer->getMaterialCount(); slot++)
 	{
-		Renderer* renderer = dynamic_cast<Renderer*>(component);
+		// У режимі гри правляться власні копії, тож файли матеріалів лишаються як були
+		Material* material = mPlaying ? renderer->getMaterial(slot) : renderer->getSharedMaterial(slot);
 
-		if (renderer == nullptr) continue;
-
-		for (unsigned int slot = 0; slot < renderer->getMaterialCount(); slot++)
-		{
-			// У режимі гри правляться власні копії, тож файли матеріалів лишаються як були
-			Material* material = mPlaying ? renderer->getMaterial(slot) : renderer->getSharedMaterial(slot);
-
-			if (std::find(shown.begin(), shown.end(), material) == shown.end()) shown.push_back(material);
-		}
+		if (std::find(shown.begin(), shown.end(), material) == shown.end()) shown.push_back(material);
 	}
 
+	// Невеликий відступ зліва показує, що матеріали належать саме цьому рендер-компоненту
+	const float indent = 12.0f;
+
+	ImGui::Indent(indent);
+
+	// Кожен матеріал - згорнутий вкладений вузол; розгортають лише той, який хочуть правити
 	for (Material* material : shown)
 	{
 		ImGui::PushID(material);
-		ImGui::Separator();
 
 		std::string title = materialName(material) + " (Material)###material";
 
-		if (ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) drawMaterialEditor(material, mPlaying);
+		if (ImGui::TreeNodeEx(title.c_str(), ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanAvailWidth))
+		{
+			drawMaterialEditor(material, mPlaying);
+			ImGui::TreePop();
+		}
 
 		ImGui::PopID();
 	}
+
+	ImGui::Unindent(indent);
 }
 
 // Малює налаштування імпорту моделі, вибраної в панелі ресурсів: її матеріали, заміни та витягування у файли

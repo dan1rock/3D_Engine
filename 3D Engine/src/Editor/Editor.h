@@ -108,8 +108,8 @@ private:
 	void drawRendererAssets(Renderer* renderer);
 	// Малює поле матеріалу слота: вибір файлу матеріалу зі списку або перетягнутого з панелі ресурсів
 	void drawMaterialSlot(Renderer* renderer, unsigned int slot);
-	// Малює редактори всіх матеріалів об'єкта під його компонентами
-	void drawEntityMaterials(Entity* entity);
+	// Малює редактори матеріалів рендер-компонента вкладеними вузлами під ним самим
+	void drawRendererMaterials(Renderer* renderer);
 	// Малює вибраний у панелі ресурсів файл матеріалу
 	void drawMaterialAsset();
 	// Малює налаштування імпорту моделі, вибраної в панелі ресурсів: її матеріали, заміни та витягування у файли

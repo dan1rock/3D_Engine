@@ -58,12 +58,15 @@ void inspectorLabel(const char* label, bool overridden)
 	float labelWidth = available * 0.42f;
 	if (labelWidth < 80.0f) labelWidth = 80.0f;
 
+	// Вкладені вузли зсувають підпис праворуч, тож і поле зсувається на той самий відступ
+	float indent = ImGui::GetCursorPosX() - ImGui::GetStyle().WindowPadding.x;
+
 	ImGui::AlignTextToFramePadding();
 
 	if (overridden) ImGui::TextColored(ImVec4(PREFAB_COLOR[0], PREFAB_COLOR[1], PREFAB_COLOR[2], PREFAB_COLOR[3]), "%s", label);
 	else ImGui::TextUnformatted(label);
 
-	ImGui::SameLine(labelWidth);
+	ImGui::SameLine(labelWidth + indent);
 	ImGui::SetNextItemWidth(-1.0f);
 }
 
