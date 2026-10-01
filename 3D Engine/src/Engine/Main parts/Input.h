@@ -55,6 +55,8 @@ private:
    static INT16 oldMouseWheelDelta;
 
    static bool mIsCursorHidden;
+   // Положення курсора на екрані в момент приховування, куди він повертається, коли його знову показують
+   static POINT mHiddenCursorPos;
 
    // Оновлює стан клавіатури та кнопок миші
    static void update();  

@@ -15,6 +15,7 @@ INT16 Input::mouseWheelDelta = 0;
 INT16 Input::oldMouseWheelDelta = 0;
 
 bool Input::mIsCursorHidden = false;
+POINT Input::mHiddenCursorPos = {};
 
 // Перевіряє, чи натиснута клавіша з вказаним кодом
 bool Input::getKey(int keycode)
@@ -68,17 +69,22 @@ Vector2 Input::getDeltaMousePos()
 	return deltaMousePos;
 }
 
+// Ховає курсор або показує його знову там, де він був у момент приховування
 void Input::hideCursor(bool hide)
 {
-
 	if (hide && !mIsCursorHidden)
 	{
+		::GetCursorPos(&mHiddenCursorPos);
+
 		::ShowCursor(FALSE);
 		mIsCursorHidden = true;
 	}
 
 	if (!hide && mIsCursorHidden)
 	{
+		::SetCursorPos(mHiddenCursorPos.x, mHiddenCursorPos.y);
+		lastTickMousePos = Vector2((float)mHiddenCursorPos.x, (float)mHiddenCursorPos.y);
+
 		::ShowCursor(TRUE);
 		mIsCursorHidden = false;
 	}
