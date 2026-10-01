@@ -399,3 +399,6 @@ FodyWeavers.xsd
 
 # Don't ignore Meshes .obj
 !3D Engine/Assets/**/*.obj
+
+# Кеш мініатюр ресурсів редактора, що будується заново з самих ресурсів
+3D Engine/Library/

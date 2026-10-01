@@ -168,6 +168,7 @@
     <ClCompile Include="src\Editor\Gizmo.cpp" />
     <ClCompile Include="src\Editor\EditorGrid.cpp" />
     <ClCompile Include="src\Editor\SelectionOutline.cpp" />
+    <ClCompile Include="src\Editor\AssetPreview.cpp" />
     <ClCompile Include="src\Editor\SceneHistory.cpp" />
     <ClCompile Include="src\Editor\MaterialLibrary.cpp" />
     <ClCompile Include="src\Editor\PrefabLibrary.cpp" />
@@ -244,6 +245,7 @@
     <ClInclude Include="src\Editor\Gizmo.h" />
     <ClInclude Include="src\Editor\EditorGrid.h" />
     <ClInclude Include="src\Editor\SelectionOutline.h" />
+    <ClInclude Include="src\Editor\AssetPreview.h" />
     <ClInclude Include="src\Editor\SceneHistory.h" />
     <ClInclude Include="src\Editor\MaterialLibrary.h" />
     <ClInclude Include="src\Editor\PrefabLibrary.h" />
@@ -380,6 +382,13 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="src\Shaders\ShadowPixelShader.hlsl">
+      <ShaderModel>5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="src\Shaders\PreviewBlitPixelShader.hlsl">
       <ShaderModel>5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>

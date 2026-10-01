@@ -3,6 +3,7 @@
 #include "Gizmo.h"
 #include "EditorGrid.h"
 #include "SelectionOutline.h"
+#include "AssetPreview.h"
 #include "SceneHistory.h"
 #include "Vector3.h"
 #include <string>
@@ -17,6 +18,7 @@ class Renderer;
 class Material;
 class Texture;
 class SwapChain;
+struct ImVec4;
 
 // Редактор сцени: показує дерево об'єктів, інспектор вибраного об'єкта та керує режимом гри
 class Editor
@@ -62,6 +64,8 @@ private:
 	void drawInspector();
 	// Малює список ресурсів проєкту
 	void drawAssets();
+	// Малює ресурс панелі плиткою з мініатюрою або рядком списку; повертає, чи по ньому клікнули
+	bool drawAssetItem(const std::string& name, ID3D11ShaderResourceView* preview, bool selected, const ImVec4& color);
 
 	// Малює один вузол дерева разом з його дочірніми об'єктами
 	void drawEntityNode(Entity* entity);
@@ -300,6 +304,13 @@ private:
 	EditorGrid mGrid;
 	// Обведення вибраного об'єкта у вікні сцени
 	SelectionOutline mOutline;
+	// Мініатюри ресурсів для панелі ресурсів
+	AssetPreview mPreview;
+	// Чи панель ресурсів показує плитки з мініатюрами, а не список, та розмір плитки
+	bool mAssetGrid = true;
+	float mAssetTileSize = 76.0f;
+	// Скільки плиток уже стоїть у поточному розділі панелі, щоб знати, чи ставити наступну в той самий рядок
+	int mAssetGridCount = 0;
 
 	// Шляхи до знайдених ресурсів, які пропонує інспектор
 	std::vector<std::wstring> mMeshPaths;

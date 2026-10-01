@@ -194,6 +194,21 @@ unsigned int Texture::getMipCount() const
 	return desc.MipLevels;
 }
 
+// Повертає розмір найдетальнішого рівня текстури в пікселях
+void Texture::getSize(unsigned int& width, unsigned int& height) const
+{
+	ID3D11Texture2D* texture = nullptr;
+
+	if (FAILED(mTexture->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&texture))) return;
+
+	D3D11_TEXTURE2D_DESC desc = {};
+	texture->GetDesc(&desc);
+	texture->Release();
+
+	width = desc.Width;
+	height = desc.Height;
+}
+
 Texture::~Texture()
 {
 	mTexture->Release();

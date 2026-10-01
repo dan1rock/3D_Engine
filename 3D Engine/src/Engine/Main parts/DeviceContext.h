@@ -88,4 +88,5 @@ private:
 	ID3D11RasterizerState* mRasterizer = nullptr;
 
 	friend class ConstantBuffer;
+	friend class AssetPreview;
 };

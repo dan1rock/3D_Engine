@@ -122,6 +122,7 @@ void Editor::init()
 
 	mGrid.init();
 	mOutline.init();
+	mPreview.init();
 
 	refreshAssetLists();
 }
@@ -202,6 +203,9 @@ void Editor::update()
 
 		mCamera.update();
 	}
+
+	// Одна мініатюра за кадр малюється до інтерфейсу, тож вона з'являється вже в цьому кадрі
+	mPreview.renderPending();
 
 	drawToolbar();
 	drawHierarchy();
@@ -2345,6 +2349,18 @@ void Editor::drawAssets()
 	ImGui::Begin("Assets");
 	keepWindowOnScreen();
 
+	// Ресурси показуються плитками з мініатюрами або списком; розмір плиток можна змінити
+	if (ImGui::RadioButton("Grid", mAssetGrid)) mAssetGrid = true;
+	ImGui::SameLine();
+	if (ImGui::RadioButton("List", !mAssetGrid)) mAssetGrid = false;
+
+	if (mAssetGrid)
+	{
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(-1.0f);
+		ImGui::SliderFloat("##tileSize", &mAssetTileSize, 48.0f, 128.0f, "%.0f px");
+	}
+
 	if (ImGui::CollapsingHeader("Scenes", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		SceneManager* scenes = SceneManager::get();
@@ -2371,32 +2387,41 @@ void Editor::drawAssets()
 		ImGui::EndDisabled();
 	}
 
+	ImVec4 textColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+
+	// Перетягуваний ресурс показує свою мініатюру поруч з іменем
+	auto dragLabel = [](ID3D11ShaderResourceView* preview, const std::string& name) {
+		if (preview) ImGui::Image((ImTextureID)(intptr_t)preview, ImVec2(48.0f, 48.0f));
+		ImGui::TextUnformatted(name.c_str());
+	};
+
+	// Кожен розділ панелі має власний простір імен, бо заголовки розділів його не створюють і однакові номери плиток збігалися б
+	ImGui::PushID("Prefabs");
+
 	if (ImGui::CollapsingHeader("Prefabs", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		PrefabLibrary* library = PrefabLibrary::get();
 
+		mAssetGridCount = 0;
+
 		for (const std::string& path : library->getPaths())
 		{
 			std::string name = PrefabLibrary::getName(path);
+			ID3D11ShaderResourceView* preview = mPreview.get(AssetPreview::Kind::Prefab, path);
 
 			ImGui::PushID(path.c_str());
-			ImGui::PushStyleColor(ImGuiCol_Text, prefabColor());
 
-			// Екземпляр створюється перетягуванням. Подвійного кліку тут немає: другий клік
-			// одразу перед перетягуванням зараховувався б як подвійний і ставив би зайвий екземпляр
-			ImGui::Selectable(name.c_str());
+			// Екземпляр створюється перетягуванням, тож клік нічого не вибирає
+			drawAssetItem(name, preview, false, prefabColor());
 
-			// Подвійний клік відкриває префаб для редагування; сам перехід чекає,
-			// поки кнопку відпустять, щоб не спрацювати на початку перетягування
+			// Подвійний клік відкриває префаб для редагування; сам перехід чекає, поки кнопку відпустять, щоб не спрацювати на початку перетягування
 			if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) mPendingPrefabOpen = path;
-
-			ImGui::PopStyleColor();
 
 			// Префаб перетягують у дерево сцени або просто на сцену
 			if (ImGui::BeginDragDropSource())
 			{
 				ImGui::SetDragDropPayload(PREFAB_PAYLOAD, path.c_str(), path.size() + 1);
-				ImGui::TextColored(prefabColor(), "%s", name.c_str());
+				dragLabel(preview, name);
 				ImGui::EndDragDropSource();
 			}
 
@@ -2405,9 +2430,7 @@ void Editor::drawAssets()
 
 		if (library->getPaths().empty()) ImGui::TextDisabled("No prefabs yet");
 
-		// Об'єкт із дерева сцени, покладений сюди, стає новим префабом. Під час гри файли префабів
-		// не змінюються: після зупинки сцена повернеться до колишнього стану, а файл лишився б новим
-		// У режимі префаба нові префаби теж не створюються: вкладених префабів немає
+		// Об'єкт із дерева сцени, покладений сюди, стає новим префабом; під час гри й у режимі префаба нові префаби не створюються
 		bool canCreate = !mPlaying && !isPrefabMode();
 
 		ImGui::BeginDisabled(!canCreate);
@@ -2427,6 +2450,9 @@ void Editor::drawAssets()
 		}
 	}
 
+	ImGui::PopID();
+	ImGui::PushID("Materials");
+
 	if (ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		MaterialLibrary* library = MaterialLibrary::get();
@@ -2435,30 +2461,29 @@ void Editor::drawAssets()
 		std::vector<std::string> entries(1, MaterialLibrary::DEFAULT_NAME);
 		entries.insert(entries.end(), library->getPaths().begin(), library->getPaths().end());
 
+		mAssetGridCount = 0;
+
 		for (const std::string& entry : entries)
 		{
 			bool builtIn = entry == MaterialLibrary::DEFAULT_NAME;
 			std::string name = builtIn ? entry : MaterialLibrary::getName(entry);
+			ID3D11ShaderResourceView* preview = mPreview.get(AssetPreview::Kind::Material, entry);
 
 			ImGui::PushID(entry.c_str());
 
-			if (builtIn) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-
 			// Клік показує матеріал в інспекторі замість вибраного об'єкта
-			if (ImGui::Selectable(name.c_str(), mInspectedMaterial == entry && mSelected == nullptr))
+			if (drawAssetItem(name, preview, mInspectedMaterial == entry && mSelected == nullptr, builtIn ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : textColor))
 			{
 				selectOnly(nullptr);
 				mInspectedModel.clear();
 				mInspectedMaterial = entry;
 			}
 
-			if (builtIn) ImGui::PopStyleColor();
-
 			// Матеріал перетягують на поле слота в інспекторі
 			if (ImGui::BeginDragDropSource())
 			{
 				ImGui::SetDragDropPayload(MATERIAL_PAYLOAD, entry.c_str(), entry.size() + 1);
-				ImGui::TextUnformatted(name.c_str());
+				dragLabel(preview, name);
 				ImGui::EndDragDropSource();
 			}
 
@@ -2499,8 +2524,13 @@ void Editor::drawAssets()
 		}
 	}
 
+	ImGui::PopID();
+	ImGui::PushID("Meshes");
+
 	if (ImGui::CollapsingHeader("Meshes", ImGuiTreeNodeFlags_DefaultOpen))
 	{
+		mAssetGridCount = 0;
+
 		for (size_t i = 0; i < mMeshNames.size(); i++)
 		{
 			std::string name = mMeshNames[i];
@@ -2508,13 +2538,14 @@ void Editor::drawAssets()
 			size_t slash = name.find_last_of("\\/");
 			if (slash != std::string::npos) name = name.substr(slash + 1);
 
-			// Подвійний клік створює у сцені об'єкт з цим мешем
-			ImGui::PushID((int)i);
-
 			std::string modelPath(mMeshPaths[i].begin(), mMeshPaths[i].end());
 
+			// Шлях файлу однозначно визначає плитку навіть після зміни переліку
+			ImGui::PushID(modelPath.c_str());
+			ID3D11ShaderResourceView* preview = mPreview.get(AssetPreview::Kind::Model, modelPath);
+
 			// Клік показує налаштування імпорту моделі, подвійний створює у сцені об'єкт з нею
-			bool clicked = ImGui::Selectable(name.c_str(), mInspectedModel == modelPath && mSelected == nullptr, ImGuiSelectableFlags_AllowDoubleClick);
+			bool clicked = drawAssetItem(name, preview, mInspectedModel == modelPath && mSelected == nullptr, textColor);
 
 			if (clicked)
 			{
@@ -2535,11 +2566,11 @@ void Editor::drawAssets()
 				}
 			}
 
-			// Меш перетягують на поле меша в інспекторі
+			// Меш перетягують на поле меша в інспекторі або на сцену
 			if (ImGui::BeginDragDropSource())
 			{
 				ImGui::SetDragDropPayload(MESH_PAYLOAD, mMeshPaths[i].c_str(), (mMeshPaths[i].size() + 1) * sizeof(wchar_t));
-				ImGui::TextUnformatted(name.c_str());
+				dragLabel(preview, name);
 				ImGui::EndDragDropSource();
 			}
 
@@ -2547,8 +2578,13 @@ void Editor::drawAssets()
 		}
 	}
 
-	if (ImGui::CollapsingHeader("Textures"))
+	ImGui::PopID();
+	ImGui::PushID("Textures");
+
+	if (ImGui::CollapsingHeader("Textures", ImGuiTreeNodeFlags_DefaultOpen))
 	{
+		mAssetGridCount = 0;
+
 		for (size_t i = 0; i < mTextureNames.size(); i++)
 		{
 			std::string name = mTextureNames[i];
@@ -2556,14 +2592,17 @@ void Editor::drawAssets()
 			size_t slash = name.find_last_of("\\/");
 			if (slash != std::string::npos) name = name.substr(slash + 1);
 
-			ImGui::PushID((int)i);
-			ImGui::Selectable(name.c_str());
+			std::string texturePath(mTexturePaths[i].begin(), mTexturePaths[i].end());
+			ID3D11ShaderResourceView* preview = mPreview.get(AssetPreview::Kind::Texture, texturePath);
+
+			ImGui::PushID(texturePath.c_str());
+			drawAssetItem(name, preview, false, textColor);
 
 			// Текстуру перетягують на поле карти матеріалу
 			if (ImGui::BeginDragDropSource())
 			{
 				ImGui::SetDragDropPayload(TEXTURE_PAYLOAD, mTexturePaths[i].c_str(), (mTexturePaths[i].size() + 1) * sizeof(wchar_t));
-				ImGui::TextUnformatted(name.c_str());
+				dragLabel(preview, name);
 				ImGui::EndDragDropSource();
 			}
 
@@ -2571,7 +2610,63 @@ void Editor::drawAssets()
 		}
 	}
 
+	ImGui::PopID();
+
 	ImGui::End();
+}
+
+// Малює ресурс панелі плиткою з мініатюрою або рядком списку; повертає, чи по ньому клікнули
+bool Editor::drawAssetItem(const std::string& name, ID3D11ShaderResourceView* preview, bool selected, const ImVec4& color)
+{
+	if (!mAssetGrid)
+	{
+		ImGui::PushStyleColor(ImGuiCol_Text, color);
+		bool clicked = ImGui::Selectable(name.c_str(), selected, ImGuiSelectableFlags_AllowDoubleClick);
+		ImGui::PopStyleColor();
+
+		return clicked;
+	}
+
+	float tile = mAssetTileSize;
+	float textHeight = ImGui::GetTextLineHeight();
+
+	// Плитки стають в один рядок, поки вміщаються в ширину панелі
+	float right = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+
+	if (mAssetGridCount > 0 && ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + tile <= right) ImGui::SameLine();
+
+	mAssetGridCount++;
+
+	ImVec2 start = ImGui::GetCursorScreenPos();
+	bool clicked = ImGui::Selectable("##asset", selected, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(tile, tile + textHeight));
+
+	// Мініатюра займає квадрат плитки, а поки її малюють - сіра заглушка
+	ImDrawList* draw = ImGui::GetWindowDrawList();
+	const float padding = 4.0f;
+	ImVec2 imageMin(start.x + padding, start.y + padding);
+	ImVec2 imageMax(start.x + tile - padding, start.y + tile - padding);
+
+	if (preview) draw->AddImage((ImTextureID)(intptr_t)preview, imageMin, imageMax);
+	else draw->AddRectFilled(imageMin, imageMax, ImGui::GetColorU32(ImGuiCol_FrameBg), 4.0f);
+
+	// Довге ім'я вкорочується до ширини плитки, а повне видно в підказці
+	std::string label = name;
+
+	while (label.size() > 1 && ImGui::CalcTextSize((label + "...").c_str()).x > tile)
+	{
+		label.pop_back();
+
+		while (!label.empty() && ((unsigned char)label.back() & 0xC0) == 0x80) label.pop_back();
+	}
+
+	if (label != name) label += "...";
+
+	float width = ImGui::CalcTextSize(label.c_str()).x;
+	draw->AddText(ImVec2(start.x + (tile - width) * 0.5f, start.y + tile), ImGui::GetColorU32(color), label.c_str());
+
+	if (label != name && ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) ImGui::SetTooltip("%s", name.c_str());
+
+	return clicked;
 }
 
 // Переходить у режим гри, зберігши стан сцени

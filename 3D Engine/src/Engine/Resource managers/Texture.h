@@ -25,6 +25,8 @@ public:
 
 	// Повертає кількість mip-рівнів текстури
 	unsigned int getMipCount() const;
+	// Повертає розмір найдетальнішого рівня текстури в пікселях
+	void getSize(unsigned int& width, unsigned int& height) const;
 private:
 	// Створює текстуру відеокарти із завантаженого зображення
 	void create(const DirectX::ScratchImage& imageData);

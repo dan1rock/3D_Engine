@@ -173,4 +173,5 @@ private:
 	friend class PostProcessing;
 	friend class EditorGrid;
 	friend class SelectionOutline;
+	friend class AssetPreview;
 };
