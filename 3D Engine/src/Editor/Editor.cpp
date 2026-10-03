@@ -177,6 +177,9 @@ void Editor::refreshAssetLists()
 // Малює інтерфейс редактора та оновлює його камеру
 void Editor::update()
 {
+	// Сховані в редакторі об'єкти не малюються, поки сценою керує редактор: під час редагування й на паузі
+	EntityManager::get()->hideEditorHidden = mEnabled && (!mPlaying || mPaused);
+
 	// У режимі префаба сховати редактор не можна: тоді сцена почала б грати, а в ній лише префаб
 	if (Input::getKeyDown(VK_F1) && !isPrefabMode()) mEnabled = !mEnabled;
 
@@ -644,7 +647,8 @@ void Editor::drawHierarchy()
 // Малює один вузол дерева разом з його дочірніми об'єктами
 void Editor::drawEntityNode(Entity* entity)
 {
-	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+	// Перекриття дозволяє замку в кінці рядка отримувати кліки замість самого рядка
+	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap;
 
 	if (isSelected(entity)) flags |= ImGuiTreeNodeFlags_Selected;
 
@@ -670,7 +674,14 @@ void Editor::drawEntityNode(Entity* entity)
 
 	if (colored) ImGui::PopStyleColor();
 
-	if (ImGui::IsItemClicked()) clickHierarchyRow(entity);
+	// Клік по оку чи замку в кінці рядка лише перемикає їх і не вибирає сам рядок
+	ImVec2 rowMin = ImGui::GetItemRectMin();
+	ImVec2 rowMax = ImGui::GetItemRectMax();
+	bool rowHovered = ImGui::IsItemHovered();
+	float rowHeight = rowMax.y - rowMin.y;
+	bool overToggles = ImGui::GetIO().MousePos.x >= rowMax.x - rowHeight * 2.0f - 4.0f;
+
+	if (ImGui::IsItemClicked() && !overToggles) clickHierarchyRow(entity);
 
 	// Рядок можна тягнути мишею, щоб змінити місце об'єкта в дереві; вибраний тягне за собою весь вибір
 	if (ImGui::BeginDragDropSource())
@@ -685,6 +696,9 @@ void Editor::drawEntityNode(Entity* entity)
 
 	drawDropTarget(entity);
 
+	drawVisibilityToggle(entity, rowMin, rowMax, rowHovered);
+	drawLockToggle(entity, rowMin, rowMax, rowHovered);
+
 	if (open)
 	{
 		std::vector<Entity*> children(entity->getChildren()->begin(), entity->getChildren()->end());
@@ -696,6 +710,99 @@ void Editor::drawEntityNode(Entity* entity)
 
 		ImGui::TreePop();
 	}
+}
+
+// Малює око перед замком у рядку дерева: видно, коли об'єкт схований або рядок під курсором, клік ховає чи показує об'єкт у вікні сцени
+void Editor::drawVisibilityToggle(Entity* entity, const ImVec2& rowMin, const ImVec2& rowMax, bool rowHovered)
+{
+	float size = rowMax.y - rowMin.y;
+	float x = rowMax.x - size * 2.0f - 4.0f;
+
+	ImGui::SameLine();
+	ImGui::SetCursorScreenPos(ImVec2(x, rowMin.y));
+
+	ImGui::PushID("visibility");
+	bool clicked = ImGui::InvisibleButton("##visibility", ImVec2(size, size));
+	bool hovered = ImGui::IsItemHovered();
+	ImGui::PopID();
+
+	if (clicked) entity->hiddenInEditor = !entity->hiddenInEditor;
+
+	if (hovered) ImGui::SetTooltip(entity->hiddenInEditor ? "Hidden in the Scene view (still visible in play mode)" : "Hide in the Scene view");
+
+	// Схований через батька показується блідіше, а видимий - лише коли рядок під курсором
+	bool inherited = !entity->hiddenInEditor && entity->isHiddenInEditor();
+	bool hidden = entity->hiddenInEditor || inherited;
+
+	if (!hidden && !rowHovered && !hovered) return;
+
+	ImVec4 color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+
+	if (inherited) color.w = 0.45f;
+	else if (!hidden) color.w = hovered ? 0.8f : 0.35f;
+
+	ImU32 packed = ImGui::GetColorU32(color);
+	ImDrawList* draw = ImGui::GetWindowDrawList();
+
+	// Око - мигдалеподібний контур із двох кривих і зіниця; у схованого зіниці немає, а око перекреслене
+	float centerX = x + size * 0.5f;
+	float centerY = rowMin.y + size * 0.52f;
+	float halfWidth = size * 0.36f;
+	float halfHeight = size * 0.36f;
+
+	draw->AddBezierQuadratic(ImVec2(centerX - halfWidth, centerY), ImVec2(centerX, centerY - halfHeight), ImVec2(centerX + halfWidth, centerY), packed, 1.4f);
+	draw->AddBezierQuadratic(ImVec2(centerX - halfWidth, centerY), ImVec2(centerX, centerY + halfHeight), ImVec2(centerX + halfWidth, centerY), packed, 1.4f);
+
+	if (hidden) draw->AddLine(ImVec2(centerX - halfWidth * 0.8f, centerY + halfHeight * 0.7f), ImVec2(centerX + halfWidth * 0.8f, centerY - halfHeight * 0.7f), packed, 1.6f);
+	else draw->AddCircleFilled(ImVec2(centerX, centerY), size * 0.11f, packed);
+}
+
+// Малює замок у кінці рядка дерева: видно, коли об'єкт замкнений або рядок під курсором, клік перемикає замок
+void Editor::drawLockToggle(Entity* entity, const ImVec2& rowMin, const ImVec2& rowMax, bool rowHovered)
+{
+	float size = rowMax.y - rowMin.y;
+
+	ImGui::SameLine();
+	ImGui::SetCursorScreenPos(ImVec2(rowMax.x - size - 2.0f, rowMin.y));
+
+	ImGui::PushID("lock");
+	bool clicked = ImGui::InvisibleButton("##lock", ImVec2(size, size));
+	bool hovered = ImGui::IsItemHovered();
+	ImGui::PopID();
+
+	if (clicked) entity->lockedInEditor = !entity->lockedInEditor;
+
+	if (hovered) ImGui::SetTooltip(entity->lockedInEditor ? "Locked: can't be picked in the Scene view" : "Lock picking in the Scene view");
+
+	// Замкнений через батька показується блідіше, а відімкнений - лише коли рядок під курсором
+	bool inherited = !entity->lockedInEditor && entity->isLockedInEditor();
+	bool locked = entity->lockedInEditor || inherited;
+
+	if (!locked && !rowHovered && !hovered) return;
+
+	ImVec4 color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+
+	if (inherited) color.w = 0.45f;
+	else if (!locked) color.w = hovered ? 0.8f : 0.35f;
+
+	ImU32 packed = ImGui::GetColorU32(color);
+	ImDrawList* draw = ImGui::GetWindowDrawList();
+
+	// Корпус замка - прямокутник, дужка - півколо над ним; у відімкненого дужка піднята й відкрита справа
+	float x = rowMax.x - size - 2.0f;
+	float y = rowMin.y;
+	float centerX = x + size * 0.5f;
+	float bodyTop = y + size * 0.48f;
+	float radius = size * 0.18f;
+	float lift = locked ? 0.0f : size * 0.12f;
+
+	draw->AddRectFilled(ImVec2(centerX - size * 0.26f, bodyTop), ImVec2(centerX + size * 0.26f, y + size * 0.86f), packed, 1.5f);
+
+	draw->PathArcTo(ImVec2(centerX, bodyTop - lift), radius, 3.14159265f, locked ? 6.28318531f : 5.4f, 12);
+	draw->PathStroke(packed, 0, 1.6f);
+
+	// Піднята дужка лівою ніжкою досі тримається за корпус
+	if (!locked) draw->AddLine(ImVec2(centerX - radius, bodyTop - lift), ImVec2(centerX - radius, bodyTop), packed, 1.6f);
 }
 
 // Приймає перетягнутий об'єкт на рядок дерева: над ним, під ним чи всередину
@@ -1192,7 +1299,8 @@ void Editor::dropPrefabIntoScene()
 
 	float distance = 0.0f;
 
-	if (Gizmo::pick(mouse.x, mouse.y, &distance))
+	// Об'єкт ставиться й на замкнену поверхню: замок забороняє лише вибір кліком
+	if (Gizmo::pick(mouse.x, mouse.y, &distance, true))
 	{
 		Ray ray = Gizmo::screenPointToRay(mouse.x, mouse.y);
 

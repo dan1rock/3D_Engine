@@ -269,6 +269,10 @@ static JsonValue writeEntity(Entity* entity, WriteContext& context, bool prefabR
 
 		if (entity->dontDestroyOnLoad) entityValue.set("persistent", true);
 
+		// Замок стосується лише редагування цієї сцени, тож у файл префаба він не потрапляє
+		if (entity->lockedInEditor) entityValue.set("locked", true);
+		if (entity->hiddenInEditor) entityValue.set("hidden", true);
+
 		// Екземпляр зберігає і повні дані, і перелік змінених властивостей: після завантаження решта
 		// береться з файлу префаба, а якщо файл зник, об'єкт однаково відновиться з цих даних
 		if (!entity->prefabAsset.empty())
@@ -521,6 +525,8 @@ void SceneSerializer::applyRecords(const std::vector<RecordChange>& entities, co
 		entity->isActiveSelf = data.get("active").asBool(true);
 		entity->dontDestroyOnLoad = data.get("persistent").asBool(false);
 		entity->prefabAsset = data.get("prefabAsset").asString();
+		entity->lockedInEditor = data.get("locked").asBool(false);
+		entity->hiddenInEditor = data.get("hidden").asBool(false);
 
 		int parentId = data.get("parent").asInt(-1);
 		Entity* parent = parentId >= 0 ? manager->findById((unsigned int)parentId) : nullptr;
@@ -817,6 +823,8 @@ static std::vector<Entity*> buildEntities(const JsonValue& data, Entity* parent,
 		entity->isActiveSelf = entityData.get("active").asBool(true);
 		entity->dontDestroyOnLoad = entityData.get("persistent").asBool(false);
 		entity->prefabAsset = entityData.get("prefabAsset").asString();
+		entity->lockedInEditor = entityData.get("locked").asBool(false);
+		entity->hiddenInEditor = entityData.get("hidden").asBool(false);
 
 		created.push_back(entity);
 	}

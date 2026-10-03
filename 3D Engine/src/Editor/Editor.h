@@ -18,6 +18,7 @@ class Renderer;
 class Material;
 class Texture;
 class SwapChain;
+struct ImVec2;
 struct ImVec4;
 
 // Редактор сцени: показує дерево об'єктів, інспектор вибраного об'єкта та керує режимом гри
@@ -71,6 +72,10 @@ private:
 	void drawEntityNode(Entity* entity);
 	// Приймає перетягнутий об'єкт на рядок дерева: над ним, під ним чи всередину
 	void drawDropTarget(Entity* target);
+	// Малює око перед замком у рядку дерева: видно, коли об'єкт схований або рядок під курсором, клік ховає чи показує об'єкт у вікні сцени
+	void drawVisibilityToggle(Entity* entity, const ImVec2& rowMin, const ImVec2& rowMax, bool rowHovered);
+	// Малює замок у кінці рядка дерева: видно, коли об'єкт замкнений або рядок під курсором, клік перемикає замок
+	void drawLockToggle(Entity* entity, const ImVec2& rowMin, const ImVec2& rowMax, bool rowHovered);
 	// Перевіряє, чи можна зробити об'єкт дочірнім для вказаного батька (nullptr — корінь)
 	bool canDrop(Entity* dragged, Entity* newParent) const;
 	// Перевіряє, чи можна покласти новий екземпляр префаба під вказаного батька

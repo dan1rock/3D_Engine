@@ -115,6 +115,9 @@ void SelectionOutline::render(SwapChain* swapChain, unsigned int width, unsigned
 
 		if (!owner->isActive()) continue;
 
+		// Схований у редакторі об'єкт не має й обведення
+		if (owner->isHiddenInEditor()) continue;
+
 		// Самі вибрані пишуть у червоний канал, їхні нащадки на будь-якій глибині - у зелений
 		bool isSelected = selected.count(owner) > 0;
 		bool isChild = false;

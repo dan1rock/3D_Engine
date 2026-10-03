@@ -125,6 +125,12 @@ private:
 
 	bool mFrustumCullingEnabled = true;
 
+public:
+	// Чи сховані в редакторі об'єкти зараз не малюються: так під час редагування й на паузі, але не в самій грі
+	bool hideEditorHidden = false;
+
+private:
+
 	int mVisibleRenderers = 0;
 	int mActiveRenderers = 0;
 };

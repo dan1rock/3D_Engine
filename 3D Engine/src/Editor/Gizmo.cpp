@@ -349,7 +349,7 @@ static float distanceToSegment(float px, float py, float ax, float ay, float bx,
 }
 
 // Шукає найближчий видимий об'єкт під вказаною точкою екрана
-Entity* Gizmo::pick(float screenX, float screenY, float* hitDistance)
+Entity* Gizmo::pick(float screenX, float screenY, float* hitDistance, bool includeLocked)
 {
 	Ray ray = screenPointToRay(screenX, screenY);
 
@@ -359,6 +359,12 @@ Entity* Gizmo::pick(float screenX, float screenY, float* hitDistance)
 	for (Entity* entity : EntityManager::get()->getEntities())
 	{
 		if (!entity->isActive()) continue;
+
+		// Замкнений об'єкт клік пропускає, тож вибирається те, що за ним
+		if (!includeLocked && entity->isLockedInEditor()) continue;
+
+		// Схованого об'єкта не видно, тож ні вибрати його, ні поставити щось на нього не можна
+		if (EntityManager::get()->hideEditorHidden && entity->isHiddenInEditor()) continue;
 
 		Renderer* renderer = entity->getComponent<Renderer>();
 

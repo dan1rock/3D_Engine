@@ -266,6 +266,9 @@ void EntityManager::updateRenderers()
 	for (auto* r : mRenderers) {
 		if (!r->getOwner()->isActive()) continue;
 
+		// Схований у редакторі об'єкт не малюється у вікні сцени
+		if (hideEditorHidden && r->getOwner()->isHiddenInEditor()) continue;
+
 		mActiveRenderers++;
 
 		if (mFrustumCullingEnabled && !r->isInsideFrustum(frustum)) continue;
@@ -312,6 +315,9 @@ void EntityManager::renderShadowCasters(const Frustum& frustum)
 {
 	for (auto* r : mRenderers) {
 		if (!r->getOwner()->isActive()) continue;
+
+		// Схований у редакторі об'єкт не кидає й тіні
+		if (hideEditorHidden && r->getOwner()->isHiddenInEditor()) continue;
 
 		// Перевіряються лише бічні площини: об'єкт перед каскадом уздовж напрямку
 		// світла лишається за межами його глибини, але тінь у каскад усе одно кидає

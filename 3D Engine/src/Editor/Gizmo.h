@@ -30,7 +30,7 @@ public:
 	static bool projectToScreen(const Vector3& world, float& screenX, float& screenY);
 
 	// Шукає найближчий видимий об'єкт під вказаною точкою екрана
-	static Entity* pick(float screenX, float screenY, float* hitDistance = nullptr);
+	static Entity* pick(float screenX, float screenY, float* hitDistance = nullptr, bool includeLocked = false);
 
 	// Малює маніпулятор на об'єкті entity і рухає ним усі targets разом; true, поки миша зайнята маніпулятором
 	bool update(Entity* entity, const std::vector<Entity*>& targets);

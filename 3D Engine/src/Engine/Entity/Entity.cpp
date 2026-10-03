@@ -258,3 +258,25 @@ bool Entity::isActive()
 
     return true;
 }
+
+// Перевіряє, чи об'єкт схований у редакторі сам або через когось із батьків
+bool Entity::isHiddenInEditor()
+{
+	for (Entity* current = this; current; current = current->getParent())
+	{
+		if (current->hiddenInEditor) return true;
+	}
+
+	return false;
+}
+
+// Перевіряє, чи об'єкт замкнений у редакторі сам або через когось із батьків
+bool Entity::isLockedInEditor()
+{
+	for (Entity* current = this; current; current = current->getParent())
+	{
+		if (current->lockedInEditor) return true;
+	}
+
+	return false;
+}
