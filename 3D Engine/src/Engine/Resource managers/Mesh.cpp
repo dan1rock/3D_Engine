@@ -1,5 +1,6 @@
 #include "Mesh.h"
 #include "GraphicsEngine.h"
+#include "AssetCache.h"
 #include <assimp/cimport.h>
 #include <assimp/config.h>
 #include <assimp/scene.h>
@@ -17,17 +18,27 @@
 #include <fstream>
 #include <algorithm>
 #include <cwctype>
+#include <type_traits>
 #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #include <experimental/filesystem>
 
 namespace filesystem = std::experimental::filesystem;
 
 // Структура для зберігання вершинних даних
-struct vertex {
+struct MeshVertex {
     Vector3 pos;
     Vector3 normal;
     Vector2 texCoord;
 };
+
+// Номер способу перетворення моделей: його зміна робить застарілими всі збережені в кеші меші
+static const int MESH_CACHE_VERSION = 1;
+
+// Вершини, частини й налаштування матеріалів пишуться в кеш байтами як є, тож вони мають бути лише числами без вказівників
+static_assert(std::is_standard_layout<MeshVertex>::value && sizeof(MeshVertex) == 8 * sizeof(float), "MeshVertex is cached as raw bytes");
+static_assert(std::is_standard_layout<Vector3>::value && sizeof(Vector3) == 3 * sizeof(float), "Vector3 is cached as raw bytes");
+static_assert(std::is_trivially_copyable<SubMesh>::value, "SubMesh is cached as raw bytes");
+static_assert(std::is_trivially_copyable<MaterialProperties>::value, "MaterialProperties is cached as raw bytes");
 
 // Сітка моделі разом з повним перетворенням вузла, у якому вона стоїть
 struct MeshInstance
@@ -85,9 +96,14 @@ static std::wstring findTexture(const aiScene* scene, const aiMaterial* material
     return std::wstring();
 }
 
-// Перевіряє, чи OBJ-файл має свою бібліотеку матеріалів; без неї usemtl дає лише імена без жодних налаштувань
-static bool objHasMaterialLibrary(const std::wstring& modelPath)
+// Повертає шлях бібліотеки матеріалів OBJ-файлу, якщо вона існує; без неї usemtl дає лише імена без жодних налаштувань
+static std::wstring objMaterialLibrary(const std::wstring& modelPath)
 {
+    std::wstring extension = modelPath.substr(modelPath.find_last_of(L'.') + 1);
+    std::transform(extension.begin(), extension.end(), extension.begin(), ::towlower);
+
+    if (extension != L"obj") return std::wstring();
+
     std::ifstream file(modelPath);
     std::string line;
 
@@ -101,12 +117,13 @@ static bool objHasMaterialLibrary(const std::wstring& modelPath)
         while (!name.empty() && (name.back() == '\r' || name.back() == ' ')) name.pop_back();
 
         std::wstring folder = modelPath.substr(0, modelPath.find_last_of(L"\\/") + 1);
+        std::wstring library = folder + std::wstring(name.begin(), name.end());
         std::error_code error;
 
-        return filesystem::is_regular_file(folder + std::wstring(name.begin(), name.end()), error);
+        return filesystem::is_regular_file(library, error) ? library : std::wstring();
     }
 
-    return false;
+    return std::wstring();
 }
 
 // Читає матеріали й вбудовані текстури моделі; колір, карти й прозорість переходять у налаштування матеріалу
@@ -116,7 +133,7 @@ static void readModelMaterials(const aiScene* scene, const std::wstring& modelPa
     std::wstring extension = modelPath.substr(modelPath.find_last_of(L'.') + 1);
     std::transform(extension.begin(), extension.end(), extension.begin(), ::towlower);
 
-    bool describesMaterials = extension != L"obj" || objHasMaterialLibrary(modelPath);
+    bool describesMaterials = extension != L"obj" || !objMaterialLibrary(modelPath).empty();
 
     for (unsigned t = 0; t < scene->mNumTextures; ++t)
     {
@@ -331,10 +348,58 @@ static void decompose(const aiMatrix4x4& source, Vector3& position, Vector3& rot
     scale = matrix.getScale();
 }
 
+// Повертає відбиток джерела меша: версія перетворення, файл моделі, а в OBJ ще й його бібліотека матеріалів; порожній, якщо файлу немає
+std::string Mesh::sourceStamp(const std::wstring& path)
+{
+    std::wstring file = path.substr(0, path.find(L"::"));
+    std::string stamp = AssetCache::stampOf(file);
+
+    if (stamp.empty()) return stamp;
+
+    stamp = std::to_string(MESH_CACHE_VERSION) + "|" + stamp;
+
+	// Бібліотека матеріалів задає слоти й текстури моделі, тож її зміна теж оновлює кеш
+    std::wstring library = objMaterialLibrary(file);
+
+    if (!library.empty()) stamp += "|" + AssetCache::stampOf(library);
+
+    return stamp;
+}
+
 // Завантажує модель з файлу, створює вершинний та індексний буфери; шлях модель::вузол бере лише сітки цього вузла
 Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
 {
-    std::wstring requested(fullPath);
+    std::vector<MeshVertex> vertices;
+
+	// Перетворена модель береться з кешу, поки її файл не змінився; інакше її читає бібліотека імпорту, а кеш оновлюється
+    std::wstring cache = AssetCache::pathOf(L"Meshes", fullPath, L".mesh");
+    std::string stamp = sourceStamp(fullPath);
+
+    if (!readCache(cache, stamp, vertices))
+    {
+        import(fullPath, vertices);
+        writeCache(cache, stamp, vertices);
+    }
+
+    createBuffers(vertices);
+}
+
+// Читає модель бібліотекою імпорту й перетворює її сітки на вершини рушія
+void Mesh::import(const std::wstring& requested, std::vector<MeshVertex>& outVertices)
+{
+	// Невдале читання кешу могло лишити часткові дані
+    outVertices.clear();
+    mPositions.clear();
+    mIndices.clear();
+    mSubMeshes.clear();
+    mMaterialCount = 1;
+    mMaterialNames.clear();
+    mModelMaterials.clear();
+    mEmbeddedTextures.clear();
+    mModelNodes.clear();
+    mBoundsCenter = Vector3(0.0f, 0.0f, 0.0f);
+    mBoundsRadius = 0.0f;
+
     size_t separator = requested.find(L"::");
 
     std::wstring ws = separator == std::wstring::npos ? requested : requested.substr(0, separator);
@@ -379,9 +444,6 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
 		// і перша ж спроба його намалювати впала б на розіменуванні nullptr
 		throw std::runtime_error("Mesh file is missing or has no geometry");
     }
-
-    std::vector<vertex> outVertices;
-    std::vector<uint32_t> outIndices;
 
     std::vector<const aiNode*> nodes;
     std::vector<int> parents;
@@ -447,7 +509,6 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
     }
 
     outVertices.reserve(totalVertices);
-    outIndices.reserve(totalIndices);
     mPositions.reserve(totalVertices);
     mIndices.reserve(totalIndices);
 
@@ -482,11 +543,11 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
 
 		// Assimp розбиває модель на окремі сітки за матеріалами, тому кожна стає частиною меша
         SubMesh subMesh;
-        subMesh.indexStart = static_cast<unsigned int>(outIndices.size());
+        subMesh.indexStart = static_cast<unsigned int>(mIndices.size());
         subMesh.materialSlot = mesh->mMaterialIndex;
 
         for (unsigned i = 0; i < mesh->mNumVertices; ++i) {
-            vertex v;
+            MeshVertex v;
 
             aiVector3D position = instance.transform * mesh->mVertices[i];
             aiVector3D normal = normalMatrix * mesh->mNormals[i];
@@ -529,12 +590,11 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
             for (unsigned j = 0; j < face.mNumIndices; ++j) {
                 unsigned int index = face.mNumIndices == 3 && j > 0 ? face.mIndices[3 - j] : face.mIndices[j];
 
-                outIndices.push_back(baseVertex + index);
                 mIndices.push_back(baseVertex + index);
             }
         }
 
-        subMesh.indexCount = static_cast<unsigned int>(outIndices.size()) - subMesh.indexStart;
+        subMesh.indexCount = static_cast<unsigned int>(mIndices.size()) - subMesh.indexStart;
 
 		// Порожні частини не створюють викликів малювання
         if (subMesh.indexCount > 0)
@@ -601,8 +661,138 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
         mMaterialCount = (unsigned int)mSubMeshes.size();
         mMaterialNames.assign(mMaterialCount, std::string());
     }
+}
 
+// Зберігає перетворену модель у кеш
+void Mesh::writeCache(const std::wstring& path, const std::string& stamp, const std::vector<MeshVertex>& vertices) const
+{
+    CacheWriter out;
 
+    out.array(vertices);
+    out.array(mIndices);
+    out.array(mSubMeshes);
+    out.value(mMaterialCount);
+
+    out.value((unsigned int)mMaterialNames.size());
+    for (const std::string& name : mMaterialNames) out.string(name);
+
+    out.value((unsigned int)mModelMaterials.size());
+
+    for (const ModelMaterial& material : mModelMaterials)
+    {
+        out.string(material.name);
+        out.string(material.key);
+        out.value(material.properties);
+        for (const std::wstring& map : material.maps) out.wstring(map);
+        out.value(material.imported);
+    }
+
+    out.value((unsigned int)mEmbeddedTextures.size());
+
+    for (const EmbeddedTexture& texture : mEmbeddedTextures)
+    {
+        out.array(texture.data);
+        out.value(texture.width);
+        out.value(texture.height);
+        out.string(texture.format);
+        out.string(texture.name);
+    }
+
+    out.value((unsigned int)mModelNodes.size());
+
+    for (const ModelNode& node : mModelNodes)
+    {
+        out.string(node.name);
+        out.string(node.key);
+        out.value(node.parent);
+        out.value(node.position);
+        out.value(node.rotation);
+        out.value(node.scale);
+        out.value(node.hasMeshes);
+    }
+
+    out.value(mBoundsCenter);
+    out.value(mBoundsRadius);
+
+    AssetCache::write(path, stamp, out.data.data(), out.data.size());
+}
+
+// Читає перетворену модель з кешу; false, якщо кешу немає або він застарів
+bool Mesh::readCache(const std::wstring& path, const std::string& stamp, std::vector<MeshVertex>& vertices)
+{
+    std::vector<unsigned char> data;
+
+    if (!AssetCache::read(path, stamp, data)) return false;
+
+    CacheReader in(data);
+
+    in.array(vertices);
+    in.array(mIndices);
+    in.array(mSubMeshes);
+    mMaterialCount = in.value<unsigned int>();
+
+    mMaterialNames.resize(in.count(sizeof(unsigned int)));
+    for (std::string& name : mMaterialNames) name = in.string();
+
+    mModelMaterials.resize(in.count(sizeof(unsigned int)));
+
+    for (ModelMaterial& material : mModelMaterials)
+    {
+        material.name = in.string();
+        material.key = in.string();
+        material.properties = in.value<MaterialProperties>();
+        for (std::wstring& map : material.maps) map = in.wstring();
+        material.imported = in.value<bool>();
+    }
+
+    mEmbeddedTextures.resize(in.count(sizeof(unsigned int)));
+
+    for (EmbeddedTexture& texture : mEmbeddedTextures)
+    {
+        in.array(texture.data);
+        texture.width = in.value<unsigned int>();
+        texture.height = in.value<unsigned int>();
+        texture.format = in.string();
+        texture.name = in.string();
+    }
+
+    mModelNodes.resize(in.count(sizeof(unsigned int)));
+
+    for (ModelNode& node : mModelNodes)
+    {
+        node.name = in.string();
+        node.key = in.string();
+        node.parent = in.value<int>();
+        node.position = in.value<Vector3>();
+        node.rotation = in.value<Vector3>();
+        node.scale = in.value<Vector3>();
+        node.hasMeshes = in.value<bool>();
+    }
+
+    mBoundsCenter = in.value<Vector3>();
+    mBoundsRadius = in.value<float>();
+
+	// Індекси за межами вершин означали б зіпсований кеш, тож такий кеш не приймається
+    bool valid = in.ok && !vertices.empty();
+
+    for (unsigned int index : mIndices)
+    {
+        if (index >= vertices.size()) { valid = false; break; }
+    }
+
+    if (!valid) return false;
+
+	// Позиції для фізики - ті самі вершини
+    mPositions.resize(vertices.size());
+
+    for (size_t i = 0; i < vertices.size(); ++i) mPositions[i] = vertices[i].pos;
+
+    return true;
+}
+
+// Створює вершинний та індексний буфери відеокарти
+void Mesh::createBuffers(const std::vector<MeshVertex>& vertices)
+{
 	// Створюємо вершинний та індексний буфери в графічному рушії
     mVertexBuffer = GraphicsEngine::get()->createVertexBuffer();
     mIndexBuffer = GraphicsEngine::get()->createIndexBuffer();
@@ -614,8 +804,8 @@ Mesh::Mesh(const wchar_t* fullPath) : Resource(fullPath)
     GraphicsEngine::get()->compileVertexShader(L"src\\Shaders\\VertexLayoutShader.hlsl", "main", &shaderByteCode, &shaderSize);
 
 	// Завантажуємо вершинний та індексний буфери з даними
-    mVertexBuffer->load(outVertices.data(), sizeof(vertex), outVertices.size(), shaderByteCode, shaderSize);
-    mIndexBuffer->load(outIndices.data(), outIndices.size());
+    mVertexBuffer->load((void*)vertices.data(), sizeof(MeshVertex), (UINT)vertices.size(), shaderByteCode, shaderSize);
+    mIndexBuffer->load(mIndices.data(), (UINT)mIndices.size());
 
 	// Звільняємо ресурси вершинного шейдера
     GraphicsEngine::get()->releaseVertexShader();

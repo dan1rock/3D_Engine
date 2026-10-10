@@ -155,8 +155,8 @@ std::string AssetPreview::stampOf(Kind kind, const std::string& path) const
 
 	stamp += "-" + std::to_string(modifiedTime(path));
 
-	// Заміни матеріалів моделі лежать у її файлі налаштувань імпорту
-	if (kind == Kind::Model) stamp += "-" + std::to_string(modifiedTime(path + ".import"));
+	// Заміни матеріалів моделі й стиснення текстури лежать у файлі налаштувань імпорту
+	if (kind == Kind::Model || kind == Kind::Texture) stamp += "-" + std::to_string(modifiedTime(path + ".import"));
 
 	return stamp;
 }

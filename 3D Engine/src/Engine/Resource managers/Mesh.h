@@ -43,6 +43,9 @@ struct EmbeddedTexture
 	// Ім'я файлу, під яким текстуру вбудували, або порожнє
 	std::string name;
 };
+// Вершина меша в тому вигляді, в якому її читає вершинний шейдер
+struct MeshVertex;
+
 // Частина меша з власним матеріалом: неперервний діапазон індексів у спільному буфері
 struct SubMesh
 {
@@ -88,6 +91,8 @@ public:
 
 	// Звільняє модель, збережену для завантаження її окремих вузлів
 	static void releaseImportCache();
+	// Повертає відбиток джерела меша: версія перетворення, файл моделі, а в OBJ ще й його бібліотека матеріалів; порожній, якщо файлу немає
+	static std::string sourceStamp(const std::wstring& path);
 
 	// Повертає центр сфери, що охоплює меш, у локальних координатах
 	const Vector3& getBoundsCenter() const;
@@ -95,6 +100,15 @@ public:
 	float getBoundsRadius() const;
 
 private:
+	// Читає модель бібліотекою імпорту й перетворює її сітки на вершини рушія
+	void import(const std::wstring& requested, std::vector<MeshVertex>& vertices);
+	// Читає перетворену модель з кешу; false, якщо кешу немає або він застарів
+	bool readCache(const std::wstring& path, const std::string& stamp, std::vector<MeshVertex>& vertices);
+	// Зберігає перетворену модель у кеш
+	void writeCache(const std::wstring& path, const std::string& stamp, const std::vector<MeshVertex>& vertices) const;
+	// Створює вершинний та індексний буфери відеокарти
+	void createBuffers(const std::vector<MeshVertex>& vertices);
+
 	VertexBuffer* mVertexBuffer = nullptr;
 	IndexBuffer* mIndexBuffer = nullptr;
 

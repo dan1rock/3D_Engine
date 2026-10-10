@@ -188,7 +188,9 @@ void Editor::update()
 
 	if (!mEnabled) return;
 
+
 	syncSelection();
+
 
 	// Вибір перед будь-якою зміною цього кадру: його поверне скасування цієї зміни
 	if (!mPlaying && mUndoCheckFrames == 0 && !ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::IsAnyItemActive())
@@ -1648,24 +1650,27 @@ void Editor::drawInspector()
 	{
 		selectOnly(nullptr);
 		mInspectedMaterial.clear();
+		mInspectedTexture.clear();
 		mInspectedModel = mOpenModelRequest;
 		mOpenModelRequest.clear();
 	}
 
 	if (mSelected == nullptr)
 	{
-		// Без вибраного об'єкта інспектор показує вибрані в панелі ресурсів модель чи матеріал
+		// Без вибраного об'єкта інспектор показує вибрані в панелі ресурсів модель, матеріал чи текстуру
 		if (!mInspectedModel.empty()) drawModelAsset();
 		else if (!mInspectedMaterial.empty()) drawMaterialAsset();
+		else if (!mInspectedTexture.empty()) drawTextureAsset();
 		else ImGui::TextUnformatted("Nothing selected");
 
 		ImGui::End();
 		return;
 	}
 
-	// Вибраний об'єкт заміняє в інспекторі вибрані раніше модель чи матеріал
+	// Вибраний об'єкт заміняє в інспекторі вибрані раніше модель, матеріал чи текстуру
 	mInspectedMaterial.clear();
 	mInspectedModel.clear();
+	mInspectedTexture.clear();
 
 	// Перевірка, що вибраний об'єкт ще існує у сцені
 	bool alive = false;
@@ -2584,6 +2589,7 @@ void Editor::drawAssets()
 			{
 				selectOnly(nullptr);
 				mInspectedModel.clear();
+				mInspectedTexture.clear();
 				mInspectedMaterial = entry;
 			}
 
@@ -2622,6 +2628,7 @@ void Editor::drawAssets()
 				{
 					selectOnly(nullptr);
 					mInspectedModel.clear();
+					mInspectedTexture.clear();
 					mInspectedMaterial = path;
 				}
 
@@ -2659,6 +2666,7 @@ void Editor::drawAssets()
 			{
 				selectOnly(nullptr);
 				mInspectedMaterial.clear();
+				mInspectedTexture.clear();
 				mInspectedModel = modelPath;
 			}
 
@@ -2704,7 +2712,15 @@ void Editor::drawAssets()
 			ID3D11ShaderResourceView* preview = mPreview.get(AssetPreview::Kind::Texture, texturePath);
 
 			ImGui::PushID(texturePath.c_str());
-			drawAssetItem(name, preview, false, textColor);
+
+			// Клік показує в інспекторі розмір текстури та її стиснення
+			if (drawAssetItem(name, preview, mInspectedTexture == texturePath && mSelected == nullptr, textColor))
+			{
+				selectOnly(nullptr);
+				mInspectedModel.clear();
+				mInspectedMaterial.clear();
+				mInspectedTexture = texturePath;
+			}
 
 			// Текстуру перетягують на поле карти матеріалу
 			if (ImGui::BeginDragDropSource())
@@ -2721,6 +2737,73 @@ void Editor::drawAssets()
 	ImGui::PopID();
 
 	ImGui::End();
+}
+
+// Повертає зрозумілу назву формату пікселів текстури
+static const char* textureFormatName(DXGI_FORMAT format)
+{
+	switch (format)
+	{
+	case DXGI_FORMAT_BC1_UNORM: return "BC1 (compressed, no alpha)";
+	case DXGI_FORMAT_BC3_UNORM: return "BC3 (compressed, with alpha)";
+	case DXGI_FORMAT_BC7_UNORM: return "BC7 (compressed, high quality)";
+	case DXGI_FORMAT_R8G8B8A8_UNORM: return "RGBA 8 bit";
+	case DXGI_FORMAT_B8G8R8A8_UNORM: return "BGRA 8 bit";
+	case DXGI_FORMAT_B8G8R8X8_UNORM: return "BGRX 8 bit";
+	case DXGI_FORMAT_R16G16B16A16_UNORM: return "RGBA 16 bit";
+	case DXGI_FORMAT_R8_UNORM: return "R 8 bit";
+	default: return "Uncompressed";
+	}
+}
+
+// Малює вибрану в панелі ресурсів текстуру: розмір, формат, пам'ять і налаштування стиснення
+void Editor::drawTextureAsset()
+{
+	std::wstring wide(mInspectedTexture.begin(), mInspectedTexture.end());
+	Texture* texture = GraphicsEngine::get()->getTextureManager()->createTextureFromFile(wide.c_str());
+
+	ImGui::Text("%s (Texture)", filesystem::path(mInspectedTexture).filename().string().c_str());
+	ImGui::TextDisabled("%s", mInspectedTexture.c_str());
+
+	if (texture == nullptr)
+	{
+		ImGui::TextDisabled("The texture can't be loaded.");
+		return;
+	}
+
+	unsigned int width = 0;
+	unsigned int height = 0;
+	texture->getSize(width, height);
+
+	ImGui::TextDisabled("%u x %u, %u mip levels", width, height, texture->getMipCount());
+	ImGui::TextDisabled("%s, %.1f MB in video memory", textureFormatName(texture->getFormat()), texture->getMemorySize() / (1024.0 * 1024.0));
+
+	ImGui::SeparatorText("Import Settings");
+
+	// Нове стиснення застосовується одразу: текстура перезавантажується, і всі матеріали бачать її новий вигляд
+	TextureCompression compression = Texture::getCompression(wide);
+	const char* names[] = { "None", "Normal Quality (BC1 / BC3)", "High Quality (BC7)" };
+	int selected = (int)compression;
+
+	if (ImGui::Combo("Compression", &selected, names, IM_ARRAYSIZE(names)) && selected != (int)compression)
+	{
+		Texture::setCompression(wide, (TextureCompression)selected);
+		texture->reload();
+	}
+
+	// Стиснення, яке не вдалося, лишає текстуру нестисненою, і це варто пояснити
+	DXGI_FORMAT format = texture->getFormat();
+	bool compressed = format == DXGI_FORMAT_BC1_UNORM || format == DXGI_FORMAT_BC3_UNORM || format == DXGI_FORMAT_BC7_UNORM;
+
+	if (compression != TextureCompression::None && !compressed)
+	{
+		ImGui::TextWrapped("This texture can't be compressed: both its sides must be multiples of 4.");
+	}
+
+	// Довге пояснення переноситься за шириною інспектора
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	ImGui::TextWrapped("Compressed textures are kept with their mip levels in Library\\Textures, so only the first load compresses them.");
+	ImGui::PopStyleColor();
 }
 
 // Малює ресурс панелі плиткою з мініатюрою або рядком списку; повертає, чи по ньому клікнули

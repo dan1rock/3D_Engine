@@ -211,8 +211,8 @@ void CarComponent::simulateWheel(wheel& wheel)
 		if (distanceDiff > maxDiff) distanceDiff = maxDiff;
 		wheel.springDistance += distanceDiff;
 
-		wheel.wheelTransform->setLocalRotation(Vector3(wheel.spin * (wheel.rightSide ? -1.0f : 1.0f), 
-			wheel.rightSide ? 3.1415f : 0.0f, 0.0f));
+		wheel.wheelTransform->setLocalRotation(Vector3(wheel.spin * (wheel.rightSide ? 1.0f : -1.0f), 
+			wheel.rightSide ?  0.0f: 3.1415f, 0.0f));
 
 		wheel.wheelTransform->setLocalPosition(-Vector3(0, 1, 0) * wheel.springDistance);
 
@@ -235,8 +235,8 @@ void CarComponent::simulateWheel(wheel& wheel)
 		if (distanceDiff > maxDiff) distanceDiff = maxDiff;
 		wheel.springDistance += distanceDiff;
 
-		wheel.wheelTransform->setLocalRotation(Vector3(wheel.spin * (wheel.rightSide ? -1.0f : 1.0f),
-			wheel.rightSide ? 3.1415f : 0.0f, 0.0f));
+		wheel.wheelTransform->setLocalRotation(Vector3(wheel.spin * (wheel.rightSide ? 1.0f : -1.0f),
+			wheel.rightSide ? 0.0f : 3.1415f, 0.0f));
 
 		wheel.wheelTransform->setLocalPosition(-Vector3(0, 1, 0) * wheel.springDistance);
 	}

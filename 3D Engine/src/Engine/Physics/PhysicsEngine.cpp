@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <thread>
 #include <iostream>
+#include <string>
 
 using namespace physx;
 
@@ -73,6 +74,7 @@ void PhysicsEngine::init()
 	// Створення інтерфейсу для роботи з мешами
     PxCookingParams params(gPhysics->getTolerancesScale());
 
+	// Зміна цих параметрів вимагає нового номера в cookingStamp, інакше кеш віддасть дані, приготовані по-старому
 	// BVH34 будується на порядок швидше за типовий BVH33 і не поступається йому у швидкості запитів
     params.midphaseDesc.setToDefault(PxMeshMidPhase::eBVH34);
 
@@ -148,8 +150,17 @@ ConvexMeshManager* PhysicsEngine::getConvexMeshManager()
     return mConvexMeshManager;
 }
 
-// Створює (готує) опуклий меш з набору точок і повертає його
-PxConvexMesh* PhysicsEngine::cookConvexMesh(const std::vector<PxVec3>& points)
+// Повертає відбиток версії PhysX і параметрів готування, від яких залежать готові дані
+const char* PhysicsEngine::cookingStamp()
+{
+	// Друга частина - номер набору параметрів готування з init; його треба змінити разом з ними
+	static const std::string stamp = std::to_string(PX_PHYSICS_VERSION) + "-bvh34-noremap-1";
+
+	return stamp.c_str();
+}
+
+// Створює (готує) опуклий меш з набору точок і повертає його; cooked отримує готові дані для кешу
+PxConvexMesh* PhysicsEngine::cookConvexMesh(const std::vector<PxVec3>& points, std::vector<unsigned char>* cooked)
 {
     PxConvexMeshDesc desc;
     desc.points.count = static_cast<PxU32>(points.size());
@@ -162,14 +173,36 @@ PxConvexMesh* PhysicsEngine::cookConvexMesh(const std::vector<PxVec3>& points)
         throw std::runtime_error("Convex cooking failed");
     }
 
+    if (cooked) cooked->assign(buf.getData(), buf.getData() + buf.getSize());
+
     PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
     PxConvexMesh* convexMesh = gPhysics->createConvexMesh(input);
 
     return convexMesh;
 }
 
-// Створює (готує) трикутний меш з набору точок та індексів і повертає його
-PxTriangleMesh* PhysicsEngine::cookTriangleMesh(const std::vector<PxVec3>& points, const std::vector<PxU32>& indices)
+// Створює опуклий меш з уже готових даних, або nullptr, якщо дані не підходять
+PxConvexMesh* PhysicsEngine::createConvexMesh(const std::vector<unsigned char>& cooked)
+{
+    if (cooked.empty()) return nullptr;
+
+    PxDefaultMemoryInputData input(const_cast<PxU8*>(cooked.data()), (PxU32)cooked.size());
+
+    return gPhysics->createConvexMesh(input);
+}
+
+// Створює трикутний меш з уже готових даних, або nullptr, якщо дані не підходять
+PxTriangleMesh* PhysicsEngine::createTriangleMesh(const std::vector<unsigned char>& cooked)
+{
+    if (cooked.empty()) return nullptr;
+
+    PxDefaultMemoryInputData input(const_cast<PxU8*>(cooked.data()), (PxU32)cooked.size());
+
+    return gPhysics->createTriangleMesh(input);
+}
+
+// Створює (готує) трикутний меш з набору точок та індексів і повертає його; cooked отримує готові дані для кешу
+PxTriangleMesh* PhysicsEngine::cookTriangleMesh(const std::vector<PxVec3>& points, const std::vector<PxU32>& indices, std::vector<unsigned char>* cooked)
 {
     PxTriangleMeshDesc meshDesc;
     meshDesc.points.count = PxU32(points.size());
@@ -182,6 +215,8 @@ PxTriangleMesh* PhysicsEngine::cookTriangleMesh(const std::vector<PxVec3>& point
     PxDefaultMemoryOutputStream buf;
     if (!gCooking->cookTriangleMesh(meshDesc, buf))
         throw std::runtime_error("Failed to cook triangle mesh");
+
+    if (cooked) cooked->assign(buf.getData(), buf.getData() + buf.getSize());
 
     PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
     PxTriangleMesh* triangleMesh = gPhysics->createTriangleMesh(input);

@@ -26,10 +26,16 @@ public:
 	// Повертає менеджер опуклих мешів
 	ConvexMeshManager* getConvexMeshManager();
 
-	// Створює (готує) опуклий меш з набору точок і повертає його
-	PxConvexMesh* cookConvexMesh(const std::vector<PxVec3>& points);
-	// Створює (готує) трикутний меш з набору точок та індексів і повертає його
-	PxTriangleMesh* cookTriangleMesh(const std::vector<PxVec3>& points, const std::vector<PxU32>& indices);
+	// Створює (готує) опуклий меш з набору точок і повертає його; cooked отримує готові дані для кешу
+	PxConvexMesh* cookConvexMesh(const std::vector<PxVec3>& points, std::vector<unsigned char>* cooked = nullptr);
+	// Створює (готує) трикутний меш з набору точок та індексів і повертає його; cooked отримує готові дані для кешу
+	PxTriangleMesh* cookTriangleMesh(const std::vector<PxVec3>& points, const std::vector<PxU32>& indices, std::vector<unsigned char>* cooked = nullptr);
+	// Створює опуклий меш з уже готових даних, або nullptr, якщо дані не підходять
+	PxConvexMesh* createConvexMesh(const std::vector<unsigned char>& cooked);
+	// Створює трикутний меш з уже готових даних, або nullptr, якщо дані не підходять
+	PxTriangleMesh* createTriangleMesh(const std::vector<unsigned char>& cooked);
+	// Повертає відбиток версії PhysX і параметрів готування, від яких залежать готові дані
+	static const char* cookingStamp();
 
 	// Повертає єдиний екземпляр PhysicsEngine (синглтон)
 	static PhysicsEngine* get();

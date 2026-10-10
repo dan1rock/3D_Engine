@@ -2,14 +2,49 @@
 #include "GraphicsEngine.h"
 #include "DeviceContext.h"
 #include "Mesh.h"
+#include "AssetCache.h"
+#include "Json.h"
 #include <DirectXTex.h>
 #include <fstream>
+#include <sstream>
+#include <iostream>
+#include <chrono>
+#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#include <experimental/filesystem>
 
-// Створює текстуру з файлу
+namespace filesystem = std::experimental::filesystem;
+
+// Номер способу стиснення: його зміна робить застарілими всі стиснені текстури в кеші
+static const char* TEXTURE_CACHE_VERSION = "1";
+// Розширення файлу налаштувань імпорту, що лежить поруч з текстурою
+static const wchar_t* IMPORT_EXTENSION = L".import";
+
+// Повертає назву стиснення, під якою воно лежить у файлі налаштувань
+static const char* compressionName(TextureCompression compression)
+{
+	switch (compression)
+	{
+	case TextureCompression::Normal: return "Normal";
+	case TextureCompression::High: return "High";
+	default: return "None";
+	}
+}
+
+// Створює текстуру з файлу; стиснена за налаштуваннями імпорту текстура береться з кешу
 Texture::Texture(const wchar_t* fullPath): Resource(fullPath)
 {
+	load(fullPath);
+}
+
+// Завантажує файл текстури: стиснену бере з кешу або стискає, решту створює із зображення
+void Texture::load(const std::wstring& path)
+{
+	TextureCompression compression = getCompression(path);
+
+	if (compression != TextureCompression::None && loadCompressed(path, compression)) return;
+
 	DirectX::ScratchImage imageData;
-	HRESULT res = DirectX::LoadFromWICFile(fullPath, DirectX::WIC_FLAGS_NONE, nullptr, imageData);
+	HRESULT res = DirectX::LoadFromWICFile(path.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, imageData);
 
 	if (FAILED(res))
 	{
@@ -17,6 +52,144 @@ Texture::Texture(const wchar_t* fullPath): Resource(fullPath)
 	}
 
 	create(imageData);
+}
+
+// Створює стиснену текстуру з кешу або стискає зображення з готовими mip-рівнями й зберігає його в кеш; false, якщо стиснути не вдалося
+bool Texture::loadCompressed(const std::wstring& path, TextureCompression compression)
+{
+	std::wstring cache = AssetCache::pathOf(L"Textures", path, L".dds");
+	std::string stamp = AssetCache::stampOf(path);
+
+	if (!stamp.empty()) stamp += std::string("|") + TEXTURE_CACHE_VERSION + "|" + compressionName(compression);
+
+	std::vector<unsigned char> data;
+	DirectX::ScratchImage compressed;
+
+	// Стиснене зображення з усіма рівнями лишається лише передати відеокарті
+	if (AssetCache::read(cache, stamp, data) && SUCCEEDED(DirectX::LoadFromDDSMemory(data.data(), data.size(), DirectX::DDS_FLAGS_NONE, nullptr, compressed)))
+	{
+		create(compressed);
+		return true;
+	}
+
+	auto started = std::chrono::steady_clock::now();
+
+	DirectX::ScratchImage source;
+
+	if (FAILED(DirectX::LoadFromWICFile(path.c_str(), DirectX::WIC_FLAGS_NONE, nullptr, source))) return false;
+
+	const DirectX::TexMetadata& metadata = source.GetMetadata();
+
+	// Блоки стиснення мають 4 на 4 пікселі, тож відеокарта приймає лише такі сторони, що діляться на 4
+	if (metadata.width % 4 != 0 || metadata.height % 4 != 0) return false;
+
+	// Рівні будуються до стиснення, бо стиснені пікселі вже не усереднити
+	DirectX::ScratchImage mips;
+
+	if (FAILED(DirectX::GenerateMipMaps(*source.GetImage(0, 0, 0), DirectX::TEX_FILTER_DEFAULT, 0, mips))) return false;
+
+	// Непрозорій текстурі вистачає BC1, прозорість зберігає BC3, а BC7 якісніший для будь-якої
+	DXGI_FORMAT format = DXGI_FORMAT_BC7_UNORM;
+
+	if (compression == TextureCompression::Normal) format = source.IsAlphaAllOpaque() ? DXGI_FORMAT_BC1_UNORM : DXGI_FORMAT_BC3_UNORM;
+
+	// BC7 на процесорі повільний, тож його стискає відеокарта, а процесор лише тоді, коли відеокарта не змогла
+	HRESULT res = E_FAIL;
+
+	if (format == DXGI_FORMAT_BC7_UNORM)
+	{
+		res = DirectX::Compress(GraphicsEngine::get()->mD3dDevice, mips.GetImages(), mips.GetImageCount(), mips.GetMetadata(),
+			format, DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_ALPHA_WEIGHT_DEFAULT, compressed);
+	}
+
+	if (FAILED(res))
+	{
+		DirectX::TEX_COMPRESS_FLAGS flags = DirectX::TEX_COMPRESS_PARALLEL;
+
+		if (format == DXGI_FORMAT_BC7_UNORM) flags |= DirectX::TEX_COMPRESS_BC7_QUICK;
+
+		res = DirectX::Compress(mips.GetImages(), mips.GetImageCount(), mips.GetMetadata(), format, flags, DirectX::TEX_THRESHOLD_DEFAULT, compressed);
+	}
+
+	if (FAILED(res)) return false;
+
+	DirectX::Blob blob;
+
+	if (SUCCEEDED(DirectX::SaveToDDSMemory(compressed.GetImages(), compressed.GetImageCount(), compressed.GetMetadata(), DirectX::DDS_FLAGS_NONE, blob)))
+	{
+		AssetCache::write(cache, stamp, blob.GetBufferPointer(), blob.GetBufferSize());
+	}
+
+	long long elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+	std::wcout << L"Texture compressed in " << elapsed << L" ms: " << path << std::endl;
+
+	create(compressed);
+	return true;
+}
+
+// Повертає стиснення з налаштувань імпорту файлу текстури
+TextureCompression Texture::getCompression(const std::wstring& path)
+{
+	std::ifstream file(path + IMPORT_EXTENSION, std::ios::binary);
+
+	if (!file.is_open()) return TextureCompression::None;
+
+	std::stringstream text;
+	text << file.rdbuf();
+
+	std::string name = JsonValue::parse(text.str()).get("compression").asString();
+
+	if (name == "Normal") return TextureCompression::Normal;
+	if (name == "High") return TextureCompression::High;
+
+	return TextureCompression::None;
+}
+
+// Записує стиснення в налаштування імпорту файлу текстури; без стиснення файл налаштувань не потрібен
+void Texture::setCompression(const std::wstring& path, TextureCompression compression)
+{
+	std::error_code error;
+
+	if (compression == TextureCompression::None)
+	{
+		filesystem::remove(path + IMPORT_EXTENSION, error);
+		return;
+	}
+
+	JsonValue data = JsonValue::object();
+	data.set("version", 1);
+	data.set("compression", compressionName(compression));
+
+	std::ofstream file(path + IMPORT_EXTENSION, std::ios::binary | std::ios::trunc);
+	file << data.toString();
+}
+
+// Перезавантажує текстуру з файлу за поточними налаштуваннями імпорту; матеріали лишаються з тією самою текстурою
+void Texture::reload()
+{
+	ID3D11Resource* oldTexture = mTexture;
+	ID3D11ShaderResourceView* oldView = mShaderResourceView;
+
+	mTexture = nullptr;
+	mShaderResourceView = nullptr;
+
+	try
+	{
+		load(getFullPath());
+	}
+	catch (...)
+	{
+		// Файл, що вже не читається, лишає текстуру такою, як була
+		if (mTexture) mTexture->Release();
+		if (mShaderResourceView) mShaderResourceView->Release();
+
+		mTexture = oldTexture;
+		mShaderResourceView = oldView;
+		return;
+	}
+
+	if (oldTexture) oldTexture->Release();
+	if (oldView) oldView->Release();
 }
 
 // Створює текстуру, вбудовану у файл моделі; fullPath - назва, під якою її знаходять інші
@@ -209,8 +382,47 @@ void Texture::getSize(unsigned int& width, unsigned int& height) const
 	height = desc.Height;
 }
 
+// Повертає формат пікселів текстури у відеопам'яті
+DXGI_FORMAT Texture::getFormat() const
+{
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
+
+	if (mShaderResourceView) mShaderResourceView->GetDesc(&desc);
+
+	return desc.Format;
+}
+
+// Повертає, скільки байтів займають усі mip-рівні текстури у відеопам'яті
+size_t Texture::getMemorySize() const
+{
+	ID3D11Texture2D* texture = nullptr;
+
+	if (FAILED(mTexture->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&texture))) return 0;
+
+	D3D11_TEXTURE2D_DESC desc = {};
+	texture->GetDesc(&desc);
+	texture->Release();
+
+	size_t total = 0;
+	size_t width = desc.Width;
+	size_t height = desc.Height;
+
+	for (UINT level = 0; level < desc.MipLevels; level++)
+	{
+		size_t rowPitch = 0;
+		size_t slicePitch = 0;
+
+		if (SUCCEEDED(DirectX::ComputePitch(desc.Format, width, height, rowPitch, slicePitch))) total += slicePitch;
+
+		width = width > 1 ? width / 2 : 1;
+		height = height > 1 ? height / 2 : 1;
+	}
+
+	return total * desc.ArraySize;
+}
+
 Texture::~Texture()
 {
-	mTexture->Release();
-	mShaderResourceView->Release();
+	if (mTexture) mTexture->Release();
+	if (mShaderResourceView) mShaderResourceView->Release();
 }
