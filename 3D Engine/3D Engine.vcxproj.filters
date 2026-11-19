@@ -43,6 +43,9 @@
     <Filter Include="Application\Components">
       <UniqueIdentifier>{7bffffb7-dfe8-49f0-985d-e905a824e73f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\AI">
+      <UniqueIdentifier>{3c1f6a2e-8d4b-4e57-9a61-2f0b7d5e4c93}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main\Main.cpp">
@@ -189,6 +192,33 @@
     <ClCompile Include="src\Engine\Entity\PlaneCollider.cpp">
       <Filter>Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="src\Engine\AI\NeuralNetwork.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\GeneticAlgorithm.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\VehicleController.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\RaySensor.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\AgentSensor.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\AgentBrain.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\NeuroevolutionBrain.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\TrainingManager.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\Main parts\SimulationSettings.cpp">
+      <Filter>Engine\Main parts</Filter>
+    </ClCompile>
     <ClCompile Include="src\Engine\Physics\Physics.cpp">
       <Filter>Engine\Physics</Filter>
     </ClCompile>
@@ -196,9 +226,6 @@
       <Filter>Application\Components</Filter>
     </ClCompile>
     <ClCompile Include="Demo\Components\InstantiationTest.cpp">
-      <Filter>Application\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="Demo\Components\CarComponent.cpp">
       <Filter>Application\Components</Filter>
     </ClCompile>
     <ClCompile Include="Demo\Components\FollowComponent.cpp" />
@@ -372,6 +399,33 @@
     <ClInclude Include="src\Engine\Entity\PlaneCollider.h">
       <Filter>Engine\Component</Filter>
     </ClInclude>
+    <ClInclude Include="src\Engine\AI\NeuralNetwork.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\GeneticAlgorithm.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\VehicleController.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\RaySensor.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\AgentSensor.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\AgentBrain.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\NeuroevolutionBrain.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\TrainingManager.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\Main parts\SimulationSettings.h">
+      <Filter>Engine\Main parts</Filter>
+    </ClInclude>
     <ClInclude Include="src\Engine\Physics\Physics.h">
       <Filter>Engine\Physics</Filter>
     </ClInclude>
@@ -379,9 +433,6 @@
       <Filter>Application\Components</Filter>
     </ClInclude>
     <ClInclude Include="Demo\Components\InstantiationTest.h">
-      <Filter>Application\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="Demo\Components\CarComponent.h">
       <Filter>Application\Components</Filter>
     </ClInclude>
     <ClInclude Include="Demo\Components\FollowComponent.h" />

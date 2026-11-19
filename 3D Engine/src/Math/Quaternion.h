@@ -49,6 +49,13 @@ public:
         sinY = (sinY > 1.0f) ? 1.0f : (sinY < -1.0f) ? -1.0f : sinY;
         e.y = std::asin(sinY);
 
+        // Поворот на 90 градусів навколо Y суміщає осі X і Z: обидва арктангенси стають 0/0, тож увесь залишок повороту віддаємо Z
+        if (std::fabs(sinY) > 0.9999995f) {
+            e.x = 0.0f;
+            e.z = std::atan2(-2.0f * (x * y - w * z), 1.0f - 2.0f * (x * x + z * z));
+            return e;
+        }
+
         e.x = std::atan2(2.0f * (y * z + w * x), w * w - x * x - y * y + z * z);
 
         e.z = std::atan2(2.0f * (x * y + w * z), w * w + x * x - y * y - z * z);

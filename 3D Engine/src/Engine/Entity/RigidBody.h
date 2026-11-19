@@ -41,6 +41,19 @@ public:
 	void setMass(float mass);
 	// Встановлює центр мас тіла
 	void setCenterOfMass(const Vector3& com);
+	// Задає лінійну швидкість тіла
+	void setVelocity(const Vector3& velocity);
+	// Задає кутову швидкість тіла
+	void setAngularVelocity(const Vector3& velocity);
+
+	// Задає групу фільтрації: тіла з однаковою ненульовою групою не зіштовхуються й не бачать одне одного в запитах
+	void setCollisionGroup(unsigned int group);
+	// Повертає групу фільтрації зіткнень, 0 - тіло без групи
+	unsigned int getCollisionGroup() const;
+	// Вмикає облік зіткнень тіла з перешкодами, який забирає takeCollisions
+	void setReportCollisions(bool report);
+	// Повертає кількість зіткнень з перешкодами від попереднього виклику й обнуляє лічильник
+	int takeCollisions();
 
 	// Додає актора до сцени PhysX або прибирає з неї, щоб неактивний об'єкт не брав участі у фізиці
 	void syncActivity();
@@ -80,6 +93,11 @@ private:
 	// Додає коллайдер до списку коллайдерів цього фізичного тіла
 	void addCollider(Collider* collider);
 
+	// Передає формам актора групу фільтрації та ознаку обліку зіткнень
+	void applyFilterData();
+	// Викликається рушієм фізики, коли тіло вдарилося об перешкоду
+	void onCollision();
+
 	std::list<Collider*> mColliders = {};
 
     physx::PxRigidActor* mActor = nullptr;
@@ -92,10 +110,17 @@ private:
 	bool mCcd = false;
 	// Чи актор зараз у сцені PhysX; неактивний об'єкт тримає актора поза нею
 	bool mInScene = false;
+	// Група фільтрації зіткнень, 0 - без групи
+	unsigned int mCollisionGroup = 0;
+	// Чи рахувати зіткнення тіла з перешкодами
+	bool mReportCollisions = false;
+	// Кількість зіткнень від останнього takeCollisions
+	int mCollisions = 0;
 
 	friend class Transform;
 	friend class Collider;
 	friend class EntityManager;
 	friend class Physics;
+	friend class ContactReporter;
 };
 

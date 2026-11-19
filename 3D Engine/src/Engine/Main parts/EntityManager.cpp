@@ -218,6 +218,12 @@ RigidBody* EntityManager::getRigidBody(void* actor)
 	return nullptr;
 }
 
+// Повертає всі зареєстровані фізичні тіла за їхніми акторами
+const std::unordered_map<void*, RigidBody*>& EntityManager::getRigidBodies() const
+{
+	return mRigidBodies;
+}
+
 // Повертає всі зареєстровані об'єкти сцени для редактора та збереження
 const std::list<Entity*>& EntityManager::getEntities() const
 {

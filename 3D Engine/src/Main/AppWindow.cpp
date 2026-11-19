@@ -10,6 +10,7 @@
 #include "PostProcessing.h"
 #include "Editor.h"
 #include "DemoComponentTypes.h"
+#include "SimulationSettings.h"
 
 #include <iostream>
 
@@ -22,6 +23,7 @@ AppWindow::AppWindow()
 AppWindow::~AppWindow()
 {
 }
+
 
 // Викликається при створенні вікна: ініціалізує рушії, створює SwapChain, встановлює початкові константи та завантажує головну сцену
 void AppWindow::onCreate()
@@ -98,10 +100,21 @@ void AppWindow::onUpdate()
 	{
 		// Виконує фіксоване оновлення фізики та компонентів
 		static float accumulator = 0.0f;
-		constexpr float fixedStep = 1.0f / 50.0f;
+		constexpr float fixedStep = SimulationSettings::fixedStep;
 		accumulator += Time::deltaTime;
 
-		if (accumulator >= fixedStep)
+		if (SimulationSettings::fixedStepsPerFrame > 0)
+		{
+			// Прискорений режим навчання: задана кількість кроків за кадр, хоч би скільки часу минуло
+			for (int i = 0; i < SimulationSettings::fixedStepsPerFrame; i++)
+			{
+				EntityManager::get()->fixedUpdateComponents();
+				PhysicsEngine::get()->update(fixedStep);
+			}
+
+			accumulator = 0.0f;
+		}
+		else if (accumulator >= fixedStep)
 		{
 			EntityManager::get()->fixedUpdateComponents();
 			PhysicsEngine::get()->update(fixedStep);
@@ -117,15 +130,18 @@ void AppWindow::onUpdate()
 
 	EntityManager::get()->updateLights();
 
+	// Сцену можна не малювати лише під час симуляції: у редакторі її має бути видно завжди
+	bool renderScene = !simulate || SimulationSettings::renderScene;
+
 	// Рендерить сцену в карту тіней з точки зору світла
-	GraphicsEngine::get()->renderShadowPass();
+	if (renderScene) GraphicsEngine::get()->renderShadowPass();
 
 	// Очищає буфер кадру та встановлює розмір вьюпорту
 	GraphicsEngine::get()->getPostProcessing()->begin(mSwapChain);
 	GraphicsEngine::get()->getImmDeviceContext()->setViewportSize(windowSize.right - windowSize.left, windowSize.bottom - windowSize.top);
 
 	// Оновлює рендер-компоненти
-	EntityManager::get()->updateRenderers();
+	if (renderScene) EntityManager::get()->updateRenderers();
 
 	// Застосовує ефекти постобробки та виводить результат у вікно
 	GraphicsEngine::get()->getPostProcessing()->apply(mSwapChain);
@@ -145,8 +161,8 @@ void AppWindow::onUpdate()
 		appIsRunning = false;
 	}
 
-	// Виводить кадр на екран
-	mSwapChain->present(true);
+	// Виводить кадр на екран; без малювання сцени кадр не чекає вертикальної синхронізації, щоб навчання йшло швидше
+	mSwapChain->present(renderScene);
 }
 
 // Викликається при зміні розміру вікна: оновлює SwapChain та матрицю проекції

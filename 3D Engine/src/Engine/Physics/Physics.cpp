@@ -8,10 +8,13 @@ using namespace physx;
 // Клас для фільтрації акторів, які потрібно ігнорувати при фізичних запитах
 struct IgnoreActorFilterCallback : PxQueryFilterCallback
 {
+    // Актор, якого запит не бачить
     PxRigidActor* mIgnore;
+    // Група фільтрації ігнорованого тіла: тіла тієї самої групи запит теж не бачить
+    PxU32 mGroup;
 
-    // Конструктор з актором, якого потрібно ігнорувати
-    IgnoreActorFilterCallback(PxRigidActor* ignore) : mIgnore(ignore) {}
+    // Конструктор з актором, якого потрібно ігнорувати, та групою фільтрації його тіла
+    IgnoreActorFilterCallback(PxRigidActor* ignore, PxU32 group) : mIgnore(ignore), mGroup(group) {}
 
     // Викликається перед додаванням попадання до результату запиту
     PxQueryHitType::Enum preFilter(
@@ -22,6 +25,10 @@ struct IgnoreActorFilterCallback : PxQueryFilterCallback
     ) override
     {
         if (actor == mIgnore)
+            return PxQueryHitType::eNONE;
+
+        // Агенти однієї групи не зіштовхуються, тож і промені їхніх коліс та сенсорів одне одного не помічають
+        if (mGroup != 0 && shape->getQueryFilterData().word0 == mGroup)
             return PxQueryHitType::eNONE;
 
         return PxQueryHitType::eBLOCK;
@@ -44,7 +51,7 @@ bool Physics::raycast(const Vector3& origin, const Vector3& direction, float max
 
     PxQueryFilterData filterData(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC);
     filterData.flags |= PxQueryFlag::ePREFILTER;
-    IgnoreActorFilterCallback filterCB(ignore->mActor);
+    IgnoreActorFilterCallback filterCB(ignore ? ignore->mActor : nullptr, ignore ? ignore->getCollisionGroup() : 0);
 
     bool status = PhysicsEngine::get()->getScene()->raycast(
         PxVec3(origin.x, origin.y, origin.z),
@@ -77,6 +84,8 @@ bool Physics::sphereCast(const Vector3& origin, const Vector3& direction, float 
     PxSweepBuffer sweepBuffer;
 
     PxQueryFilterData filterData(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC);
+    filterData.flags |= PxQueryFlag::ePREFILTER;
+    IgnoreActorFilterCallback filterCB(ignore ? ignore->mActor : nullptr, ignore ? ignore->getCollisionGroup() : 0);
 
 	bool status = PhysicsEngine::get()->getScene()->sweep(
 		sphere,
@@ -85,7 +94,8 @@ bool Physics::sphereCast(const Vector3& origin, const Vector3& direction, float 
 		maxDistance,
 		sweepBuffer,
 		PxHitFlag::eDEFAULT,
-		filterData
+		filterData,
+		&filterCB
 	);
 
     if (!status || !sweepBuffer.hasBlock)

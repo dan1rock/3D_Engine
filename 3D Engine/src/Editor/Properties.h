@@ -34,6 +34,9 @@ public:
 	// Посилання на інший об'єкт сцени
 	virtual void reference(const char* name, Entity*& value, ReferenceKind kind) = 0;
 
+	// Шлях до файлу ресурсу з розширенням extension; у файлі сцени це звичайний рядок, а інспектор показує список таких ресурсів
+	virtual void asset(const char* name, std::string& path, const char* extension) { property(name, path); }
+
 	// Поля між цими викликами показуються, але не редагуються: так видно значення,
 	// які задаються лише під час створення компонента
 	virtual void beginReadOnly() {}

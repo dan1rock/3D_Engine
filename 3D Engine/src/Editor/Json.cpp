@@ -164,6 +164,27 @@ void JsonValue::set(const char* key, const JsonValue& value)
 	mObject.push_back(std::make_pair(std::string(key), value));
 }
 
+// Додає або замінює поле об'єкта, забираючи значення без копіювання вкладених полів
+void JsonValue::set(const char* key, JsonValue&& value)
+{
+	if (mType != Type::Object)
+	{
+		mType = Type::Object;
+		mObject.clear();
+	}
+
+	for (auto& field : mObject)
+	{
+		if (field.first == key)
+		{
+			field.second = std::move(value);
+			return;
+		}
+	}
+
+	mObject.emplace_back(std::string(key), std::move(value));
+}
+
 // Прибирає поле об'єкта, якщо воно є
 void JsonValue::remove(const char* key)
 {
@@ -222,6 +243,18 @@ void JsonValue::push(const JsonValue& value)
 	}
 
 	mArray.push_back(value);
+}
+
+// Додає елемент у кінець масиву, забираючи його без копіювання вкладених полів
+void JsonValue::push(JsonValue&& value)
+{
+	if (mType != Type::Array)
+	{
+		mType = Type::Array;
+		mArray.clear();
+	}
+
+	mArray.push_back(std::move(value));
 }
 
 // Читає значення потрібного типу, повертаючи запасне, якщо тип не той

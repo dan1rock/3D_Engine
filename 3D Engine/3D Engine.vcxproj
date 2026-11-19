@@ -84,6 +84,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(SolutionDir)packages\directxtex_desktop_win10.2025.3.25.2\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)packages\directxtex_desktop_win10.2025.3.25.2
+ative\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -120,7 +123,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)src\Editor;$(ProjectDir)Demo\Components;$(ProjectDir)src\imgui;$(ProjectDir)src\Math;$(ProjectDir)src\Main;$(ProjectDir)src\Engine\Shader managers;$(ProjectDir)src\Engine\Scene;$(ProjectDir)src\Engine\Resource managers;$(ProjectDir)src\Engine\Physics;$(ProjectDir)src\Engine\Main parts;$(ProjectDir)src\Engine\Entity;$(ProjectDir)src\Engine\Buffer managers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\Editor;$(ProjectDir)Demo\Components;$(ProjectDir)src\imgui;$(ProjectDir)src\Math;$(ProjectDir)src\Main;$(ProjectDir)src\Engine\Shader managers;$(ProjectDir)src\Engine\Scene;$(ProjectDir)src\Engine\Resource managers;$(ProjectDir)src\Engine\Physics;$(ProjectDir)src\Engine\Main parts;$(ProjectDir)src\Engine\Entity;$(ProjectDir)src\Engine\Buffer managers;$(ProjectDir)src\Engine\AI;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,15 +137,20 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\Editor;$(ProjectDir)Demo\Components;$(ProjectDir)src\imgui;$(ProjectDir)src\Math;$(ProjectDir)src\Main;$(ProjectDir)src\Engine\Shader managers;$(ProjectDir)src\Engine\Scene;$(ProjectDir)src\Engine\Resource managers;$(ProjectDir)src\Engine\Physics;$(ProjectDir)src\Engine\Main parts;$(ProjectDir)src\Engine\Entity;$(ProjectDir)src\Engine\Buffer managers;$(ProjectDir)src\Engine\AI;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <FxCompile>
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Demo\Components\FollowComponent.cpp" />
@@ -189,7 +197,6 @@
     <ClCompile Include="src\Engine\Buffer managers\IndexBuffer.cpp" />
     <ClCompile Include="src\Engine\Main parts\Input.cpp" />
     <ClCompile Include="Demo\Components\InstantiationTest.cpp" />
-    <ClCompile Include="Demo\Components\CarComponent.cpp" />
     <ClCompile Include="src\Main\Main.cpp" />
     <ClCompile Include="src\Engine\Resource managers\Material.cpp" />
     <ClCompile Include="src\Engine\Resource managers\Mesh.cpp" />
@@ -197,6 +204,15 @@
     <ClCompile Include="src\Engine\Resource managers\MeshManager.cpp" />
     <ClCompile Include="src\Engine\Entity\MeshRenderer.cpp" />
     <ClCompile Include="src\Engine\Physics\Physics.cpp" />
+    <ClCompile Include="src\Engine\AI\NeuralNetwork.cpp" />
+    <ClCompile Include="src\Engine\AI\GeneticAlgorithm.cpp" />
+    <ClCompile Include="src\Engine\AI\VehicleController.cpp" />
+    <ClCompile Include="src\Engine\AI\RaySensor.cpp" />
+    <ClCompile Include="src\Engine\AI\AgentSensor.cpp" />
+    <ClCompile Include="src\Engine\AI\AgentBrain.cpp" />
+    <ClCompile Include="src\Engine\AI\NeuroevolutionBrain.cpp" />
+    <ClCompile Include="src\Engine\AI\TrainingManager.cpp" />
+    <ClCompile Include="src\Engine\Main parts\SimulationSettings.cpp" />
     <ClCompile Include="src\Engine\Physics\PhysicsEngine.cpp" />
     <ClCompile Include="src\Engine\Shader managers\PixelShader.cpp" />
     <ClCompile Include="src\Engine\Entity\PlaneCollider.cpp" />
@@ -266,7 +282,6 @@
     <ClInclude Include="src\Engine\Buffer managers\IndexBuffer.h" />
     <ClInclude Include="src\Engine\Main parts\Input.h" />
     <ClInclude Include="Demo\Components\InstantiationTest.h" />
-    <ClInclude Include="Demo\Components\CarComponent.h" />
     <ClInclude Include="src\Engine\Resource managers\Material.h" />
     <ClInclude Include="src\Math\Matrix.h" />
     <ClInclude Include="src\Math\Frustum.h" />
@@ -275,6 +290,15 @@
     <ClInclude Include="src\Engine\Resource managers\MeshManager.h" />
     <ClInclude Include="src\Engine\Entity\MeshRenderer.h" />
     <ClInclude Include="src\Engine\Physics\Physics.h" />
+    <ClInclude Include="src\Engine\AI\NeuralNetwork.h" />
+    <ClInclude Include="src\Engine\AI\GeneticAlgorithm.h" />
+    <ClInclude Include="src\Engine\AI\VehicleController.h" />
+    <ClInclude Include="src\Engine\AI\RaySensor.h" />
+    <ClInclude Include="src\Engine\AI\AgentSensor.h" />
+    <ClInclude Include="src\Engine\AI\AgentBrain.h" />
+    <ClInclude Include="src\Engine\AI\NeuroevolutionBrain.h" />
+    <ClInclude Include="src\Engine\AI\TrainingManager.h" />
+    <ClInclude Include="src\Engine\Main parts\SimulationSettings.h" />
     <ClInclude Include="src\Engine\Physics\PhysicsEngine.h" />
     <ClInclude Include="src\Engine\Shader managers\PixelShader.h" />
     <ClInclude Include="src\Engine\Entity\PlaneCollider.h" />

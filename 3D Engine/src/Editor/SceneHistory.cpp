@@ -8,6 +8,9 @@ SceneHistory::SceneHistory()
 // Починає історію від поточного стану сцени, забуваючи всі кроки
 void SceneHistory::reset()
 {
+	// Скидання історії сцену не змінює, тож її стан зберігає свій номер
+	mBaseRevision = getRevision();
+
 	for (Step& step : mSteps)
 	{
 		step = Step();
@@ -76,13 +79,15 @@ bool SceneHistory::record(const std::vector<int>& selectionBefore, int activeBef
 	step.activeBefore = activeBefore;
 	step.selectionAfter = selectionAfter;
 	step.activeAfter = activeAfter;
+	step.revision = mNextRevision++;
 
 	// Скасовані кроки після поточного зникають, як і в будь-якому редакторі
 	mCount = mPosition;
 
-	// Коло заповнене: найстаріший крок звільняє місце
+	// Коло заповнене: найстаріший крок звільняє місце, і початком історії стає стан після нього
 	if (mCount == CAPACITY)
 	{
+		mBaseRevision = at(0).revision;
 		mStart = (mStart + 1) % CAPACITY;
 		mCount--;
 		mPosition--;
@@ -140,6 +145,14 @@ int SceneHistory::getUndoCount() const
 int SceneHistory::getRedoCount() const
 {
 	return mCount - mPosition;
+}
+
+// Номер поточного стану сцени: однаковий номер означає той самий стан, тож за ним видно незбережені зміни без запису сцени
+int SceneHistory::getRevision() const
+{
+	if (mPosition == 0) return mBaseRevision;
+
+	return mSteps[(mStart + mPosition - 1) % CAPACITY].revision;
 }
 
 // Приводить сцену до стану до кроку або після нього

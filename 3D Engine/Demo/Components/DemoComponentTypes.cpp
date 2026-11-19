@@ -2,7 +2,7 @@
 #include "ComponentRegistry.h"
 #include "Entity.h"
 
-#include "CarComponent.h"
+#include "VehicleController.h"
 #include "FollowComponent.h"
 #include "FrameCounter.h"
 #include "SceneChanger.h"
@@ -13,7 +13,8 @@
 // Реєструє компоненти демонстраційного проєкту в редакторі та у файлі сцени
 void registerDemoComponentTypes()
 {
-	ComponentRegistry::registerType("CarComponent", [](Entity* e) -> Component* { return e->addComponent<CarComponent>(); });
+	// Старі сцени зберігали автомобіль під давнім іменем компонента; тепер ним керує VehicleController рушія
+	ComponentRegistry::registerAlias("CarComponent", [](Entity* e) -> Component* { return e->addComponent<VehicleController>(); });
 	ComponentRegistry::registerType("FollowComponent", [](Entity* e) -> Component* { return e->addComponent<FollowComponent>(); });
 	ComponentRegistry::registerType("FrameCounter", [](Entity* e) -> Component* { return e->addComponent<FrameCounter>(); });
 	ComponentRegistry::registerType("SceneChanger", [](Entity* e) -> Component* { return e->addComponent<SceneChanger>(); });

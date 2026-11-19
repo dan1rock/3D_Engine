@@ -1,40 +1,5 @@
 {
-  "version": 4,
-  "materials": [
-    {
-      "color": [0, 0.5, 0.5, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 100,
-      "cullBack": true,
-      "clampTexture": false,
-      "texture": "Assets\\Textures\\1x1_grid_quarter_lines_numbered.png",
-      "shader": "src\\Shaders\\PrototypePixelShader.hlsl"
-    },
-    {
-      "color": [1, 1, 1, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 1,
-      "cullBack": false,
-      "clampTexture": true,
-      "texture": "Assets\\Textures\\HDR_029_Sky_Cloudy_Bg.jpg",
-      "shader": "src\\Shaders\\UnlitPixelShader.hlsl"
-    },
-    {
-      "color": [0.5, 0.5, 0.5, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 2,
-      "cullBack": true,
-      "clampTexture": false,
-      "texture": "Assets\\Textures\\1x1_grid_quarter_lines_numbered.png",
-      "shader": "src\\Shaders\\PrototypePixelShader.hlsl"
-    }
-  ],
+  "version": 6,
   "entities": [
     {
       "index": 0,
@@ -71,7 +36,9 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\plane.obj",
           "castShadows": true,
-          "material": 0
+          "materials": [
+            "Assets\\Materials\\Ground 1.mat"
+          ]
         },
         {
           "type": "MeshCollider"
@@ -121,7 +88,9 @@
           "type": "SkySphere",
           "mesh": "Assets\\Meshes\\sphere.obj",
           "castShadows": false,
-          "material": 1
+          "materials": [
+            "Assets\\Materials\\Sky.mat"
+          ]
         }
       ]
     },
@@ -159,7 +128,9 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\sphere.obj",
           "castShadows": true,
-          "material": 2
+          "materials": [
+            "Assets\\Materials\\Spawned Object.mat"
+          ]
         },
         {
           "type": "SphereCollider",

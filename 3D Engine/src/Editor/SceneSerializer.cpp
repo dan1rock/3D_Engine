@@ -1,4 +1,5 @@
 #include "SceneSerializer.h"
+#include <utility>
 #include "SceneIO.h"
 #include "Json.h"
 #include "PrefabLibrary.h"
@@ -286,7 +287,7 @@ static JsonValue writeEntity(Entity* entity, WriteContext& context, bool prefabR
 				overrideList.push(key);
 			}
 
-			entityValue.set("prefabOverrides", overrideList);
+			entityValue.set("prefabOverrides", std::move(overrideList));
 		}
 	}
 
@@ -317,7 +318,7 @@ static JsonValue writeEntity(Entity* entity, WriteContext& context, bool prefabR
 		transformValue.set("scale", vectorToJson(hasParent ? transform->getLocalScale() : transform->getScale()));
 	}
 
-	entityValue.set("transform", transformValue);
+	entityValue.set("transform", std::move(transformValue));
 
 	JsonValue componentList = JsonValue::array();
 
@@ -345,17 +346,17 @@ static JsonValue writeEntity(Entity* entity, WriteContext& context, bool prefabR
 				materialList.push(context.materialReference(renderer->getSharedMaterial(slot)));
 			}
 
-			componentValue.set("materials", materialList);
+			componentValue.set("materials", std::move(materialList));
 		}
 
 		// Решту полів компонент записує сам, бо лише він знає, що саме варто зберігати
 		SceneWriteVisitor writer(componentValue, context.indices);
 		component->visitProperties(writer);
 
-		componentList.push(componentValue);
+		componentList.push(std::move(componentValue));
 	}
 
-	if (componentList.size() > 0) entityValue.set("components", componentList);
+	if (componentList.size() > 0) entityValue.set("components", std::move(componentList));
 
 	return entityValue;
 }
@@ -406,7 +407,6 @@ void SceneSerializer::captureRecords(SceneRecords& out, MaterialRegistry& regist
 
 	for (Entity* entity : entities)
 	{
-		out.entities[(int)entity->getId()] = writeEntity(entity, context, false, true).toString();
 	}
 
 	// Значення матеріалів з файлів теж входять у крок, тож правку матеріалу можна скасувати
@@ -635,7 +635,7 @@ std::string SceneSerializer::serialize(bool includePersistent)
 	JsonValue scene = JsonValue::object();
 
 	scene.set("version", SCENE_VERSION);
-	scene.set("entities", entityList);
+	scene.set("entities", std::move(entityList));
 
 	return scene.toString();
 }
@@ -674,7 +674,7 @@ JsonValue SceneSerializer::serializeSubtree(Entity* root)
 	JsonValue data = JsonValue::object();
 
 	data.set("version", SCENE_VERSION);
-	data.set("entities", entityList);
+	data.set("entities", std::move(entityList));
 
 	return data;
 }
@@ -706,7 +706,7 @@ std::string SceneSerializer::serializeEntities(const std::vector<Entity*>& roots
 	JsonValue data = JsonValue::object();
 
 	data.set("version", SCENE_VERSION);
-	data.set("entities", entityList);
+	data.set("entities", std::move(entityList));
 
 	return data.toString();
 }

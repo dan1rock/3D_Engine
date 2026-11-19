@@ -1,4 +1,4 @@
-#include "CarComponent.h"
+#include "VehicleController.h"
 #include "RigidBody.h"
 #include "Physics.h"
 #include "Prefab.h"
@@ -6,38 +6,83 @@
 #include "EngineTime.h"
 #include "imgui.h"
 #include <iostream>
+#include <algorithm>
 
 #include <string>
 #include "Properties.h"
 
-CarComponent::CarComponent()
+// Створює автомобіль з параметрами за замовчуванням
+VehicleController::VehicleController()
 {
 }
 
-CarComponent::~CarComponent()
+// Звільняє автомобіль; колеса знищуються разом з дочірніми об'єктами
+VehicleController::~VehicleController()
 {
 }
 
-void CarComponent::awake()
+// Скидає ознаку зібраності, щоб колеса побудувалися заново
+void VehicleController::awake()
 {
 	isStarted = false;
 }
 
+// Задає нормовані дії газу та керма в межах [-1; 1]; відтоді клавіатура автомобілем не керує
+void VehicleController::setActions(float throttle, float steering)
+{
+	mThrottleAction = std::max(-1.0f, std::min(throttle, 1.0f));
+	mSteeringAction = std::max(-1.0f, std::min(steering, 1.0f));
+	mExternalControl = true;
+}
+
+// Скидає кут керма та дії, наприклад перед новим епізодом
+void VehicleController::resetState()
+{
+	mSteering = 0.0f;
+	mSpeed = 0.0f;
+	mThrottleAction = 0.0f;
+	mSteeringAction = 0.0f;
+}
+
+// Повертає поточний кут повороту передніх коліс у радіанах
+float VehicleController::getSteering() const
+{
+	return mSteering;
+}
+
+// Повертає останню дію газу
+float VehicleController::getThrottleAction() const
+{
+	return mThrottleAction;
+}
+
+// Повертає останню дію керма
+float VehicleController::getSteeringAction() const
+{
+	return mSteeringAction;
+}
+
+// Повертає фізичне тіло корпусу, або nullptr, поки автомобіль не зібрано
+RigidBody* VehicleController::getRigidBody() const
+{
+	return mRigidBody;
+}
+
 // Забуває фізичне тіло, якщо його прибрали з машини: далі fixedUpdate просто нічого не робить
-void CarComponent::onComponentRemoved(Component* removed)
+void VehicleController::onComponentRemoved(Component* removed)
 {
 	if (removed == mRigidBody) mRigidBody = nullptr;
 }
 
-void CarComponent::start()
+// Збирає автомобіль: знаходить фізичне тіло й створює колеса
+void VehicleController::start()
 {
 	isStarted = true;
 
-	// Сцена, завантажена з файлу, не містить посилання на образ колеса, бо формат їх не зберігає.
-	// Без нього чи без фізичного тіла машина просто не вмикається, замість того щоб зламати гру
+	// Без образу колеса чи фізичного тіла машина просто не вмикається, замість того щоб зламати гру
 	if (wheelPrefab == nullptr || getOwner()->getComponent<RigidBody>() == nullptr)
 	{
-		std::cout << "CarComponent: no wheel prefab or rigid body, car stays disabled" << std::endl;
+		std::cout << "VehicleController: no wheel prefab or rigid body, car stays disabled" << std::endl;
 		return;
 	}
 
@@ -63,12 +108,15 @@ void CarComponent::start()
 	mWheelBR.rightSide = true;
 }
 
-void CarComponent::update()
+// Малює вікно налагодження
+void VehicleController::update()
 {
 	if (!isStarted)
 	{
 		start();
 	}
+
+	if (!debugWindow) return;
 
 	std::string name = "Car " + std::to_string(id);
 	const char* cname = name.c_str();
@@ -83,14 +131,21 @@ void CarComponent::update()
 	ImGui::SliderFloat("Grip", &gripRatio, 0.0f, 2.0f);
 	if (ImGui::Button("Copy")) {
 		Entity* newCar = mOwner->instantiate();
-		newCar->getComponent<CarComponent>()->id = id + 1;
+		newCar->getComponent<VehicleController>()->id = id + 1;
 		newCar->getTransform()->setPosition(mOwner->getTransform()->getPosition() + mOwner->getTransform()->getRight() * 3.0f);
 	};
 	ImGui::End();
 }
 
-void CarComponent::fixedUpdate()
+// Застосовує дії до коліс і моделює їх на кроці фізики
+void VehicleController::fixedUpdate()
 {
+	// Автомобіль, створений посеред кадру, збирається вже на першому кроці фізики, а не чекає оновлення кадру
+	if (!isStarted)
+	{
+		start();
+	}
+
 	if (!mRigidBody) return;
 
 	float carSpeed = mRigidBody->getVelocity() * mOwner->getTransform()->getForward();
@@ -100,29 +155,23 @@ void CarComponent::fixedUpdate()
 
 	float accelerationRatio = 1.0f - absoluteSpeed / maxSpeed;
 
-	float targetSteering = 0.0f;
+	// Клавіатура формує ті самі нормовані дії, що й агент
+	if (!mExternalControl && playerInput)
+	{
+		mThrottleAction = 0.0f;
+		mSteeringAction = 0.0f;
 
-	if (Input::getKey('A'))
-	{
-		targetSteering -= maxSteering;
+		if (Input::getKey('A')) mSteeringAction -= 1.0f;
+		if (Input::getKey('D')) mSteeringAction += 1.0f;
+		if (Input::getKey('W')) mThrottleAction += 1.0f;
+		if (Input::getKey('S')) mThrottleAction -= 1.0f;
 	}
-	if (Input::getKey('D'))
-	{
-		targetSteering += maxSteering;
-	}
+
+	float targetSteering = mSteeringAction * maxSteering;
 
 	mSteering += (targetSteering - mSteering) * 0.1f;
 
-	float acceleration = 0.0f;
-
-	if (Input::getKey('W'))
-	{
-		acceleration += 10.0f;
-	}
-	if (Input::getKey('S'))
-	{
-		acceleration += -10.0f;
-	}
+	float acceleration = mThrottleAction * maxThrust;
 
 	if (carSpeed * acceleration >= 0.0f)
 	{
@@ -143,7 +192,8 @@ void CarComponent::fixedUpdate()
 	mRigidBody->addForce(Vector3(0, -9.81, 0));
 }
 
-void CarComponent::simulateWheel(wheel& wheel)
+// Моделює підвіску, зчеплення, тягу й опір одного колеса
+void VehicleController::simulateWheel(wheel& wheel)
 {
 	Transform* transform = getOwner()->getTransform();
 
@@ -242,7 +292,8 @@ void CarComponent::simulateWheel(wheel& wheel)
 	}
 }
 
-void CarComponent::initWheel(wheel& wheel, Vector3 position)
+// Створює колесо з образу в заданій точці кріплення
+void VehicleController::initWheel(wheel& wheel, Vector3 position)
 {
 	wheel.positionTransform = (new Entity())->getTransform();
 	wheel.positionTransform->getOwner()->setParent(mOwner);
@@ -250,8 +301,9 @@ void CarComponent::initWheel(wheel& wheel, Vector3 position)
 	wheel.wheelTransform = wheelPrefab->instantiate()->getTransform();
 	wheel.wheelTransform->getOwner()->setParent(wheel.positionTransform->getOwner());
 }
+
 // Перелічує власні поля для файлу сцени та інспектора
-void CarComponent::visitProperties(PropertyVisitor& visitor)
+void VehicleController::visitProperties(PropertyVisitor& visitor)
 {
 	visitor.property("id", id);
 	visitor.property("force", force, 0.5f);
@@ -260,6 +312,9 @@ void CarComponent::visitProperties(PropertyVisitor& visitor)
 	visitor.property("maxSpeed", maxSpeed, 0.5f);
 	visitor.property("maxSteering", maxSteering, 0.01f);
 	visitor.property("gripRatio", gripRatio, 0.01f);
+	visitor.property("maxThrust", maxThrust, 0.1f);
+	visitor.property("playerInput", playerInput);
+	visitor.property("debugWindow", debugWindow);
 
 	// Без образу колеса машина після завантаження лишилася б без коліс
 	visitor.reference("wheelPrefab", wheelPrefab);

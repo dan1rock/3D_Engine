@@ -1,50 +1,5 @@
 {
-  "version": 4,
-  "materials": [
-    {
-      "color": [1, 1, 1, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 1,
-      "cullBack": false,
-      "clampTexture": true,
-      "texture": "Assets\\Textures\\HDR_029_Sky_Cloudy_Bg.jpg",
-      "shader": "src\\Shaders\\UnlitPixelShader.hlsl"
-    },
-    {
-      "color": [0, 0.5, 0.5, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 2,
-      "cullBack": true,
-      "clampTexture": false,
-      "texture": "Assets\\Textures\\1x1_grid_quarter_lines_numbered.png",
-      "shader": "src\\Shaders\\PrototypePixelShader.hlsl"
-    },
-    {
-      "color": [1, 1, 1, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 1,
-      "cullBack": true,
-      "clampTexture": true,
-      "texture": "Assets\\Textures\\city_shadows.png",
-      "shader": "src\\Shaders\\PixelShader.hlsl"
-    },
-    {
-      "color": [1, 1, 1, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 1,
-      "cullBack": true,
-      "clampTexture": true,
-      "shader": "src\\Shaders\\PixelShader.hlsl"
-    }
-  ],
+  "version": 6,
   "entities": [
     {
       "index": 0,
@@ -81,7 +36,9 @@
           "type": "SkySphere",
           "mesh": "Assets\\Meshes\\sphere.obj",
           "castShadows": false,
-          "material": 0
+          "materials": [
+            "Assets\\Materials\\Sky.mat"
+          ]
         }
       ]
     },
@@ -119,7 +76,9 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\sphere.obj",
           "castShadows": true,
-          "material": 1
+          "materials": [
+            "Assets\\Materials\\Projectile 1.mat"
+          ]
         },
         {
           "type": "SphereCollider",
@@ -171,7 +130,11 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\city_base.obj",
           "castShadows": true,
-          "material": 2
+          "materials": [
+            "Assets\\Materials\\City Base.mat",
+            "Assets\\Materials\\City Base.mat",
+            "Assets\\Materials\\City Base.mat"
+          ]
         },
         {
           "type": "MeshCollider"
@@ -199,7 +162,10 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\city.obj",
           "castShadows": true,
-          "material": 3
+          "materials": [
+            "Assets\\Materials\\City.mat",
+            "Assets\\Materials\\City.mat"
+          ]
         },
         {
           "type": "MeshCollider"
@@ -215,7 +181,7 @@
     {
       "index": 7,
       "name": "Ground",
-      "active": true,
+      "active": false,
       "parent": 5,
       "transform": {
         "position": [0, 0.02, 0],

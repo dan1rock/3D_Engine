@@ -8,6 +8,11 @@
 #include "MeshCollider.h"
 #include "SphereCollider.h"
 #include "PlaneCollider.h"
+#include "VehicleController.h"
+#include "RaySensor.h"
+#include "AgentSensor.h"
+#include "NeuroevolutionBrain.h"
+#include "TrainingManager.h"
 
 #include <unordered_map>
 
@@ -32,6 +37,14 @@ void ComponentRegistry::registerType(const std::string& name, Creator creator)
 
 	creators()[name] = creator;
 	names().push_back(name);
+}
+
+// Реєструє давнє ім'я типу лише для читання старих сцен: у меню редактора воно не з'являється
+void ComponentRegistry::registerAlias(const std::string& name, Creator creator)
+{
+	if (creators().find(name) != creators().end()) return;
+
+	creators()[name] = creator;
 }
 
 // Створює компонент зареєстрованого типу, або повертає nullptr для невідомого імені
@@ -63,4 +76,11 @@ void ComponentRegistry::registerEngineTypes()
 
 	// Фізичне тіло за замовчуванням нерухоме: рухоме потребує маси, яку задають в інспекторі
 	registerType("RigidBody", [](Entity* e) -> Component* { return e->addComponent<RigidBody>(true); });
+
+	// Компоненти агентів штучного інтелекту
+	registerType("VehicleController", [](Entity* e) -> Component* { return e->addComponent<VehicleController>(); });
+	registerType("RaySensor", [](Entity* e) -> Component* { return e->addComponent<RaySensor>(); });
+	registerType("AgentSensor", [](Entity* e) -> Component* { return e->addComponent<AgentSensor>(); });
+	registerType("NeuroevolutionBrain", [](Entity* e) -> Component* { return e->addComponent<NeuroevolutionBrain>(); });
+	registerType("TrainingManager", [](Entity* e) -> Component* { return e->addComponent<TrainingManager>(); });
 }

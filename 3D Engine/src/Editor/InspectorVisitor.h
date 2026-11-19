@@ -3,6 +3,7 @@
 
 #include <set>
 #include <string>
+#include <vector>
 
 // Ставить підпис у ліву колонку, а саме поле розтягує на решту ширини. Власні підписи ImGui
 // малює праворуч від поля, і у вузькій панелі інспектора вони просто зрізаються за краєм.
@@ -22,6 +23,13 @@ extern const char* const MATERIAL_PAYLOAD;
 extern const char* const MESH_PAYLOAD;
 // Тип вмісту, що переносить шлях до текстури з панелі ресурсів
 extern const char* const TEXTURE_PAYLOAD;
+// Тип вмісту, що переносить шлях до файлу ресурсу іншого виду, наприклад навченої мережі
+extern const char* const ASSET_FILE_PAYLOAD;
+
+// Повертає шляхи всіх файлів у ресурсах проєкту з вказаним розширенням, відносно теки проєкту
+std::vector<std::string> findAssetFiles(const char* extension);
+// Повертає ім'я файлу ресурсу без теки й розширення
+std::string assetFileName(const std::string& path);
 
 // Малює поля компонента в інспекторі редактора та одразу записує зміни назад у компонент
 class InspectorVisitor : public PropertyVisitor
@@ -36,6 +44,8 @@ public:
 	void color(const char* name, float* channels, int count) override;
 
 	void reference(const char* name, Entity*& value, ReferenceKind kind) override;
+	// Малює вибір файлу ресурсу зі списку, який приймає й ресурс, перетягнутий з панелі ресурсів
+	void asset(const char* name, std::string& path, const char* extension) override;
 
 	// Поля між цими викликами показуються, але не редагуються
 	void beginReadOnly() override;

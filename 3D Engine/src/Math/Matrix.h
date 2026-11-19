@@ -219,8 +219,17 @@ public:
 		// setRotation(getRotation()) повертає інший поворот, і об'єкт після завантаження
 		// сцени дивиться не туди, куди дивився до збереження
 		Vector3 rotation;
-		rotation.x = atan2f(u.z, f.z);
 		rotation.y = atan2f(-r.z, sqrtf(r.x * r.x + r.y * r.y));
+
+		// Поворот на 90 градусів навколо Y суміщає осі X і Z: обидва арктангенси стають 0/0, тож увесь залишок повороту віддаємо Z
+		if (fabsf(r.z) > 0.9999995f)
+		{
+			rotation.x = 0.0f;
+			rotation.z = atan2f(-u.x, u.y);
+			return rotation;
+		}
+
+		rotation.x = atan2f(u.z, f.z);
 		rotation.z = atan2f(r.y, r.x);
 
 		return rotation;

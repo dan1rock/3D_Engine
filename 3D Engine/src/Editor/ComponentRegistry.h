@@ -15,6 +15,8 @@ public:
 
 	// Реєструє тип компонента під вказаним іменем
 	static void registerType(const std::string& name, Creator creator);
+	// Реєструє давнє ім'я типу лише для читання старих сцен: у меню редактора воно не з'являється
+	static void registerAlias(const std::string& name, Creator creator);
 
 	// Створює компонент зареєстрованого типу, або повертає nullptr для невідомого імені
 	static Component* create(const std::string& name, Entity* entity);

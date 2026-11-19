@@ -24,6 +24,7 @@
 #include "PostProcessing.h"
 #include "Input.h"
 #include "Properties.h"
+#include "NeuralNetwork.h"
 #include <unordered_set>
 
 #include "imgui.h"
@@ -370,7 +371,8 @@ bool Editor::isSceneDirty()
 	// Під час гри та в режимі префаба у світі не та сцена, що у файлі, тож лишається остання оцінка
 	if (mPlaying || isPrefabMode()) return mSceneDirty;
 
-	mSceneDirty = SceneSerializer::serialize(true) != mSavedScene;
+	// Кожна правка сцени проходить через історію скасування, тож досить порівняти номер стану, а не записувати всю сцену
+	mSceneDirty = mHistory.getRevision() != mSavedRevision;
 
 	return mSceneDirty;
 }
@@ -378,9 +380,8 @@ bool Editor::isSceneDirty()
 // Запам'ятовує поточний стан сцени як збережений
 void Editor::markSceneSaved()
 {
-	mSavedScene = SceneSerializer::serialize(true);
+	mSavedRevision = mHistory.getRevision();
 	mSceneDirty = false;
-	mDirtyCheckFrame = 0;
 }
 
 // Зберігає відкриту сцену у її файл
@@ -496,12 +497,8 @@ void Editor::drawToolbar()
 
 	ImGui::Separator();
 
-	// Зірочка позначає незбережені зміни сцени
-	if (!mPlaying && !isPrefabMode() && ++mDirtyCheckFrame >= 15)
-	{
-		mDirtyCheckFrame = 0;
-		isSceneDirty();
-	}
+	// Зірочка позначає незбережені зміни сцени; перевірка лише порівнює номери стану, тож іде щокадру
+	if (!mPlaying && !isPrefabMode()) isSceneDirty();
 
 	ImGui::Text("Scene: %s%s", SceneManager::get()->getActiveSceneName().c_str(), mSceneDirty ? " *" : "");
 
@@ -1367,6 +1364,9 @@ void Editor::openPrefab(const std::string& path)
 	// Екземпляри в ньому пам'ятають свої зміни, тож правки префаба дістануться їм при відновленні
 	mPrefabModeScene = SceneSerializer::serialize(true);
 
+	// Префаб матиме власну історію, тож позначку змін сцени запам'ятовуємо до виходу з нього
+	mPrefabModeSceneClean = !isSceneDirty();
+
 	const std::list<Entity*>& entities = EntityManager::get()->getEntities();
 
 	mPrefabModeSelected = -1;
@@ -1439,6 +1439,10 @@ void Editor::closePrefab(bool save)
 	mPrefabModeScene.clear();
 
 	resetUndo();
+
+	// Сцена повернулася у стан до режиму префаба, тож і позначка змін - та сама, що тоді
+	mSavedRevision = mPrefabModeSceneClean ? mHistory.getRevision() : -1;
+	mSceneDirty = !mPrefabModeSceneClean;
 
 	// Об'єкти сцени, створені заново, можуть сховати курсор, як SceneChanger при прокиданні
 	Input::hideCursor(false);
@@ -2135,20 +2139,17 @@ void Editor::drawMaterialAsset()
 		// Файл перейменовується, коли ім'я підтвердили клавішею Enter
 		if (ImGui::InputText("##materialName", mMaterialNameBuffer, sizeof(mMaterialNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
 		{
-			std::string oldReference = MaterialLibrary::quotedReference(material->assetPath);
+			bool wasSaved = mHistory.getRevision() == mSavedRevision;
 			std::string newPath = library->rename(material, mMaterialNameBuffer);
 
 			if (!newPath.empty())
 			{
 				mInspectedMaterial = newPath;
 
-				// Файл відкритої сцени вже виправлено, тож і збережений стан для порівняння має посилатися на новий шлях
-				std::string newReference = MaterialLibrary::quotedReference(newPath);
+				// Файл відкритої сцени вже виправлено, тож перейменування одразу йде в історію і не робить сцену незбереженою
+				recordUndo();
 
-				for (size_t at = mSavedScene.find(oldReference); at != std::string::npos; at = mSavedScene.find(oldReference, at + newReference.size()))
-				{
-					mSavedScene.replace(at, oldReference.size(), newReference);
-				}
+				if (wasSaved) mSavedRevision = mHistory.getRevision();
 			}
 		}
 
@@ -2732,6 +2733,63 @@ void Editor::drawAssets()
 
 			ImGui::PopID();
 		}
+	}
+
+	ImGui::PopID();
+	ImGui::PushID("Networks");
+
+	if (ImGui::CollapsingHeader("Networks", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		// Тренер дописує нові мережі просто під час гри, тож тека перечитується раз на секунду
+		if (mNetworkScanTime < 0.0 || ImGui::GetTime() - mNetworkScanTime > 1.0)
+		{
+			mNetworkPaths = findAssetFiles(NeuralNetwork::FILE_EXTENSION);
+			mNetworkScanTime = ImGui::GetTime();
+		}
+
+		mAssetGridCount = 0;
+
+		for (const std::string& path : mNetworkPaths)
+		{
+			std::string name = assetFileName(path);
+
+			ImGui::PushID(path.c_str());
+
+			drawAssetItem(name, nullptr, false, textColor);
+
+			// Підказка показує, з якого покоління мережа і наскільки вона була пристосована
+			if (ImGui::IsItemHovered())
+			{
+				NeuralNetwork network;
+				int generation = 0;
+				float fitness = 0.0f;
+
+				if (network.load(path, &generation, &fitness))
+				{
+					std::string layers;
+
+					for (int size : network.getLayers()) layers += (layers.empty() ? "" : "-") + std::to_string(size);
+
+					ImGui::SetTooltip("%s\nLayers %s, %d parameters\nGeneration %d, fitness %.2f", path.c_str(), layers.c_str(), network.getParameterCount(), generation, fitness);
+				}
+				else
+				{
+					ImGui::SetTooltip("%s\nNot a valid network file", path.c_str());
+				}
+			}
+
+			// Мережу перетягують на поле ваг мозку агента в інспекторі
+			if (ImGui::BeginDragDropSource())
+			{
+				ImGui::SetDragDropPayload(ASSET_FILE_PAYLOAD, path.c_str(), path.size() + 1);
+				dragLabel(nullptr, name);
+				ImGui::EndDragDropSource();
+			}
+
+			ImGui::PopID();
+		}
+
+		if (mNetworkPaths.empty()) ImGui::TextDisabled("No trained networks yet");
 	}
 
 	ImGui::PopID();

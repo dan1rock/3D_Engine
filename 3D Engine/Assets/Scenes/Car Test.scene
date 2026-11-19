@@ -1,78 +1,11 @@
 {
-  "version": 4,
-  "materials": [
-    {
-      "color": [0.5, 0.5, 0.5, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 40,
-      "cullBack": true,
-      "clampTexture": false,
-      "texture": "Assets\\Textures\\1x1_grid_quarter_lines_numbered.png",
-      "shader": "src\\Shaders\\PrototypePixelShader.hlsl"
-    },
-    {
-      "color": [1, 1, 1, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 1,
-      "cullBack": false,
-      "clampTexture": true,
-      "texture": "Assets\\Textures\\HDR_029_Sky_Cloudy_Bg.jpg",
-      "shader": "src\\Shaders\\UnlitPixelShader.hlsl"
-    },
-    {
-      "color": [0.7, 0.7, 0.1, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 1,
-      "cullBack": true,
-      "clampTexture": true,
-      "texture": "Assets\\Textures\\1x1_grid_quarter_lines_numbered.png",
-      "shader": "src\\Shaders\\PrototypePixelShader.hlsl"
-    },
-    {
-      "color": [1, 1, 1, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 1,
-      "cullBack": true,
-      "clampTexture": true,
-      "texture": "Assets\\Textures\\wheel.png",
-      "shader": "src\\Shaders\\PixelShader.hlsl"
-    },
-    {
-      "color": [1, 1, 1, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 1,
-      "cullBack": true,
-      "clampTexture": true,
-      "texture": "Assets\\Textures\\car.png",
-      "shader": "src\\Shaders\\PixelShader.hlsl"
-    },
-    {
-      "color": [1, 1, 1, 1],
-      "ambient": 0.4,
-      "smoothness": 0.5,
-      "shininess": 32,
-      "textureScale": 1,
-      "cullBack": true,
-      "clampTexture": true,
-      "texture": "Assets\\Textures\\car.png",
-      "shader": "src\\Shaders\\PixelShader.hlsl"
-    }
-  ],
+  "version": 6,
   "entities": [
     {
       "index": 0,
       "name": "Offroad",
       "active": true,
+      "locked": true,
       "parent": -1,
       "transform": {
         "position": [100, -2, 0],
@@ -84,7 +17,9 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\offroad.obj",
           "castShadows": true,
-          "material": -1
+          "materials": [
+            "DefaultMaterial"
+          ]
         },
         {
           "type": "MeshCollider"
@@ -101,6 +36,7 @@
       "index": 1,
       "name": "Ground",
       "active": true,
+      "locked": true,
       "parent": -1,
       "transform": {
         "position": [0, -2.01, 0],
@@ -112,7 +48,9 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\plane.obj",
           "castShadows": true,
-          "material": 0
+          "materials": [
+            "Assets\\Materials\\Ground.mat"
+          ]
         },
         {
           "type": "MeshCollider"
@@ -140,7 +78,9 @@
           "type": "SkySphere",
           "mesh": "Assets\\Meshes\\sphere.obj",
           "castShadows": false,
-          "material": 1
+          "materials": [
+            "Assets\\Materials\\Sky.mat"
+          ]
         }
       ]
     },
@@ -178,7 +118,9 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\sphere.obj",
           "castShadows": true,
-          "material": 2
+          "materials": [
+            "Assets\\Materials\\Projectile.mat"
+          ]
         },
         {
           "type": "SphereCollider",
@@ -231,7 +173,9 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\wheel.obj",
           "castShadows": true,
-          "material": 3
+          "materials": [
+            "Assets\\Materials\\Wheel.mat"
+          ]
         }
       ]
     },
@@ -251,7 +195,11 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\car.obj",
           "castShadows": true,
-          "material": 4
+          "materials": [
+            "Assets\\Materials\\Car.mat",
+            "Assets\\Materials\\Car.mat",
+            "Assets\\Materials\\Car.mat"
+          ]
         },
         {
           "type": "MeshCollider"
@@ -312,7 +260,11 @@
           "type": "MeshRenderer",
           "mesh": "Assets\\Meshes\\car.obj",
           "castShadows": true,
-          "material": 5
+          "materials": [
+            "Assets\\Materials\\Car.mat",
+            "Assets\\Materials\\CarGlass.mat",
+            "Assets\\Materials\\Car.mat"
+          ]
         },
         {
           "type": "MeshCollider"
@@ -333,6 +285,27 @@
           "maxSteering": 0.3,
           "gripRatio": 0.5,
           "wheelPrefab": "Assets\\Prefabs\\Wheel.prefab"
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "name": "rabbit",
+      "active": true,
+      "parent": -1,
+      "transform": {
+        "position": [15.054026, -2.01, 2.3739765],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": [
+        {
+          "type": "MeshRenderer",
+          "mesh": "Assets\\Meshes\\rabbit.obj::Rabbit",
+          "castShadows": true,
+          "materials": [
+            "Assets\\Materials\\Rabbit.mat"
+          ]
         }
       ]
     }

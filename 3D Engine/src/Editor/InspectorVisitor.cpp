@@ -7,6 +7,12 @@
 #include "imgui.h"
 
 #include <vector>
+#include <algorithm>
+#include <cctype>
+#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#include <experimental/filesystem>
+
+namespace filesystem = std::experimental::filesystem;
 
 // Перетворює ім'я поля на підпис, звичний для редактора: forceDamping -> Force Damping
 static std::string toLabel(const char* name)
@@ -38,6 +44,40 @@ const char* const MATERIAL_PAYLOAD = "MATERIAL_ASSET";
 const char* const MESH_PAYLOAD = "MESH_ASSET";
 // Тип вмісту, що переносить шлях до текстури з панелі ресурсів
 const char* const TEXTURE_PAYLOAD = "TEXTURE_ASSET";
+// Тип вмісту, що переносить шлях до файлу ресурсу іншого виду, наприклад навченої мережі
+const char* const ASSET_FILE_PAYLOAD = "ASSET_FILE";
+
+// Повертає шляхи всіх файлів у ресурсах проєкту з вказаним розширенням, відносно теки проєкту
+std::vector<std::string> findAssetFiles(const char* extension)
+{
+	std::vector<std::string> files;
+	std::string wanted = extension;
+	std::transform(wanted.begin(), wanted.end(), wanted.begin(), ::tolower);
+
+	std::error_code error;
+
+	if (!filesystem::exists("Assets", error)) return files;
+
+	for (filesystem::recursive_directory_iterator it("Assets", error), end; !error && it != end; it.increment(error))
+	{
+		if (!filesystem::is_regular_file(it->path(), error)) continue;
+
+		std::string found = it->path().extension().string();
+		std::transform(found.begin(), found.end(), found.begin(), ::tolower);
+
+		if (found == wanted) files.push_back(it->path().string());
+	}
+
+	std::sort(files.begin(), files.end());
+
+	return files;
+}
+
+// Повертає ім'я файлу ресурсу без теки й розширення
+std::string assetFileName(const std::string& path)
+{
+	return filesystem::path(path).stem().string();
+}
 
 // Ставить підпис у ліву колонку, а саме поле розтягує на решту ширини
 void inspectorLabel(const char* label, bool overridden)
@@ -101,6 +141,46 @@ static void acceptReferenceDrop(Entity*& value, ReferenceKind kind)
 static std::string fieldId(const char* name)
 {
 	return std::string("##") + name;
+}
+
+// Малює вибір файлу ресурсу зі списку, який приймає й ресурс, перетягнутий з панелі ресурсів
+void InspectorVisitor::asset(const char* name, std::string& path, const char* extension)
+{
+	inspectorLabel(toLabel(name).c_str(), isOverridden(name));
+
+	std::string current = path.empty() ? "none" : assetFileName(path);
+
+	if (ImGui::BeginCombo(fieldId(name).c_str(), current.c_str()))
+	{
+		if (ImGui::Selectable("none", path.empty())) path.clear();
+
+		// Тека ресурсів читається лише тоді, коли список відкрито
+		for (const std::string& file : findAssetFiles(extension))
+		{
+			if (ImGui::Selectable(assetFileName(file).c_str(), file == path)) path = file;
+
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", file.c_str());
+		}
+
+		ImGui::EndCombo();
+	}
+
+	if (!path.empty() && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", path.c_str());
+
+	if (ImGui::BeginDragDropTarget())
+	{
+		// Інший вид ресурсу поле не приймає
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(ASSET_FILE_PAYLOAD))
+		{
+			std::string dropped((const char*)payload->Data);
+			std::string droppedExtension = filesystem::path(dropped).extension().string();
+			std::transform(droppedExtension.begin(), droppedExtension.end(), droppedExtension.begin(), ::tolower);
+
+			if (droppedExtension == extension) path = dropped;
+		}
+
+		ImGui::EndDragDropTarget();
+	}
 }
 
 void InspectorVisitor::property(const char* name, float& value, float step)

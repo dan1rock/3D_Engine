@@ -48,6 +48,8 @@ public:
 	void syncPhysicsActivity();
 	// Повертає фізичне тіло за вказаним актором
 	RigidBody* getRigidBody(void* actor);
+	// Повертає всі зареєстровані фізичні тіла за їхніми акторами
+	const std::unordered_map<void*, RigidBody*>& getRigidBodies() const;
 
 	// Повертає всі зареєстровані об'єкти сцени для редактора та збереження
 	const std::list<Entity*>& getEntities() const;

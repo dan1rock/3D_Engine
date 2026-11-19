@@ -38,6 +38,8 @@ public:
 	const JsonValue& get(const char* key) const;
 	// Додає або замінює поле об'єкта
 	void set(const char* key, const JsonValue& value);
+	// Додає або замінює поле об'єкта, забираючи значення без копіювання вкладених полів
+	void set(const char* key, JsonValue&& value);
 	// Прибирає поле об'єкта, якщо воно є
 	void remove(const char* key);
 	// Повертає ім'я та значення поля об'єкта за його номером, щоб поля можна було обійти
@@ -50,6 +52,8 @@ public:
 	const JsonValue& at(size_t index) const;
 	// Додає елемент у кінець масиву
 	void push(const JsonValue& value);
+	// Додає елемент у кінець масиву, забираючи його без копіювання вкладених полів
+	void push(JsonValue&& value);
 
 	// Читає значення потрібного типу, повертаючи запасне, якщо тип не той
 	float asFloat(float fallback = 0.0f) const;

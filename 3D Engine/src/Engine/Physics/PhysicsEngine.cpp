@@ -1,12 +1,105 @@
 #include "PhysicsEngine.h"
 #include <ctype.h>
+#include <cmath>
 #include "ConvexMeshManager.h"
+#include "EntityManager.h"
+#include "RigidBody.h"
 #include <stdexcept>
 #include <thread>
 #include <iostream>
 #include <string>
 
 using namespace physx;
+
+// Фільтр пар симуляції: тіла однієї ненульової групи не зіштовхуються, а для тіл з обліком зіткнень просить звіт про контакти
+static PxFilterFlags engineFilterShader(PxFilterObjectAttributes attributes0, PxFilterData filterData0, PxFilterObjectAttributes attributes1, PxFilterData filterData1, PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize)
+{
+	if (PxFilterObjectIsTrigger(attributes0) || PxFilterObjectIsTrigger(attributes1))
+	{
+		pairFlags = PxPairFlag::eTRIGGER_DEFAULT;
+		return PxFilterFlag::eDEFAULT;
+	}
+
+	// Агенти однієї навчальної групи проходять одне крізь одного, але зіштовхуються з рештою сцени
+	if (filterData0.word0 != 0 && filterData0.word0 == filterData1.word0) return PxFilterFlag::eSUPPRESS;
+
+	pairFlags = PxPairFlag::eCONTACT_DEFAULT;
+
+	// Звіт про контакти коштує часу, тому його просять лише тіла, яким він потрібен
+	if ((filterData0.word1 | filterData1.word1) & 1u)
+	{
+		pairFlags |= PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eNOTIFY_CONTACT_POINTS;
+	}
+
+	return PxFilterFlag::eDEFAULT;
+}
+
+// Отримує від PhysX звіти про контакти й передає тілам з обліком зіткнень удари об перешкоди
+class ContactReporter : public PxSimulationEventCallback
+{
+public:
+	// Розбирає пари контактів після кроку симуляції
+	void onContact(const PxContactPairHeader& pairHeader, const PxContactPair* pairs, PxU32 nbPairs) override
+	{
+		if (pairHeader.flags & (PxContactPairHeaderFlag::eREMOVED_ACTOR_0 | PxContactPairHeaderFlag::eREMOVED_ACTOR_1)) return;
+
+		RigidBody* body0 = EntityManager::get()->getRigidBody(pairHeader.actors[0]);
+		RigidBody* body1 = EntityManager::get()->getRigidBody(pairHeader.actors[1]);
+
+		bool report0 = body0 && body0->mReportCollisions;
+		bool report1 = body1 && body1->mReportCollisions;
+
+		if (!report0 && !report1) return;
+
+		PxContactPairPoint points[16];
+
+		for (PxU32 i = 0; i < nbPairs; i++)
+		{
+			const PxContactPair& pair = pairs[i];
+
+			if (!(pair.events & (PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_PERSISTS))) continue;
+
+			PxU32 count = pair.extractContacts(points, 16);
+
+			// Перешкодою вважається лише бічний удар: опору знизу корпус відчуває й на звичайному горбі
+			bool obstacle = false;
+
+			for (PxU32 p = 0; p < count; p++)
+			{
+				if (std::fabs(points[p].normal.y) < OBSTACLE_NORMAL_Y)
+				{
+					obstacle = true;
+					break;
+				}
+			}
+
+			if (!obstacle) continue;
+
+			if (report0) body0->onCollision();
+			if (report1) body1->onCollision();
+
+			return;
+		}
+	}
+
+	// Розрив з'єднань рушій не обробляє
+	void onConstraintBreak(PxConstraintInfo* constraints, PxU32 count) override {}
+	// Пробудження тіл рушій не обробляє
+	void onWake(PxActor** actors, PxU32 count) override {}
+	// Засинання тіл рушій не обробляє
+	void onSleep(PxActor** actors, PxU32 count) override {}
+	// Тригери рушій не обробляє
+	void onTrigger(PxTriggerPair* pairs, PxU32 count) override {}
+	// Ранні звіти про рух тіл рушій не обробляє
+	void onAdvance(const PxRigidBody* const* bodyBuffer, const PxTransform* poseBuffer, const PxU32 count) override {}
+
+private:
+	// Найбільша вертикальна складова нормалі контакту, за якої він вважається ударом об перешкоду, а не опорою
+	static constexpr float OBSTACLE_NORMAL_Y = 0.7f;
+};
+
+// Єдиний приймач звітів про контакти для сцени PhysX
+static ContactReporter gContactReporter;
 
 PhysicsEngine::PhysicsEngine()
 {
@@ -57,7 +150,8 @@ void PhysicsEngine::init()
     sceneDesc.ccdMaxPasses = 4;
     gDispatcher = PxDefaultCpuDispatcherCreate(std::thread::hardware_concurrency());
     sceneDesc.cpuDispatcher = gDispatcher;
-    sceneDesc.filterShader = PxDefaultSimulationFilterShader;
+    sceneDesc.filterShader = engineFilterShader;
+    sceneDesc.simulationEventCallback = &gContactReporter;
     gScene = gPhysics->createScene(sceneDesc);
 
 	// Ініціалізація PVD (Physics Visual Debugger) для сцени

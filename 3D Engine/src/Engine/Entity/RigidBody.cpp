@@ -191,6 +191,84 @@ void RigidBody::setCenterOfMass(const Vector3& com)
 	dynamicActor->setCMassLocalPose(PxTransform(PxVec3(com.x, com.y, com.z)));
 }
 
+// Задає лінійну швидкість тіла
+void RigidBody::setVelocity(const Vector3& velocity)
+{
+	// PhysX дозволяє задавати швидкість лише актору, що вже стоїть у сцені
+	if (!mActor || mIsStatic || !mInScene) return;
+
+	static_cast<PxRigidDynamic*>(mActor)->setLinearVelocity(PxVec3(velocity.x, velocity.y, velocity.z));
+}
+
+// Задає кутову швидкість тіла
+void RigidBody::setAngularVelocity(const Vector3& velocity)
+{
+	if (!mActor || mIsStatic || !mInScene) return;
+
+	static_cast<PxRigidDynamic*>(mActor)->setAngularVelocity(PxVec3(velocity.x, velocity.y, velocity.z));
+}
+
+// Задає групу фільтрації: тіла з однаковою ненульовою групою не зіштовхуються й не бачать одне одного в запитах
+void RigidBody::setCollisionGroup(unsigned int group)
+{
+	if (group == mCollisionGroup) return;
+
+	mCollisionGroup = group;
+	applyFilterData();
+}
+
+// Повертає групу фільтрації зіткнень, 0 - тіло без групи
+unsigned int RigidBody::getCollisionGroup() const
+{
+	return mCollisionGroup;
+}
+
+// Вмикає облік зіткнень тіла з перешкодами, який забирає takeCollisions
+void RigidBody::setReportCollisions(bool report)
+{
+	if (report == mReportCollisions) return;
+
+	mReportCollisions = report;
+	mCollisions = 0;
+	applyFilterData();
+}
+
+// Повертає кількість зіткнень з перешкодами від попереднього виклику й обнуляє лічильник
+int RigidBody::takeCollisions()
+{
+	int collisions = mCollisions;
+	mCollisions = 0;
+	return collisions;
+}
+
+// Передає формам актора групу фільтрації та ознаку обліку зіткнень
+void RigidBody::applyFilterData()
+{
+	if (!mActor) return;
+
+	// Перше слово - група, друге - прапорець обліку зіткнень; їх читають фільтр симуляції та фізичні запити
+	PxFilterData data(mCollisionGroup, mReportCollisions ? 1u : 0u, 0, 0);
+
+	PxU32 count = mActor->getNbShapes();
+	std::vector<PxShape*> shapes(count);
+	mActor->getShapes(shapes.data(), count);
+
+	for (PxShape* shape : shapes)
+	{
+		shape->setSimulationFilterData(data);
+		shape->setQueryFilterData(data);
+	}
+
+	// Пари, які PhysX уже відфільтрував, без цього зберегли б старе рішення
+	if (mActor->getScene()) mActor->getScene()->resetFiltering(*mActor);
+}
+
+// Викликається рушієм фізики, коли тіло вдарилося об перешкоду
+void RigidBody::onCollision()
+{
+	mCollisions++;
+}
+
 // Ініціалізує фізичне тіло, створює фізичного актора, додає коллайдери, реєструє в EntityManager
 void RigidBody::awake()
 {
@@ -290,9 +368,13 @@ void RigidBody::updateShape()
 		// Коллайдер без меша не має що дати фізиці, а розіменування nullptr тут впало б
 		if (geometry == nullptr) continue;
 
-		PxShape* s = PhysicsEngine::get()->getPhysics()->createShape(*static_cast<PxGeometry*>(geometry), *mMaterial);
+		// Форма належить лише цьому актору: спільну форму PhysX не дає змінювати, поки вона прикріплена, а групу фільтрації задають і після створення
+		PxShape* s = PhysicsEngine::get()->getPhysics()->createShape(*static_cast<PxGeometry*>(geometry), *mMaterial, true);
 		mActor->attachShape(*s);
 	}
+
+	// Нові форми отримують ту саму групу фільтрації, що й старі
+	applyFilterData();
 }
 
 // Звільняє всі форми з фізичного тіла
@@ -380,4 +462,11 @@ void RigidBody::visitProperties(PropertyVisitor& visitor)
 
 	// Масу мало записати у поле: її має знати й сам рушій фізики
 	if (mass != mMass) setMass(mass);
+
+	// Групу треба передати формам актора, тому й вона задається через метод
+	int group = (int)mCollisionGroup;
+	visitor.property("collisionGroup", group);
+
+	if (group < 0) group = 0;
+	if ((unsigned int)group != mCollisionGroup) setCollisionGroup((unsigned int)group);
 }
