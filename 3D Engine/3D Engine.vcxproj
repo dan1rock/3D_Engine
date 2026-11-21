@@ -212,6 +212,11 @@ ative\lib;$(LibraryPath)</LibraryPath>
     <ClCompile Include="src\Engine\AI\AgentBrain.cpp" />
     <ClCompile Include="src\Engine\AI\NeuroevolutionBrain.cpp" />
     <ClCompile Include="src\Engine\AI\TrainingManager.cpp" />
+    <ClCompile Include="src\Engine\AI\AdamOptimizer.cpp" />
+    <ClCompile Include="src\Engine\AI\LearnedDynamics.cpp" />
+    <ClCompile Include="src\Engine\AI\DynamicsModel.cpp" />
+    <ClCompile Include="src\Engine\AI\DynamicsTrainer.cpp" />
+    <ClCompile Include="src\Engine\AI\ModelPredictiveBrain.cpp" />
     <ClCompile Include="src\Engine\Main parts\SimulationSettings.cpp" />
     <ClCompile Include="src\Engine\Physics\PhysicsEngine.cpp" />
     <ClCompile Include="src\Engine\Shader managers\PixelShader.cpp" />
@@ -298,6 +303,11 @@ ative\lib;$(LibraryPath)</LibraryPath>
     <ClInclude Include="src\Engine\AI\AgentBrain.h" />
     <ClInclude Include="src\Engine\AI\NeuroevolutionBrain.h" />
     <ClInclude Include="src\Engine\AI\TrainingManager.h" />
+    <ClInclude Include="src\Engine\AI\AdamOptimizer.h" />
+    <ClInclude Include="src\Engine\AI\LearnedDynamics.h" />
+    <ClInclude Include="src\Engine\AI\DynamicsModel.h" />
+    <ClInclude Include="src\Engine\AI\DynamicsTrainer.h" />
+    <ClInclude Include="src\Engine\AI\ModelPredictiveBrain.h" />
     <ClInclude Include="src\Engine\Main parts\SimulationSettings.h" />
     <ClInclude Include="src\Engine\Physics\PhysicsEngine.h" />
     <ClInclude Include="src\Engine\Shader managers\PixelShader.h" />

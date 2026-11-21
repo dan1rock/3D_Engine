@@ -216,6 +216,21 @@
     <ClCompile Include="src\Engine\AI\TrainingManager.cpp">
       <Filter>Engine\AI</Filter>
     </ClCompile>
+    <ClCompile Include="src\Engine\AI\AdamOptimizer.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\LearnedDynamics.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\DynamicsModel.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\DynamicsTrainer.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\ModelPredictiveBrain.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
     <ClCompile Include="src\Engine\Main parts\SimulationSettings.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
@@ -421,6 +436,21 @@
       <Filter>Engine\AI</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\AI\TrainingManager.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\AdamOptimizer.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\LearnedDynamics.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\DynamicsModel.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\DynamicsTrainer.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\ModelPredictiveBrain.h">
       <Filter>Engine\AI</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Main parts\SimulationSettings.h">

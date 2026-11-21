@@ -13,6 +13,9 @@
 #include "AgentSensor.h"
 #include "NeuroevolutionBrain.h"
 #include "TrainingManager.h"
+#include "DynamicsModel.h"
+#include "DynamicsTrainer.h"
+#include "ModelPredictiveBrain.h"
 
 #include <unordered_map>
 
@@ -83,4 +86,7 @@ void ComponentRegistry::registerEngineTypes()
 	registerType("AgentSensor", [](Entity* e) -> Component* { return e->addComponent<AgentSensor>(); });
 	registerType("NeuroevolutionBrain", [](Entity* e) -> Component* { return e->addComponent<NeuroevolutionBrain>(); });
 	registerType("TrainingManager", [](Entity* e) -> Component* { return e->addComponent<TrainingManager>(); });
+	registerType("DynamicsModel", [](Entity* e) -> Component* { return e->addComponent<DynamicsModel>(); });
+	registerType("DynamicsTrainer", [](Entity* e) -> Component* { return e->addComponent<DynamicsTrainer>(); });
+	registerType("ModelPredictiveBrain", [](Entity* e) -> Component* { return e->addComponent<ModelPredictiveBrain>(); });
 }

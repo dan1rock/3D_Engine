@@ -25,6 +25,8 @@ public:
 	Vector3 getVelocityAtPoint(const Vector3& point);
 	// Повертає кутову швидкість тіла
 	Vector3 getAngularVelocity();
+	// Повертає положення й осі тіла прямо з PhysX, не чекаючи, поки їх перенесе трансформація
+	void getPose(Vector3& position, Vector3& right, Vector3& up, Vector3& forward) const;
 
 	// Додає силу до тіла
 	void addForce(const Vector3& force);

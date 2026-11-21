@@ -1,0 +1,1638 @@
+{
+  "version": 6,
+  "entities": [
+    {
+      "index": 0,
+      "name": "Sky",
+      "active": true,
+      "parent": -1,
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "scale": [200, 200, 200]
+      },
+      "components": [
+        {
+          "type": "SkySphere",
+          "mesh": "Assets\\Meshes\\sphere.obj",
+          "castShadows": false,
+          "materials": [
+            "Assets\\Materials\\Sky.mat"
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Sun",
+      "active": true,
+      "parent": -1,
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [-2.14852, -1.004067, 3.141593],
+        "scale": [1, 1, 1]
+      },
+      "components": [
+        {
+          "type": "DirectionalLight",
+          "lightColor": [1, 1, 1],
+          "intensity": 1
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Camera",
+      "active": true,
+      "parent": -1,
+      "transform": {
+        "position": [-90, 110, -195],
+        "rotation": [0.9, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": [
+        {
+          "type": "Camera"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Ground",
+      "active": true,
+      "locked": true,
+      "parent": -1,
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "scale": [200, 1, 200]
+      },
+      "components": [
+        {
+          "type": "MeshRenderer",
+          "mesh": "Assets\\Meshes\\plane.obj",
+          "castShadows": true,
+          "materials": [
+            "Assets\\Materials\\Ground.mat"
+          ]
+        },
+        {
+          "type": "MeshCollider"
+        },
+        {
+          "type": "RigidBody",
+          "static": true,
+          "continuousCollision": false,
+          "mass": 1,
+          "collisionGroup": 0
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Track Serpentine",
+      "active": true,
+      "locked": true,
+      "parent": -1,
+      "transform": {
+        "position": [110, 0, 0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": [
+        {
+          "type": "MeshRenderer",
+          "mesh": "Assets\\Meshes\\Track Serpentine.obj",
+          "castShadows": true,
+          "materials": [
+            "Assets\\Materials\\Track Wall.mat",
+            "Assets\\Materials\\Track Obstacle.mat"
+          ]
+        },
+        {
+          "type": "MeshCollider"
+        },
+        {
+          "type": "RigidBody",
+          "static": true,
+          "continuousCollision": false,
+          "mass": 1,
+          "collisionGroup": 0
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Policy Routes",
+      "active": true,
+      "parent": -1,
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 6,
+      "name": "Serpentine",
+      "active": true,
+      "parent": 5,
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 7,
+      "name": "Waypoint 0",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [75.0, 0.5, -60.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 8,
+      "name": "Waypoint 1",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [87.9897, 0.5, -60.2002],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 9,
+      "name": "Waypoint 2",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [101.9957, 0.5, -60.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 10,
+      "name": "Waypoint 3",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [116.0051, 0.5, -60.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 11,
+      "name": "Waypoint 4",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [130.0145, 0.5, -60.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 12,
+      "name": "Waypoint 5",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [144.0162, 0.5, -60.3502],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 13,
+      "name": "Waypoint 6",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [154.0063, 0.5, -60.1693],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 14,
+      "name": "Waypoint 7",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [161.7205, 0.5, -58.0972],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 15,
+      "name": "Waypoint 8",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [165.8422, 0.5, -55.3231],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 16,
+      "name": "Waypoint 9",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [168.9289, 0.5, -50.2121],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 17,
+      "name": "Waypoint 10",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [169.9893, 0.5, -45.3442],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 18,
+      "name": "Waypoint 11",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [169.1624, 0.5, -40.4355],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 19,
+      "name": "Waypoint 12",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [166.2971, 0.5, -35.1934],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 20,
+      "name": "Waypoint 13",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [162.3461, 0.5, -32.1882],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 21,
+      "name": "Waypoint 14",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [154.6843, 0.5, -29.9434],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 22,
+      "name": "Waypoint 15",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [143.703, 0.5, -29.665],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 23,
+      "name": "Waypoint 16",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [129.701, 0.5, -30.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 24,
+      "name": "Waypoint 17",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [115.6916, 0.5, -30.0001],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 25,
+      "name": "Waypoint 18",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [101.6923, 0.5, -30.4853],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 26,
+      "name": "Waypoint 19",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [93.7421, 0.5, -29.7383],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 27,
+      "name": "Waypoint 20",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [87.1146, 0.5, -27.5373],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 28,
+      "name": "Waypoint 21",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [83.3281, 0.5, -24.3302],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 29,
+      "name": "Waypoint 22",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [80.6539, 0.5, -18.9859],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 30,
+      "name": "Waypoint 23",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [80.0501, 0.5, -14.0488],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 31,
+      "name": "Waypoint 24",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [81.7249, 0.5, -8.3173],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 32,
+      "name": "Waypoint 25",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [84.5921, 0.5, -4.2479],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 33,
+      "name": "Waypoint 26",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [88.8467, 0.5, -1.6729],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 34,
+      "name": "Waypoint 27",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [97.5966, 0.5, 0.3515],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 35,
+      "name": "Waypoint 28",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [111.5935, 0.5, 0.077],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 36,
+      "name": "Waypoint 29",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [125.6018, 0.5, 0.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 37,
+      "name": "Waypoint 30",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [139.6091, 0.5, -0.1288],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 38,
+      "name": "Waypoint 31",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [153.6001, 0.5, -0.2225],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 39,
+      "name": "Waypoint 32",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [161.3415, 0.5, 1.749],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 40,
+      "name": "Waypoint 33",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [165.5533, 0.5, 4.3906],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 41,
+      "name": "Waypoint 34",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [168.7687, 0.5, 9.4162],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 42,
+      "name": "Waypoint 35",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [169.9632, 0.5, 14.2535],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 43,
+      "name": "Waypoint 36",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [169.284, 0.5, 19.1822],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 44,
+      "name": "Waypoint 37",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [166.5439, 0.5, 24.4927],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 45,
+      "name": "Waypoint 38",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [162.7017, 0.5, 27.6344],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 46,
+      "name": "Waypoint 39",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [155.0746, 0.5, 29.9813],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 47,
+      "name": "Waypoint 40",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [145.1001, 0.5, 30.4386],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 48,
+      "name": "Waypoint 41",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [131.1001, 0.5, 30.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 49,
+      "name": "Waypoint 42",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [117.0907, 0.5, 30.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 50,
+      "name": "Waypoint 43",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [103.0813, 0.5, 30.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 51,
+      "name": "Waypoint 44",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [89.0722, 0.5, 30.0327],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 52,
+      "name": "Waypoint 45",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [75.0729, 0.5, 30.4906],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 53,
+      "name": "Waypoint 46",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [67.1655, 0.5, 29.3719],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 54,
+      "name": "Waypoint 47",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [61.6115, 0.5, 27.1434],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 55,
+      "name": "Waypoint 48",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [58.049, 0.5, 23.6891],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 56,
+      "name": "Waypoint 49",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [55.477, 0.5, 17.2083],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 57,
+      "name": "Waypoint 50",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [54.5152, 0.5, 9.2818],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 58,
+      "name": "Waypoint 51",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [54.9975, 0.5, -4.7176],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 59,
+      "name": "Waypoint 52",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [55.0, 0.5, -18.727],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 60,
+      "name": "Waypoint 53",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [54.7138, 0.5, -32.7303],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 61,
+      "name": "Waypoint 54",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [54.7941, 0.5, -43.7222],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 62,
+      "name": "Waypoint 55",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [56.56, 0.5, -50.4793],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 63,
+      "name": "Waypoint 56",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [59.1844, 0.5, -54.7053],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 64,
+      "name": "Waypoint 57",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [63.311, 0.5, -57.4763],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 65,
+      "name": "Waypoint 58",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [70.0448, 0.5, -59.3079],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 66,
+      "name": "Waypoint 59",
+      "active": true,
+      "parent": 6,
+      "transform": {
+        "position": [75.0, 0.5, -60.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 67,
+      "name": "Serpentine (reverse)",
+      "active": true,
+      "parent": 5,
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 68,
+      "name": "Waypoint 0",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [75.0, 0.5, -60.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 69,
+      "name": "Waypoint 1",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [70.0448, 0.5, -59.3079],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 70,
+      "name": "Waypoint 2",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [63.311, 0.5, -57.4763],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 71,
+      "name": "Waypoint 3",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [59.1844, 0.5, -54.7053],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 72,
+      "name": "Waypoint 4",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [56.56, 0.5, -50.4793],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 73,
+      "name": "Waypoint 5",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [54.7941, 0.5, -43.7222],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 74,
+      "name": "Waypoint 6",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [54.7138, 0.5, -32.7303],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 75,
+      "name": "Waypoint 7",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [55.0, 0.5, -18.727],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 76,
+      "name": "Waypoint 8",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [54.9975, 0.5, -4.7176],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 77,
+      "name": "Waypoint 9",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [54.5152, 0.5, 9.2818],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 78,
+      "name": "Waypoint 10",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [55.477, 0.5, 17.2083],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 79,
+      "name": "Waypoint 11",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [58.049, 0.5, 23.6891],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 80,
+      "name": "Waypoint 12",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [61.6115, 0.5, 27.1434],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 81,
+      "name": "Waypoint 13",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [67.1655, 0.5, 29.3719],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 82,
+      "name": "Waypoint 14",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [75.0729, 0.5, 30.4906],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 83,
+      "name": "Waypoint 15",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [89.0722, 0.5, 30.0327],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 84,
+      "name": "Waypoint 16",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [103.0813, 0.5, 30.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 85,
+      "name": "Waypoint 17",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [117.0907, 0.5, 30.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 86,
+      "name": "Waypoint 18",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [131.1001, 0.5, 30.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 87,
+      "name": "Waypoint 19",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [145.1001, 0.5, 30.4386],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 88,
+      "name": "Waypoint 20",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [155.0746, 0.5, 29.9813],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 89,
+      "name": "Waypoint 21",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [162.7017, 0.5, 27.6344],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 90,
+      "name": "Waypoint 22",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [166.5439, 0.5, 24.4927],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 91,
+      "name": "Waypoint 23",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [169.284, 0.5, 19.1822],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 92,
+      "name": "Waypoint 24",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [169.9632, 0.5, 14.2535],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 93,
+      "name": "Waypoint 25",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [168.7687, 0.5, 9.4162],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 94,
+      "name": "Waypoint 26",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [165.5533, 0.5, 4.3906],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 95,
+      "name": "Waypoint 27",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [161.3415, 0.5, 1.749],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 96,
+      "name": "Waypoint 28",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [153.6001, 0.5, -0.2225],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 97,
+      "name": "Waypoint 29",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [139.6091, 0.5, -0.1288],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 98,
+      "name": "Waypoint 30",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [125.6018, 0.5, 0.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 99,
+      "name": "Waypoint 31",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [111.5935, 0.5, 0.077],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 100,
+      "name": "Waypoint 32",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [97.5966, 0.5, 0.3515],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 101,
+      "name": "Waypoint 33",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [88.8467, 0.5, -1.6729],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 102,
+      "name": "Waypoint 34",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [84.5921, 0.5, -4.2479],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 103,
+      "name": "Waypoint 35",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [81.7249, 0.5, -8.3173],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 104,
+      "name": "Waypoint 36",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [80.0501, 0.5, -14.0488],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 105,
+      "name": "Waypoint 37",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [80.6539, 0.5, -18.9859],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 106,
+      "name": "Waypoint 38",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [83.3281, 0.5, -24.3302],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 107,
+      "name": "Waypoint 39",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [87.1146, 0.5, -27.5373],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 108,
+      "name": "Waypoint 40",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [93.7421, 0.5, -29.7383],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 109,
+      "name": "Waypoint 41",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [101.6923, 0.5, -30.4853],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 110,
+      "name": "Waypoint 42",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [115.6916, 0.5, -30.0001],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 111,
+      "name": "Waypoint 43",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [129.701, 0.5, -30.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 112,
+      "name": "Waypoint 44",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [143.703, 0.5, -29.665],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 113,
+      "name": "Waypoint 45",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [154.6843, 0.5, -29.9434],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 114,
+      "name": "Waypoint 46",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [162.3461, 0.5, -32.1882],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 115,
+      "name": "Waypoint 47",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [166.2971, 0.5, -35.1934],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 116,
+      "name": "Waypoint 48",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [169.1624, 0.5, -40.4355],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 117,
+      "name": "Waypoint 49",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [169.9893, 0.5, -45.3442],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 118,
+      "name": "Waypoint 50",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [168.9289, 0.5, -50.2121],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 119,
+      "name": "Waypoint 51",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [165.8422, 0.5, -55.3231],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 120,
+      "name": "Waypoint 52",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [161.7205, 0.5, -58.0972],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 121,
+      "name": "Waypoint 53",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [154.0063, 0.5, -60.1693],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 122,
+      "name": "Waypoint 54",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [144.0162, 0.5, -60.3502],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 123,
+      "name": "Waypoint 55",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [130.0145, 0.5, -60.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 124,
+      "name": "Waypoint 56",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [116.0051, 0.5, -60.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 125,
+      "name": "Waypoint 57",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [101.9957, 0.5, -60.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 126,
+      "name": "Waypoint 58",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [87.9897, 0.5, -60.2002],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 127,
+      "name": "Waypoint 59",
+      "active": true,
+      "parent": 67,
+      "transform": {
+        "position": [75.0, 0.5, -60.0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": []
+    },
+    {
+      "index": 128,
+      "name": "Dynamics Trainer",
+      "active": true,
+      "parent": -1,
+      "transform": {
+        "position": [0, 0, 0],
+        "rotation": [0, 0, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": [
+        {
+          "type": "DynamicsTrainer",
+          "agentPrefab": "Assets\\Prefabs\\Agent Car.prefab",
+          "route": 5,
+          "policyWeights": "Assets\\Networks\\Vehicle.nn",
+          "policyShare": 0.25,
+          "vehicleCount": 32,
+          "fieldCenter": [-90, 0.5, 0],
+          "fieldSize": 150,
+          "episodeSteps": 1500,
+          "validationShare": 0.15,
+          "datasetCapacity": 300000,
+          "warmupSamples": 20000,
+          "batchSize": 256,
+          "learningRate": 0.001,
+          "trainMilliseconds": 8,
+          "evaluationHorizon": 25,
+          "continueTraining": false,
+          "collisionGroup": 2,
+          "seed": 0,
+          "stepsPerFrame": 1,
+          "renderScene": true,
+          "modelAsset": "Assets\\Networks\\Vehicle Dynamics.dyn"
+        }
+      ]
+    }
+  ]
+}

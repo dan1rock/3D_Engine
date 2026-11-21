@@ -56,6 +56,12 @@ public:
 	float getSteeringAction() const;
 	// Повертає фізичне тіло корпусу, або nullptr, поки автомобіль не зібрано
 	RigidBody* getRigidBody() const;
+	// Записує стан для моделі динаміки: поздовжня й поперечна швидкості, кутова швидкість рискання, кут повороту коліс
+	void getDynamicsState(float* state) const;
+	// Повертає положення в площині та курс корпусу; курс 0 означає напрям уздовж осі Z
+	void getPlanarPose(float& x, float& z, float& heading) const;
+	// Перевіряє, чи корпус стоїть на колесах, а не лежить на боці чи даху
+	bool isUpright() const;
 
 	// Перелічує власні поля для файлу сцени та інспектора
 	void visitProperties(PropertyVisitor& visitor) override;

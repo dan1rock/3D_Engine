@@ -29,10 +29,11 @@
           "type": "RigidBody",
           "static": false,
           "continuousCollision": false,
-          "mass": 1
+          "mass": 1,
+          "collisionGroup": 0
         },
         {
-          "type": "CarComponent",
+          "type": "VehicleController",
           "id": 0,
           "force": 30,
           "damping": 10,
@@ -40,7 +41,9 @@
           "maxSpeed": 70,
           "maxSteering": 0.3,
           "gripRatio": 0.5,
-          "wheelPrefab": "Assets\\Prefabs\\Wheel.prefab"
+          "maxThrust": 10,
+          "playerInput": true,
+          "debugWindow": true
         }
       ]
     }

@@ -28,7 +28,8 @@
           "type": "RigidBody",
           "static": true,
           "continuousCollision": false,
-          "mass": 1
+          "mass": 1,
+          "collisionGroup": 0
         }
       ]
     },
@@ -59,7 +60,8 @@
           "type": "RigidBody",
           "static": true,
           "continuousCollision": false,
-          "mass": 1
+          "mass": 1,
+          "collisionGroup": 0
         }
       ]
     },
@@ -130,7 +132,8 @@
           "type": "RigidBody",
           "static": false,
           "continuousCollision": true,
-          "mass": 1
+          "mass": 1,
+          "collisionGroup": 0
         }
       ]
     },
@@ -208,10 +211,11 @@
           "type": "RigidBody",
           "static": false,
           "continuousCollision": false,
-          "mass": 1
+          "mass": 1,
+          "collisionGroup": 0
         },
         {
-          "type": "CarComponent",
+          "type": "VehicleController",
           "id": 0,
           "force": 30,
           "damping": 10,
@@ -219,6 +223,9 @@
           "maxSpeed": 70,
           "maxSteering": 0.3,
           "gripRatio": 0.5,
+          "maxThrust": 10,
+          "playerInput": true,
+          "debugWindow": true,
           "wheelPrefab": 6
         }
       ]
@@ -248,7 +255,12 @@
       "name": "Player Car",
       "active": true,
       "prefabAsset": "Assets\\Prefabs\\Player Car.prefab",
-      "prefabOverrides": [],
+      "prefabOverrides": [
+        "|DynamicsModel#0.modelAsset",
+        "|DynamicsModel#0.predictionSteps",
+        "|DynamicsModel#0.showPrediction",
+        "|components"
+      ],
       "parent": -1,
       "transform": {
         "position": [0, 0, 0],
@@ -273,10 +285,11 @@
           "type": "RigidBody",
           "static": false,
           "continuousCollision": false,
-          "mass": 1
+          "mass": 1,
+          "collisionGroup": 0
         },
         {
-          "type": "CarComponent",
+          "type": "VehicleController",
           "id": 0,
           "force": 30,
           "damping": 10,
@@ -284,7 +297,16 @@
           "maxSpeed": 70,
           "maxSteering": 0.3,
           "gripRatio": 0.5,
-          "wheelPrefab": "Assets\\Prefabs\\Wheel.prefab"
+          "maxThrust": 10,
+          "playerInput": true,
+          "debugWindow": true,
+          "wheelPrefab": 6
+        },
+        {
+          "type": "DynamicsModel",
+          "modelAsset": "Assets\\Networks\\Vehicle Dynamics.dyn",
+          "showPrediction": true,
+          "predictionSteps": 50
         }
       ]
     },

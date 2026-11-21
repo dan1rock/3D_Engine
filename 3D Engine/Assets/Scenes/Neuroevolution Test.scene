@@ -1921,7 +1921,7 @@
           "static": false,
           "continuousCollision": false,
           "mass": 1,
-          "collisionGroup": 0
+          "collisionGroup": 3
         },
         {
           "type": "RaySensor",
@@ -1960,11 +1960,97 @@
           "playerInput": false,
           "debugWindow": false,
           "wheelPrefab": "Assets\\Prefabs\\Wheel.prefab"
+        },
+        {
+          "type": "DynamicsModel",
+          "modelAsset": "Assets\\Networks\\Vehicle Dynamics.dyn",
+          "showPrediction": true,
+          "predictionSteps": 50
         }
       ]
     },
     {
       "index": 153,
+      "name": "MPC Car",
+      "active": true,
+      "parent": -1,
+      "transform": {
+        "position": [-50.0, 1.0, -62.0],
+        "rotation": [0, 1.601915, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": [
+        {
+          "type": "MeshRenderer",
+          "mesh": "Assets\\Meshes\\car.obj",
+          "castShadows": true,
+          "materials": [
+            "Assets\\Materials\\Car.mat",
+            "Assets\\Materials\\CarGlass.mat",
+            "Assets\\Materials\\Car.mat"
+          ]
+        },
+        {
+          "type": "MeshCollider"
+        },
+        {
+          "type": "RigidBody",
+          "static": false,
+          "continuousCollision": false,
+          "mass": 1,
+          "collisionGroup": 3
+        },
+        {
+          "type": "RaySensor",
+          "rayCount": 9,
+          "fieldOfView": 180,
+          "range": 30,
+          "forwardOffset": 2,
+          "heightOffset": 0.3
+        },
+        {
+          "type": "AgentSensor",
+          "route": 6,
+          "range": 30,
+          "maxYawRate": 3,
+          "predictionTime": 1,
+          "goalRadius": 4,
+          "lookahead": 10
+        },
+        {
+          "type": "ModelPredictiveBrain",
+          "maxEpisodeSteps": 3000,
+          "stuckSpeed": 0.5,
+          "stuckTime": 3,
+          "modelAsset": "Assets\\Networks\\Vehicle Dynamics.dyn",
+          "candidates": 64,
+          "horizon": 25,
+          "replanInterval": 2,
+          "corridor": 2.5,
+          "corridorWeight": 2,
+          "obstacleRadius": 2,
+          "obstacleWeight": 20,
+          "smoothWeight": 0.02,
+          "showPlan": true
+        },
+        {
+          "type": "VehicleController",
+          "id": 0,
+          "force": 30,
+          "damping": 10,
+          "maxDistance": 0.15,
+          "maxSpeed": 70,
+          "maxSteering": 0.3,
+          "gripRatio": 0.5,
+          "maxThrust": 10,
+          "playerInput": false,
+          "debugWindow": false,
+          "wheelPrefab": "Assets\\Prefabs\\Wheel.prefab"
+        }
+      ]
+    },
+    {
+      "index": 154,
       "name": "Trained Car (reverse)",
       "active": false,
       "parent": -1,
@@ -1992,7 +2078,7 @@
           "static": false,
           "continuousCollision": false,
           "mass": 1,
-          "collisionGroup": 0
+          "collisionGroup": 3
         },
         {
           "type": "RaySensor",
@@ -2017,6 +2103,92 @@
           "stuckSpeed": 0.5,
           "stuckTime": 3,
           "weights": "Assets\\Networks\\Vehicle.nn"
+        },
+        {
+          "type": "VehicleController",
+          "id": 0,
+          "force": 30,
+          "damping": 10,
+          "maxDistance": 0.15,
+          "maxSpeed": 70,
+          "maxSteering": 0.3,
+          "gripRatio": 0.5,
+          "maxThrust": 10,
+          "playerInput": false,
+          "debugWindow": false,
+          "wheelPrefab": "Assets\\Prefabs\\Wheel.prefab"
+        },
+        {
+          "type": "DynamicsModel",
+          "modelAsset": "Assets\\Networks\\Vehicle Dynamics.dyn",
+          "showPrediction": true,
+          "predictionSteps": 50
+        }
+      ]
+    },
+    {
+      "index": 155,
+      "name": "MPC Car (reverse)",
+      "active": false,
+      "parent": -1,
+      "transform": {
+        "position": [-50.0, 1.0, -62.0],
+        "rotation": [0, -1.343866, 0],
+        "scale": [1, 1, 1]
+      },
+      "components": [
+        {
+          "type": "MeshRenderer",
+          "mesh": "Assets\\Meshes\\car.obj",
+          "castShadows": true,
+          "materials": [
+            "Assets\\Materials\\Car.mat",
+            "Assets\\Materials\\CarGlass.mat",
+            "Assets\\Materials\\Car.mat"
+          ]
+        },
+        {
+          "type": "MeshCollider"
+        },
+        {
+          "type": "RigidBody",
+          "static": false,
+          "continuousCollision": false,
+          "mass": 1,
+          "collisionGroup": 3
+        },
+        {
+          "type": "RaySensor",
+          "rayCount": 9,
+          "fieldOfView": 180,
+          "range": 30,
+          "forwardOffset": 2,
+          "heightOffset": 0.3
+        },
+        {
+          "type": "AgentSensor",
+          "route": 79,
+          "range": 30,
+          "maxYawRate": 3,
+          "predictionTime": 1,
+          "goalRadius": 4,
+          "lookahead": 10
+        },
+        {
+          "type": "ModelPredictiveBrain",
+          "maxEpisodeSteps": 3000,
+          "stuckSpeed": 0.5,
+          "stuckTime": 3,
+          "modelAsset": "Assets\\Networks\\Vehicle Dynamics.dyn",
+          "candidates": 64,
+          "horizon": 25,
+          "replanInterval": 2,
+          "corridor": 2.5,
+          "corridorWeight": 2,
+          "obstacleRadius": 2,
+          "obstacleWeight": 20,
+          "smoothWeight": 0.02,
+          "showPlan": true
         },
         {
           "type": "VehicleController",

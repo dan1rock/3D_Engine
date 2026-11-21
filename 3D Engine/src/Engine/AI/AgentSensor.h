@@ -44,6 +44,12 @@ public:
 	bool isRouteComplete() const;
 	// Повертає номер точки маршруту, до якої агент зараз прямує
 	int getTargetWaypoint() const;
+	// Повертає точки маршруту, зібрані останнім observe
+	const std::vector<Vector3>& getWaypoints() const;
+	// Повертає номер відрізка маршруту, на якому зараз агент
+	int getSegment() const;
+	// Повертає кількість найближчих рухомих об'єктів з останнього observe і записує їхні положення та швидкості
+	int getTrackedObjects(Vector3* positions, Vector3* velocities) const;
 
 	// Збирає точки маршруту з дочірніх об'єктів маршруту
 	static void collectWaypoints(Entity* route, std::vector<Vector3>& out);
@@ -76,4 +82,10 @@ private:
 	Vector3 mTarget;
 	// Чи маршрут пройдено
 	bool mComplete = false;
+	// Положення найближчих рухомих об'єктів з останнього observe
+	Vector3 mTrackedPositions[TRACKED_OBJECTS];
+	// Швидкості найближчих рухомих об'єктів з останнього observe
+	Vector3 mTrackedVelocities[TRACKED_OBJECTS];
+	// Кількість найближчих рухомих об'єктів з останнього observe
+	int mTrackedCount = 0;
 };

@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include <iostream>
 #include <algorithm>
+#include <cmath>
 
 #include <string>
 #include "Properties.h"
@@ -66,6 +67,56 @@ float VehicleController::getSteeringAction() const
 RigidBody* VehicleController::getRigidBody() const
 {
 	return mRigidBody;
+}
+
+// Записує стан для моделі динаміки: поздовжня й поперечна швидкості, кутова швидкість рискання, кут повороту коліс
+void VehicleController::getDynamicsState(float* state) const
+{
+	if (!mRigidBody)
+	{
+		state[0] = state[1] = state[2] = 0.0f;
+		state[3] = mSteering;
+		return;
+	}
+
+	Vector3 position, right, up, forward;
+	mRigidBody->getPose(position, right, up, forward);
+
+	Vector3 velocity = mRigidBody->getVelocity();
+	Vector3 angular = mRigidBody->getAngularVelocity();
+
+	state[0] = velocity * forward;
+	state[1] = velocity * right;
+	state[2] = angular * up;
+	state[3] = mSteering;
+}
+
+// Повертає положення в площині та курс корпусу; курс 0 означає напрям уздовж осі Z
+void VehicleController::getPlanarPose(float& x, float& z, float& heading) const
+{
+	Vector3 position, right, up, forward;
+
+	if (mRigidBody) mRigidBody->getPose(position, right, up, forward);
+	else
+	{
+		position = mOwner->getTransform()->getPosition();
+		forward = mOwner->getTransform()->getForward();
+	}
+
+	x = position.x;
+	z = position.z;
+	heading = std::atan2(forward.x, forward.z);
+}
+
+// Перевіряє, чи корпус стоїть на колесах, а не лежить на боці чи даху
+bool VehicleController::isUpright() const
+{
+	if (!mRigidBody) return true;
+
+	Vector3 position, right, up, forward;
+	mRigidBody->getPose(position, right, up, forward);
+
+	return up.y > 0.7f;
 }
 
 // Забуває фізичне тіло, якщо його прибрали з машини: далі fixedUpdate просто нічого не робить

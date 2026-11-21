@@ -111,6 +111,30 @@ int AgentSensor::getTargetWaypoint() const
 	return std::min(mSegment + 1, (int)mWaypoints.size() - 1);
 }
 
+// Повертає точки маршруту, зібрані останнім observe
+const std::vector<Vector3>& AgentSensor::getWaypoints() const
+{
+	return mWaypoints;
+}
+
+// Повертає номер відрізка маршруту, на якому зараз агент
+int AgentSensor::getSegment() const
+{
+	return mSegment;
+}
+
+// Повертає кількість найближчих рухомих об'єктів з останнього observe і записує їхні положення та швидкості
+int AgentSensor::getTrackedObjects(Vector3* positions, Vector3* velocities) const
+{
+	for (int i = 0; i < mTrackedCount; i++)
+	{
+		positions[i] = mTrackedPositions[i];
+		velocities[i] = mTrackedVelocities[i];
+	}
+
+	return mTrackedCount;
+}
+
 // Збирає точки маршруту з дочірніх об'єктів маршруту
 void AgentSensor::collectWaypoints(Entity* route, std::vector<Vector3>& out)
 {
@@ -270,12 +294,18 @@ void AgentSensor::observeObjects(const Vector3& position, const Vector3& velocit
 		}
 	}
 
+	mTrackedCount = 0;
+
 	// Відсутній об'єкт лишає нулі як у поточному, так і в прогнозованому положенні
 	for (int i = 0; i < TRACKED_OBJECTS; i++)
 	{
 		RigidBody* body = nearest[i].second;
 
 		if (!body) continue;
+
+		mTrackedPositions[mTrackedCount] = body->getOwner()->getTransform()->getPosition();
+		mTrackedVelocities[mTrackedCount] = body->getVelocity();
+		mTrackedCount++;
 
 		Vector3 relative = body->getOwner()->getTransform()->getPosition() - position;
 		Vector3 predicted = relative + (body->getVelocity() - velocity) * predictionTime;

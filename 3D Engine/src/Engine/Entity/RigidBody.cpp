@@ -68,6 +68,29 @@ Vector3 RigidBody::getAngularVelocity()
 	return Vector3(angularVelocity.x, angularVelocity.y, angularVelocity.z);
 }
 
+// Повертає положення й осі тіла прямо з PhysX, не чекаючи, поки їх перенесе трансформація
+void RigidBody::getPose(Vector3& position, Vector3& right, Vector3& up, Vector3& forward) const
+{
+	if (!mActor)
+	{
+		position = Vector3();
+		right = Vector3(1, 0, 0);
+		up = Vector3(0, 1, 0);
+		forward = Vector3(0, 0, 1);
+		return;
+	}
+
+	PxTransform pose = mActor->getGlobalPose();
+	PxVec3 x = pose.q.rotate(PxVec3(1, 0, 0));
+	PxVec3 y = pose.q.rotate(PxVec3(0, 1, 0));
+	PxVec3 z = pose.q.rotate(PxVec3(0, 0, 1));
+
+	position = Vector3(pose.p.x, pose.p.y, pose.p.z);
+	right = Vector3(x.x, x.y, x.z);
+	up = Vector3(y.x, y.y, y.z);
+	forward = Vector3(z.x, z.y, z.z);
+}
+
 // Застосовує силу до тіла
 void RigidBody::addForce(const Vector3& force)
 {
