@@ -12,9 +12,9 @@
 #include "imgui.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <string>
 
-// Через скільки кроків стоять опорні точки випадкової послідовності дій; між ними дії змінюються лінійно
-static const int KNOT_STEP = 5;
 // Найбільша довжина ламаної маршруту попереду, яку враховує оцінка; її має вистачати, щоб загальмувати перед поворотом, м
 static const float ROUTE_WINDOW = 150.0f;
 
@@ -22,6 +22,40 @@ static const float ROUTE_WINDOW = 150.0f;
 static float clampAction(float value)
 {
 	return std::max(-1.0f, std::min(value, 1.0f));
+}
+
+// Розбирає набір рівнів дії з рядка чисел через кому чи пробіл; повторення й значення поза [-1; 1] відкидаються
+static void parseLevels(const std::string& text, std::vector<float>& levels)
+{
+	levels.clear();
+
+	std::string number;
+
+	for (size_t i = 0; i <= text.size(); i++)
+	{
+		char c = i < text.size() ? text[i] : ' ';
+		bool part = (c >= '0' && c <= '9') || c == '.' || c == '-' || c == '+';
+
+		if (part)
+		{
+			number += c;
+			continue;
+		}
+
+		if (number.empty()) continue;
+
+		char* end = nullptr;
+		float value = std::strtof(number.c_str(), &end);
+
+		if (end && *end == 0)
+		{
+			value = clampAction(value);
+
+			if (std::find(levels.begin(), levels.end(), value) == levels.end()) levels.push_back(value);
+		}
+
+		number.clear();
+	}
 }
 
 // Виконує дію зі складеного плану, а коли настав час - складає новий
@@ -38,6 +72,57 @@ void ModelPredictiveBrain::decide(const float* observation, float* action)
 		action[1] = 0.0f;
 		mPlannedPath.clear();
 		mCandidatePaths.clear();
+		return;
+	}
+
+	// Автомобіль, що застряг у позі, з якої жоден кандидат не веде вперед, виїжджає з неї, повертаючи ніс до маршруту
+	float state[LearnedDynamics::STATE_SIZE];
+	vehicle->getDynamicsState(state);
+
+	mStalledSteps = std::fabs(state[0]) < 0.5f ? mStalledSteps + 1 : 0;
+
+	if (mRecoverySteps == 0 && mStalledSteps * SimulationSettings::fixedStep >= recoveryDelay)
+	{
+		float x, z, heading;
+		vehicle->getPlanarPose(x, z, heading);
+		prepareRoute(sensor, x, z, heading);
+
+		int segment = 0;
+		float deviation = 0.0f;
+		float along = projectOnRoute(x, z, segment, deviation, (int)mRouteDistance.size());
+
+		float tx, tz;
+		pointOnRoute(along + 8.0f, tx, tz);
+
+		float alpha = std::atan2(tx - x, tz - z) - heading;
+
+		while (alpha > 3.14159265f) alpha -= 6.2831853f;
+		while (alpha < -3.14159265f) alpha += 6.2831853f;
+
+		// Огляд навколо показує, де більше місця: позаду чи попереду
+		float scan[LearnedDynamics::COLLISION_RAYS];
+		DynamicsModel::scanSurroundings(vehicle, scan);
+
+		int rays = LearnedDynamics::COLLISION_RAYS;
+		float front = std::min(scan[0], std::min(scan[1], scan[rays - 1]));
+		float back = std::min(scan[rays / 2], std::min(scan[rays / 2 - 1], scan[rays / 2 + 1]));
+
+		// Задній хід з кермом убік, протилежний маршруту, розвертає ніс до маршруту; якщо позаду тісніше, автомобіль обережно повертає вперед
+		bool reverse = back > front;
+		mRecoveryThrottle = reverse ? -1.0f : 0.5f;
+		mRecoverySteering = (alpha > 0.0f) == reverse ? -1.0f : 1.0f;
+		mRecoverySteps = std::max(1, (int)std::round(recoveryTime / SimulationSettings::fixedStep));
+		mStalledSteps = 0;
+	}
+
+	if (mRecoverySteps > 0)
+	{
+		mRecoverySteps--;
+		action[0] = mRecoveryThrottle;
+		action[1] = mRecoverySteering;
+
+		// Після виїзду план складається наново, а не продовжує старий
+		mPlan.clear();
 		return;
 	}
 
@@ -96,6 +181,50 @@ void ModelPredictiveBrain::prepareRoute(AgentSensor* sensor, float x, float z, f
 		mRoute.push_back(mRoute[1] + std::cos(heading));
 		mRouteDistance.push_back(1.0f);
 	}
+}
+
+// Знаходить точку ламаної маршруту на відстані along від її початку
+void ModelPredictiveBrain::pointOnRoute(float along, float& x, float& z) const
+{
+	int last = (int)mRouteDistance.size() - 1;
+	int j = 0;
+
+	while (j < last - 1 && along > mRouteDistance[j + 1]) j++;
+
+	float length = mRouteDistance[j + 1] - mRouteDistance[j];
+	float t = length > 0.0f ? (along - mRouteDistance[j]) / length : 0.0f;
+
+	// За кінцем ламаної точка продовжує останній відрізок
+	if (j < last - 1) t = std::min(t, 1.0f);
+
+	x = mRoute[j * 2] + (mRoute[j * 2 + 2] - mRoute[j * 2]) * t;
+	z = mRoute[j * 2 + 1] + (mRoute[j * 2 + 3] - mRoute[j * 2 + 1]) * t;
+}
+
+// Повертає дію простої стратегії слідування маршрутом: кермо на точку попереду, газ до допустимої швидкості
+void ModelPredictiveBrain::followRoute(const float* state, float x, float z, float heading, int segment, float along, float maxSteering, float* action) const
+{
+	float speed = state[0];
+
+	// Метод переслідування точки: кут повороту коліс, за якого автомобіль піде дугою через точку на відстані упередження
+	float lookahead = std::max(6.0f, 0.8f * std::fabs(speed));
+	float tx, tz;
+	pointOnRoute(along + lookahead, tx, tz);
+
+	float dx = tx - x;
+	float dz = tz - z;
+	float alpha = std::atan2(dx, dz) - heading;
+
+	while (alpha > 3.14159265f) alpha -= 6.2831853f;
+	while (alpha < -3.14159265f) alpha += 6.2831853f;
+
+	float distance = std::max(1.0f, std::sqrt(dx * dx + dz * dz));
+	float wheelAngle = std::atan(2.0f * wheelBase * std::sin(alpha) / distance);
+
+	action[1] = clampAction(wheelAngle / maxSteering);
+
+	// Газ пропорційний різниці між допустимою й поточною швидкістю
+	action[0] = clampAction(0.3f * (allowedSpeed(segment, along) - speed));
 }
 
 // Повертає відстань від точки до найближчого відрізка ламаної маршруту
@@ -203,10 +332,25 @@ float ModelPredictiveBrain::projectOnRoute(float x, float z, int& segment, float
 	return bestAlong;
 }
 
-// Складає новий план: перебирає послідовності дій і запам'ятовує найкращу
+// Складає новий план: перебирає поєднання дій із наборів і запам'ятовує найкраще
 void ModelPredictiveBrain::plan(const LearnedDynamics& model, VehicleController* vehicle, AgentSensor* sensor)
 {
-	int count = std::max(1, candidates);
+	// Набори рівнів перечитуються лише тоді, коли їх змінили в інспекторі
+	if (throttlePool != mParsedThrottlePool || mThrottleLevels.empty())
+	{
+		parseLevels(throttlePool, mThrottleLevels);
+		if (mThrottleLevels.empty()) mThrottleLevels = { 0.0f, 0.5f, 1.0f };
+		mParsedThrottlePool = throttlePool;
+	}
+
+	if (steeringPool != mParsedSteeringPool || mSteeringLevels.empty())
+	{
+		parseLevels(steeringPool, mSteeringLevels);
+		if (mSteeringLevels.empty()) mSteeringLevels = { -1.0f, -0.5f, 0.0f, 0.5f, 1.0f };
+		mParsedSteeringPool = steeringPool;
+	}
+
+	int count = (int)(mThrottleLevels.size() * mSteeringLevels.size());
 	float dt = SimulationSettings::fixedStep;
 
 	float state[LearnedDynamics::STATE_SIZE];
@@ -215,7 +359,8 @@ void ModelPredictiveBrain::plan(const LearnedDynamics& model, VehicleController*
 	vehicle->getDynamicsState(state);
 
 	// Майже нерухомий автомобіль за звичайний горизонт ледь зрушить, тож план складається на довший час
-	int steps = std::max(1, horizon) * (std::fabs(state[0]) < 2.0f ? std::max(1, stallHorizonScale) : 1);
+	bool stalled = std::fabs(state[0]) < 2.0f;
+	int steps = std::max(1, horizon) * (stalled ? std::max(1, stallHorizonScale) : 1);
 	vehicle->getPlanarPose(x0, z0, heading0);
 	prepareRoute(sensor, x0, z0, heading0);
 	computeSpeedProfile(vehicle->maxSpeed > 0.0f ? vehicle->maxSpeed : 70.0f);
@@ -253,67 +398,23 @@ void ModelPredictiveBrain::plan(const LearnedDynamics& model, VehicleController*
 	Vector3 trackedVelocities[AgentSensor::TRACKED_OBJECTS];
 	int tracked = sensor->getTrackedObjects(trackedPositions, trackedVelocities);
 
-	// Послідовності дій: перша - попередній план, зсунутий на виконані кроки, далі - його збурення та нові випадкові
+	// Кандидати - усі поєднання рівнів газу й керма з наборів; дію з набору кандидат тримає holdTime, а далі дії додаються під час прогнозу
 	mSequences.assign((size_t)count * steps * 2, 0.0f);
 
-	std::vector<float> previous((size_t)steps * 2);
-	bool havePrevious = !mPlan.empty();
-
-	for (int h = 0; h < steps; h++)
-	{
-		int from = std::min(mPlanStep + h, (int)mPlan.size() / 2 - 1);
-		previous[h * 2] = havePrevious ? mPlan[from * 2] : vehicle->getThrottleAction();
-		previous[h * 2 + 1] = havePrevious ? mPlan[from * 2 + 1] : vehicle->getSteeringAction();
-	}
-
-	// Газ береться з усього проміжку: задній хід потрібен, щоб від'їхати від стіни, у яку агент уперся
-	std::uniform_real_distribution<float> throttleRange(-1.0f, 1.0f);
-	std::uniform_real_distribution<float> steeringRange(-1.0f, 1.0f);
-	std::normal_distribution<float> noise(0.0f, 0.3f);
-
-	int knots = steps / KNOT_STEP + 2;
-	std::vector<float> knotValues((size_t)knots * 2);
+	// Майже нерухомий автомобіль тримає дію з набору половину довгого горизонту: так серед кандидатів є розворот заднім ходом з повним кермом
+	int holdSteps = stalled ? std::max(1, steps / 2) : std::max(1, std::min(steps, (int)std::round(holdTime / dt)));
+	float maxSteering = vehicle->maxSteering > 0.0f ? vehicle->maxSteering : 0.3f;
 
 	for (int k = 0; k < count; k++)
 	{
+		float throttle = mThrottleLevels[k / mSteeringLevels.size()];
+		float steering = mSteeringLevels[k % mSteeringLevels.size()];
 		float* sequence = mSequences.data() + (size_t)k * steps * 2;
 
-		if (k == 0)
+		for (int h = 0; h < holdSteps; h++)
 		{
-			std::copy(previous.begin(), previous.end(), sequence);
-			continue;
-		}
-
-		bool perturb = havePrevious && k < count / 2;
-
-		// Опорні точки: збурення попереднього плану або нові значення, що починаються з поточної дії
-		for (int n = 0; n < knots; n++)
-		{
-			if (perturb)
-			{
-				int h = std::min(n * KNOT_STEP, steps - 1);
-				knotValues[n * 2] = previous[h * 2] + noise(mRandom);
-				knotValues[n * 2 + 1] = previous[h * 2 + 1] + noise(mRandom);
-			}
-			else if (n == 0)
-			{
-				knotValues[0] = vehicle->getThrottleAction();
-				knotValues[1] = vehicle->getSteeringAction();
-			}
-			else
-			{
-				knotValues[n * 2] = throttleRange(mRandom);
-				knotValues[n * 2 + 1] = steeringRange(mRandom);
-			}
-		}
-
-		for (int h = 0; h < steps; h++)
-		{
-			int n = h / KNOT_STEP;
-			float t = (float)(h % KNOT_STEP) / (float)KNOT_STEP;
-
-			sequence[h * 2] = clampAction(knotValues[n * 2] + (knotValues[n * 2 + 2] - knotValues[n * 2]) * t);
-			sequence[h * 2 + 1] = clampAction(knotValues[n * 2 + 1] + (knotValues[n * 2 + 3] - knotValues[n * 2 + 1]) * t);
+			sequence[h * 2] = throttle;
+			sequence[h * 2 + 1] = steering;
 		}
 	}
 
@@ -344,8 +445,16 @@ void ModelPredictiveBrain::plan(const LearnedDynamics& model, VehicleController*
 	{
 		for (int k = 0; k < count; k++)
 		{
-			mActions[k * 2] = mSequences[((size_t)k * steps + h) * 2];
-			mActions[k * 2 + 1] = mSequences[((size_t)k * steps + h) * 2 + 1];
+			float* applied = mSequences.data() + ((size_t)k * steps + h) * 2;
+
+			// Після утримання дії з набору прогноз продовжує стратегія слідування маршрутом: так видно, куди веде саме початковий вибір
+			if (h >= holdSteps)
+			{
+				followRoute(mStates.data() + (size_t)k * LearnedDynamics::STATE_SIZE, xs[k], zs[k], headings[k], segments[k], along[k], maxSteering, applied);
+			}
+
+			mActions[k * 2] = applied[0];
+			mActions[k * 2 + 1] = applied[1];
 		}
 
 		model.predictBatch(mStates.data(), mActions.data(), count, mNextStates.data());
@@ -447,6 +556,19 @@ void ModelPredictiveBrain::plan(const LearnedDynamics& model, VehicleController*
 		}
 	}
 
+	// Навчена модель зіткнень оцінює кожну дію з набору за тим, що зараз навколо автомобіля
+	if (model.hasCollisionModel() && collisionWeight > 0.0f)
+	{
+		float scan[LearnedDynamics::COLLISION_RAYS];
+		DynamicsModel::scanSurroundings(vehicle, scan);
+
+		for (int k = 0; k < count; k++)
+		{
+			const float* action = mSequences.data() + (size_t)k * steps * 2;
+			scores[k] -= collisionWeight * model.predictCollision(scan, state, action);
+		}
+	}
+
 	// Оцінка - просування маршрутом за горизонт мінус накопичені штрафи
 	int best = 0;
 
@@ -531,7 +653,10 @@ void ModelPredictiveBrain::visitProperties(PropertyVisitor& visitor)
 	AgentBrain::visitProperties(visitor);
 
 	visitor.asset("modelAsset", modelAsset, LearnedDynamics::FILE_EXTENSION);
-	visitor.property("candidates", candidates);
+	visitor.property("throttlePool", throttlePool);
+	visitor.property("steeringPool", steeringPool);
+	visitor.property("holdTime", holdTime, 0.01f);
+	visitor.property("wheelBase", wheelBase, 0.05f);
 	visitor.property("horizon", horizon);
 	visitor.property("replanInterval", replanInterval);
 	visitor.property("corridor", corridor, 0.05f);
@@ -539,6 +664,7 @@ void ModelPredictiveBrain::visitProperties(PropertyVisitor& visitor)
 	visitor.property("centerWeight", centerWeight, 0.005f);
 	visitor.property("obstacleRadius", obstacleRadius, 0.05f);
 	visitor.property("obstacleWeight", obstacleWeight, 0.1f);
+	visitor.property("collisionWeight", collisionWeight, 0.5f);
 	visitor.property("smoothWeight", smoothWeight, 0.005f);
 	visitor.property("lateralAcceleration", lateralAcceleration, 0.1f);
 	visitor.property("braking", braking, 0.1f);
@@ -548,10 +674,11 @@ void ModelPredictiveBrain::visitProperties(PropertyVisitor& visitor)
 	visitor.property("scanRange", scanRange, 0.5f);
 	visitor.property("terminalTime", terminalTime, 0.05f);
 	visitor.property("stallHorizonScale", stallHorizonScale);
+	visitor.property("recoveryDelay", recoveryDelay, 0.05f);
+	visitor.property("recoveryTime", recoveryTime, 0.05f);
 	visitor.property("showPlan", showPlan);
 	visitor.property("showCandidates", showCandidates);
 
-	candidates = std::max(1, std::min(candidates, 1024));
 	horizon = std::max(1, std::min(horizon, 500));
 	replanInterval = std::max(1, replanInterval);
 	stallHorizonScale = std::max(1, std::min(stallHorizonScale, 10));

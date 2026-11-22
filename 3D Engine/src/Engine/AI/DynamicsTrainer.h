@@ -31,6 +31,8 @@ public:
 	std::string policyWeights = "Assets\\Networks\\Vehicle.nn";
 	// Частка водіїв, що їздять навченою стратегією
 	float policyShare = 0.25f;
+	// Частка випадкових водіїв, що їздять трасами, а не полем: їхні удари об стіни вчать модель зіткнень
+	float randomOnTracks = 0.5f;
 	// Кількість водіїв
 	int vehicleCount = 32;
 	// Центр поля, по якому їздять випадкові водії
@@ -95,6 +97,17 @@ private:
 		float heading;
 	};
 
+	// Приклад для моделі зіткнень, мітка якого ще не відома: чекає, чи станеться удар протягом горизонту
+	struct PendingCollision
+	{
+		// Огляд і стан на момент створення прикладу
+		CollisionSample sample;
+		// Сума дій від створення прикладу, з якої виходить середня дія
+		float actionSum[2] = {};
+		// Скільки кроків минуло від створення прикладу
+		int age = 0;
+	};
+
 	// Водій: автомобіль, що збирає дані, та стан його епізоду
 	struct Driver
 	{
@@ -126,6 +139,10 @@ private:
 		float throttleTarget = 0.0f, steeringTarget = 0.0f;
 		// Скільки кроків лишилося до вибору нових цільових дій
 		int targetTimer = 0;
+		// Чи випадковий водій їздить трасою, а не полем
+		bool onTrack = false;
+		// Приклади для моделі зіткнень, що чекають на мітку
+		std::vector<PendingCollision> pending;
 	};
 
 	// Передає симуляції темп і малювання, навчає мережу в межах бюджету кадру та показує вікно
@@ -141,6 +158,10 @@ private:
 	void pickTargets(Driver& driver);
 	// Додає перехід до навчальних або перевірних даних
 	void storeTransition(const Driver& driver, const float* action, const float* next);
+	// Додає приклад з відомою міткою до навчальних або перевірних даних моделі зіткнень
+	void storeCollision(const Driver& driver, const PendingCollision& pending, float label);
+	// Оновлює приклади водія, що чекають на мітку: удар позначає всі, а спливлий горизонт - найстаріші як безпечні
+	void updatePending(Driver& driver, const float* action, bool collided);
 	// Навчає мережу, доки не вичерпано бюджет кадру
 	void train();
 	// Обчислює похибку одного кроку та положення на горизонті на перевірних даних і зберігає модель, якщо вона покращилася
@@ -154,6 +175,34 @@ private:
 	LearnedDynamics mModel;
 	// Оптимізатор мережі моделі
 	AdamOptimizer mOptimizer;
+	// Оптимізатор мережі моделі зіткнень
+	AdamOptimizer mCollisionOptimizer;
+	// Навчальні приклади моделі зіткнень
+	std::vector<CollisionSample> mCollisionData;
+	// Куди записати наступний навчальний приклад зіткнень, коли сховище заповнене
+	size_t mCollisionNext = 0;
+	// Перевірні приклади моделі зіткнень
+	std::vector<CollisionSample> mCollisionValidation;
+	// Куди записати наступний перевірний приклад зіткнень, коли сховище заповнене
+	size_t mCollisionValidationNext = 0;
+	// Пакет прикладів зіткнень для кроку оптимізатора
+	std::vector<const CollisionSample*> mCollisionBatch;
+	// Кількість навчальних прикладів з ударом, зібраних від початку
+	long long mCollisionPositives = 0;
+	// Кількість навчальних прикладів зіткнень, зібраних від початку
+	long long mCollisionTotal = 0;
+	// Кількість кроків оптимізатора моделі зіткнень
+	long long mCollisionBatches = 0;
+	// Згладжена похибка навчальних пакетів моделі зіткнень
+	float mCollisionTrainLoss = 0.0f;
+	// Логістична похибка моделі зіткнень на перевірних даних за кожну перевірку
+	std::vector<float> mCollisionLossHistory;
+	// Частка вгаданих ударів на перевірних даних з останньої перевірки
+	float mCollisionRecall = 0.0f;
+	// Частка справжніх ударів серед передбачених з останньої перевірки
+	float mCollisionPrecision = 0.0f;
+	// Найменша логістична похибка моделі зіткнень, з якою модель збережено
+	float mBestCollisionLoss = -1.0f;
 	// Водії
 	std::vector<Driver> mDrivers;
 	// Маршрути водіїв з навченою стратегією

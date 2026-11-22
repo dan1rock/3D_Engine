@@ -11,12 +11,19 @@ namespace filesystem = std::experimental::filesystem;
 
 // Підпис формату файлу моделі динаміки
 static const char DYNAMICS_MAGIC[4] = { 'E', 'D', 'M', '1' };
-// Версія формату файлу моделі динаміки
-static const int DYNAMICS_VERSION = 1;
+// Версія формату файлу моделі динаміки: 2 додала модель зіткнень
+static const int DYNAMICS_VERSION = 2;
 // Найменше відхилення, на яке ділиться величина під час нормування
 static const float MIN_SCALE = 1e-4f;
 
 const char* LearnedDynamics::FILE_EXTENSION = ".dyn";
+const float LearnedDynamics::COLLISION_RANGE = 20.0f;
+
+// Розміри шарів моделі зіткнень: огляд, стан і дія, два приховані шари, логарифм шансів зіткнення
+static std::vector<int> collisionLayers()
+{
+	return { LearnedDynamics::COLLISION_RAYS + LearnedDynamics::STATE_SIZE + LearnedDynamics::ACTION_SIZE, 64, 64, 1 };
+}
 
 // Розміри шарів мережі: стан і дія, два приховані шари по 128 нейронів, приріст стану
 std::vector<int> LearnedDynamics::defaultLayers()
@@ -225,6 +232,106 @@ void LearnedDynamics::setStatistics(long long trainedSamples, float horizonError
 	mHorizon = horizon;
 }
 
+// Створює нову модель зіткнень з випадковими вагами
+void LearnedDynamics::createCollisionModel(std::mt19937& random)
+{
+	mCollisionNetwork.build(collisionLayers(), true);
+	mCollisionNetwork.randomize(random);
+}
+
+// Перевіряє, чи є модель зіткнень
+bool LearnedDynamics::hasCollisionModel() const
+{
+	return mCollisionNetwork.getLayers() == collisionLayers();
+}
+
+// Повертає мережу моделі зіткнень
+NeuralNetwork& LearnedDynamics::getCollisionNetwork()
+{
+	return mCollisionNetwork;
+}
+
+// Складає нормований вхід моделі зіткнень
+void LearnedDynamics::collisionInput(const float* scan, const float* state, const float* action, float* input) const
+{
+	// Відстані вже нормовані дальністю, а стан і дія нормуються так само, як для моделі динаміки
+	for (int i = 0; i < COLLISION_RAYS; i++) input[i] = scan[i];
+
+	normalizeInput(state, action, input + COLLISION_RAYS);
+}
+
+// Повертає ймовірність зіткнення протягом горизонту, якщо автомобіль з таким оточенням і рухом виконуватиме дію
+float LearnedDynamics::predictCollision(const float* scan, const float* state, const float* action) const
+{
+	if (!hasCollisionModel()) return 0.0f;
+
+	float input[COLLISION_RAYS + 6];
+	float logit = 0.0f;
+
+	collisionInput(scan, state, action, input);
+	mCollisionNetwork.forward(input, &logit);
+
+	return 1.0f / (1.0f + std::exp(-logit));
+}
+
+// Робить крок оптимізатора моделі зіткнень на пакеті прикладів і повертає середню логістичну похибку
+float LearnedDynamics::trainCollisionBatch(const CollisionSample* const* batch, int count, AdamOptimizer& optimizer)
+{
+	if (count <= 0 || !hasCollisionModel()) return 0.0f;
+
+	mGradients.assign(mCollisionNetwork.getParameterCount(), 0.0f);
+
+	float input[COLLISION_RAYS + 6];
+	float loss = 0.0f;
+
+	for (int k = 0; k < count; k++)
+	{
+		collisionInput(batch[k]->scan, batch[k]->state, batch[k]->action, input);
+		loss += mCollisionNetwork.accumulateLogisticGradient(input, batch[k]->label, mGradients.data());
+	}
+
+	float scale = 1.0f / (float)count;
+
+	for (float& g : mGradients) g *= scale;
+
+	optimizer.step(mCollisionNetwork.getParameterData(), mGradients.data());
+
+	return loss / (float)count;
+}
+
+// Оцінює модель зіткнень: середня логістична похибка, частка вгаданих зіткнень і частка справжніх серед передбачених
+void LearnedDynamics::evaluateCollision(const CollisionSample* const* batch, int count, float& loss, float& recall, float& precision) const
+{
+	loss = 0.0f;
+	recall = 0.0f;
+	precision = 0.0f;
+
+	if (count <= 0 || !hasCollisionModel()) return;
+
+	int truePositive = 0;
+	int positives = 0;
+	int predicted = 0;
+
+	for (int k = 0; k < count; k++)
+	{
+		float p = predictCollision(batch[k]->scan, batch[k]->state, batch[k]->action);
+		float t = batch[k]->label;
+
+		loss -= t * std::log(p + 1e-6f) + (1.0f - t) * std::log(1.0f - p + 1e-6f);
+
+		bool predictedHit = p > 0.5f;
+		bool actualHit = t > 0.5f;
+
+		if (actualHit) positives++;
+		if (predictedHit) predicted++;
+		if (predictedHit && actualHit) truePositive++;
+	}
+
+	loss /= (float)count;
+	recall = positives > 0 ? (float)truePositive / positives : 0.0f;
+	precision = predicted > 0 ? (float)truePositive / predicted : 0.0f;
+}
+
 // Записує модель у файл ресурсу
 bool LearnedDynamics::save(const std::string& path) const
 {
@@ -255,6 +362,23 @@ bool LearnedDynamics::save(const std::string& path) const
 		out.write((const char*)&mHorizon, sizeof(mHorizon));
 
 		if (!mNetwork.write(out)) return false;
+
+		// Модель зіткнень необов'язкова; разом з нею записується огляд, на якому вона навчалася
+		int collision = hasCollisionModel() ? 1 : 0;
+		int rays = COLLISION_RAYS;
+		float range = COLLISION_RANGE;
+		int horizon = COLLISION_HORIZON;
+
+		out.write((const char*)&collision, sizeof(int));
+
+		if (collision)
+		{
+			out.write((const char*)&rays, sizeof(int));
+			out.write((const char*)&range, sizeof(float));
+			out.write((const char*)&horizon, sizeof(int));
+
+			if (!mCollisionNetwork.write(out)) return false;
+		}
 	}
 
 	filesystem::rename(temporary, file, error);
@@ -277,7 +401,7 @@ bool LearnedDynamics::load(const std::string& path)
 	in.read(magic, sizeof(magic));
 	in.read((char*)&version, sizeof(int));
 
-	if (!in || std::memcmp(magic, DYNAMICS_MAGIC, sizeof(magic)) != 0 || version != DYNAMICS_VERSION) return false;
+	if (!in || std::memcmp(magic, DYNAMICS_MAGIC, sizeof(magic)) != 0 || version < 1 || version > DYNAMICS_VERSION) return false;
 
 	in.read((char*)&normalized, sizeof(int));
 	in.read((char*)loaded.mInputMean, sizeof(loaded.mInputMean));
@@ -289,6 +413,27 @@ bool LearnedDynamics::load(const std::string& path)
 	in.read((char*)&loaded.mHorizon, sizeof(loaded.mHorizon));
 
 	if (!in || !loaded.mNetwork.read(in) || !loaded.isReady()) return false;
+
+	// Перша версія моделі зіткнень не мала
+	if (version >= 2)
+	{
+		int collision = 0;
+		in.read((char*)&collision, sizeof(int));
+
+		if (collision)
+		{
+			int rays = 0;
+			int horizon = 0;
+			float range = 0.0f;
+
+			in.read((char*)&rays, sizeof(int));
+			in.read((char*)&range, sizeof(float));
+			in.read((char*)&horizon, sizeof(int));
+
+			// Модель, навчена на іншому огляді, не підходить до променів, які пускає рушій
+			if (!in || rays != COLLISION_RAYS || range != COLLISION_RANGE || !loaded.mCollisionNetwork.read(in)) return false;
+		}
+	}
 
 	// Нульове відхилення у зіпсованому файлі дало б ділення на нуль
 	for (float scale : loaded.mInputScale) if (!(scale > 0.0f)) return false;

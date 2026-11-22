@@ -9,6 +9,7 @@
 #include "EntityManager.h"
 #include "SimulationSettings.h"
 #include "Properties.h"
+#include "DynamicsModel.h"
 #include "imgui.h"
 #include <algorithm>
 #include <chrono>
@@ -74,12 +75,20 @@ bool DynamicsTrainer::initialize()
 		mModel.create(mRandom);
 	}
 
+	// Модель зіткнень з'являється й у старій моделі динаміки, що її ще не мала
+	if (!mModel.hasCollisionModel()) mModel.createCollisionModel(mRandom);
+
 	mOptimizer.init(mModel.getNetwork().getParameterCount(), learningRate);
+	mCollisionOptimizer.init(mModel.getCollisionNetwork().getParameterCount(), learningRate);
 
 	AgentSensor::collectRoutes(route, mRoutes);
 
 	bool policyAvailable = !policyWeights.empty() && !mRoutes.empty();
 	int policyDrivers = policyAvailable ? (int)std::round(std::max(0.0f, std::min(policyShare, 1.0f)) * vehicleCount) : 0;
+
+	// Частина випадкових водіїв їздить трасами: там вони б'ються об стіни й перешкоди, і модель зіткнень бачить удари
+	int randomDrivers = std::max(1, vehicleCount) - policyDrivers;
+	int trackDrivers = mRoutes.empty() ? 0 : (int)std::round(std::max(0.0f, std::min(randomOnTracks, 1.0f)) * randomDrivers);
 
 	for (int i = 0; i < std::max(1, vehicleCount); i++)
 	{
@@ -104,6 +113,7 @@ bool DynamicsTrainer::initialize()
 		driver.body->setReportCollisions(true);
 
 		bool policy = i < policyDrivers;
+		driver.onTrack = !policy && i < policyDrivers + trackDrivers;
 
 		// Випадковому водієві дії задає тренер, тож мозок з образу йому лише заважав би
 		std::vector<AgentBrain*> brains;
@@ -155,9 +165,9 @@ void DynamicsTrainer::respawn(Driver& driver)
 	Vector3 position;
 	float heading = 0.0f;
 
-	if (driver.brain)
+	if (driver.brain || driver.onTrack)
 	{
-		// Водій зі стратегією стартує з випадкової точки випадкового маршруту, звідки лишається хоч третина шляху
+		// Водій на трасі стартує з випадкової точки випадкового маршруту, звідки лишається хоч третина шляху
 		Entity* chosen = mRoutes[std::uniform_int_distribution<int>(0, (int)mRoutes.size() - 1)(mRandom)];
 
 		std::vector<Vector3> waypoints;
@@ -173,8 +183,11 @@ void DynamicsTrainer::respawn(Driver& driver)
 		position = waypoints[start] + Vector3(0.0f, 0.5f, 0.0f);
 		heading = std::atan2(direction.x, direction.z);
 
-		driver.sensor->route = chosen;
-		driver.sensor->resetRoute(start);
+		if (driver.sensor)
+		{
+			driver.sensor->route = chosen;
+			driver.sensor->resetRoute(start);
+		}
 	}
 	else
 	{
@@ -198,6 +211,8 @@ void DynamicsTrainer::respawn(Driver& driver)
 
 	if (driver.brain) driver.brain->beginEpisode();
 
+	// Приклади, горизонт яких не встиг минути, лишаються без мітки й відкидаються
+	driver.pending.clear();
 	driver.hasState = false;
 	driver.steps = 0;
 	driver.slowSteps = 0;
@@ -294,6 +309,67 @@ void DynamicsTrainer::storeTransition(const Driver& driver, const float* action,
 	}
 }
 
+// Додає приклад з відомою міткою до навчальних або перевірних даних моделі зіткнень
+void DynamicsTrainer::storeCollision(const Driver& driver, const PendingCollision& pending, float label)
+{
+	CollisionSample sample = pending.sample;
+	int count = std::max(1, pending.age);
+
+	// Дія прикладу - середня за час від його створення: вона й привела або не привела до удару
+	sample.action[0] = pending.actionSum[0] / count;
+	sample.action[1] = pending.actionSum[1] / count;
+	sample.label = label;
+
+	bool validation = driver.trajectory >= 0;
+	std::vector<CollisionSample>& data = validation ? mCollisionValidation : mCollisionData;
+	size_t& next = validation ? mCollisionValidationNext : mCollisionNext;
+	size_t capacity = validation ? VALIDATION_CAPACITY : (size_t)std::max(batchSize, datasetCapacity);
+
+	if (data.size() < capacity) data.push_back(sample);
+	else
+	{
+		data[next] = sample;
+		next = (next + 1) % capacity;
+	}
+
+	if (!validation)
+	{
+		mCollisionTotal++;
+		if (label > 0.5f) mCollisionPositives++;
+	}
+}
+
+// Оновлює приклади водія, що чекають на мітку: удар позначає всі, а спливлий горизонт - найстаріші як безпечні
+void DynamicsTrainer::updatePending(Driver& driver, const float* action, bool collided)
+{
+	for (PendingCollision& pending : driver.pending)
+	{
+		pending.actionSum[0] += action[0];
+		pending.actionSum[1] += action[1];
+		pending.age++;
+	}
+
+	// Удар стався в межах горизонту кожного прикладу, що ще чекає
+	if (collided)
+	{
+		for (const PendingCollision& pending : driver.pending) storeCollision(driver, pending, 1.0f);
+
+		driver.pending.clear();
+		return;
+	}
+
+	// Приклади, горизонт яких минув без удару, - безпечні
+	size_t done = 0;
+
+	while (done < driver.pending.size() && driver.pending[done].age >= LearnedDynamics::COLLISION_HORIZON)
+	{
+		storeCollision(driver, driver.pending[done], 0.0f);
+		done++;
+	}
+
+	driver.pending.erase(driver.pending.begin(), driver.pending.begin() + done);
+}
+
 // Записує переходи всіх водіїв і задає дії випадковим водіям
 void DynamicsTrainer::fixedUpdate()
 {
@@ -335,10 +411,13 @@ void DynamicsTrainer::fixedUpdate()
 
 		if (driver.hasState && !broken) storeTransition(driver, action, state);
 
+		// Удар дає приклади моделі зіткнень; перевертання без удару - ні, бо що до нього призвело, невідомо
+		if (collided || upright) updatePending(driver, action, collided);
+
 		driver.steps++;
 		driver.slowSteps = std::fabs(state[0]) < 0.3f ? driver.slowSteps + 1 : 0;
 
-		bool outside = !driver.brain && (std::fabs(x - fieldCenter.x) > fieldSize * 0.5f || std::fabs(z - fieldCenter.z) > fieldSize * 0.5f);
+		bool outside = !driver.brain && !driver.onTrack && (std::fabs(x - fieldCenter.x) > fieldSize * 0.5f || std::fabs(z - fieldCenter.z) > fieldSize * 0.5f);
 		bool stuck = driver.slowSteps * SimulationSettings::fixedStep > 3.0f;
 		bool finished = driver.brain && driver.brain->isEpisodeDone();
 
@@ -353,6 +432,12 @@ void DynamicsTrainer::fixedUpdate()
 		driver.z = z;
 		driver.heading = heading;
 		driver.hasState = true;
+
+		// Новий приклад для моделі зіткнень: огляд і стан зараз, а мітку визначить найближчий горизонт
+		PendingCollision pending;
+		DynamicsModel::scanSurroundings(driver.vehicle, pending.sample.scan);
+		std::copy(state, state + 4, pending.sample.state);
+		driver.pending.push_back(pending);
 
 		// Випадкові дії плавно тягнуться до цілей, що час від часу змінюються
 		if (!driver.brain)
@@ -392,6 +477,22 @@ void DynamicsTrainer::train()
 
 		mTrainLoss = mBatches == 0 ? loss : mTrainLoss * 0.98f + loss * 0.02f;
 		mBatches++;
+
+		// Модель зіткнень навчається поруч, щойно серед прикладів з'явилися удари
+		if ((int)mCollisionData.size() >= batchSize && mCollisionPositives > 0)
+		{
+			mCollisionOptimizer.learningRate = learningRate;
+			mCollisionBatch.resize(batchSize);
+
+			std::uniform_int_distribution<size_t> pickCollision(0, mCollisionData.size() - 1);
+
+			for (int i = 0; i < batchSize; i++) mCollisionBatch[i] = &mCollisionData[pickCollision(mRandom)];
+
+			float collisionLoss = mModel.trainCollisionBatch(mCollisionBatch.data(), batchSize, mCollisionOptimizer);
+
+			mCollisionTrainLoss = mCollisionBatches == 0 ? collisionLoss : mCollisionTrainLoss * 0.98f + collisionLoss * 0.02f;
+			mCollisionBatches++;
+		}
 	} while ((nowSeconds() - start) * 1000.0 < trainMilliseconds);
 }
 
@@ -472,17 +573,44 @@ void DynamicsTrainer::evaluate()
 
 	mValidationHistory.push_back(validation);
 
-	if (horizon < 0.0f) return;
+	// Модель зіткнень перевіряється на прикладах з перевірних епізодів
+	bool collisionImproved = false;
 
-	mHorizonHistory.push_back(horizon);
-
-	if (mBestHorizonError < 0.0f || horizon < mBestHorizonError)
+	if (mCollisionBatches > 0 && !mCollisionValidation.empty())
 	{
-		mBestHorizonError = horizon;
-		mModel.setStatistics(mModel.getTrainedSamples(), horizon, evaluationHorizon);
+		int collisionCount = std::min((int)mCollisionValidation.size(), VALIDATION_SAMPLE);
+		std::uniform_int_distribution<size_t> pickCollision(0, mCollisionValidation.size() - 1);
+
+		mCollisionBatch.resize(collisionCount);
+
+		for (int i = 0; i < collisionCount; i++) mCollisionBatch[i] = &mCollisionValidation[pickCollision(mRandom)];
+
+		float collisionLoss = 0.0f;
+		mModel.evaluateCollision(mCollisionBatch.data(), collisionCount, collisionLoss, mCollisionRecall, mCollisionPrecision);
+		mCollisionLossHistory.push_back(collisionLoss);
+
+		if (mBestCollisionLoss < 0.0f || collisionLoss < mBestCollisionLoss)
+		{
+			mBestCollisionLoss = collisionLoss;
+			collisionImproved = true;
+		}
+	}
+
+	if (horizon >= 0.0f) mHorizonHistory.push_back(horizon);
+
+	bool dynamicsImproved = horizon >= 0.0f && (mBestHorizonError < 0.0f || horizon < mBestHorizonError);
+
+	if (dynamicsImproved) mBestHorizonError = horizon;
+
+	// Файл один на обидві моделі, тож записується, коли покращилася будь-яка з них
+	if (dynamicsImproved || collisionImproved)
+	{
+		mModel.setStatistics(mModel.getTrainedSamples(), mBestHorizonError, evaluationHorizon);
 		mSaved = mModel.save(modelAsset);
 
-		std::cout << "Dynamics model: one-step error " << validation << ", position error over " << evaluationHorizon << " steps " << horizon << " m" << (mSaved ? ", saved" : ", not saved") << std::endl;
+		std::cout << "Dynamics model: one-step error " << validation << ", position error over " << evaluationHorizon << " steps " << horizon << " m";
+		if (!mCollisionLossHistory.empty()) std::cout << ", collision loss " << mCollisionLossHistory.back() << " recall " << mCollisionRecall << " precision " << mCollisionPrecision;
+		std::cout << (mSaved ? ", saved" : ", not saved") << std::endl;
 	}
 }
 
@@ -526,6 +654,17 @@ void DynamicsTrainer::drawWindow()
 		ImGui::PlotLines("E(H), m", mHorizonHistory.data(), (int)mHorizonHistory.size(), 0, nullptr, 0.0f, high, ImVec2(0, 60));
 	}
 
+	ImGui::Separator();
+	ImGui::Text("Collision samples: %lld (%.1f%% hits), %d validation", mCollisionTotal, mCollisionTotal > 0 ? 100.0 * mCollisionPositives / mCollisionTotal : 0.0, (int)mCollisionValidation.size());
+
+	if (!mCollisionLossHistory.empty())
+	{
+		float high = *std::max_element(mCollisionLossHistory.begin(), mCollisionLossHistory.end());
+
+		ImGui::Text("Collision loss: %.4f, hits caught: %.0f%%, alarms right: %.0f%%", mCollisionLossHistory.back(), mCollisionRecall * 100.0f, mCollisionPrecision * 100.0f);
+		ImGui::PlotLines("Collision", mCollisionLossHistory.data(), (int)mCollisionLossHistory.size(), 0, nullptr, 0.0f, high, ImVec2(0, 60));
+	}
+
 	if (mSaved) ImGui::Text("Best model saved to %s", modelAsset.c_str());
 
 	ImGui::SliderInt("Steps per frame", &stepsPerFrame, 1, 50);
@@ -542,6 +681,7 @@ void DynamicsTrainer::visitProperties(PropertyVisitor& visitor)
 	visitor.reference("route", route);
 	visitor.asset("policyWeights", policyWeights, NeuralNetwork::FILE_EXTENSION);
 	visitor.property("policyShare", policyShare, 0.01f);
+	visitor.property("randomOnTracks", randomOnTracks, 0.01f);
 	visitor.property("vehicleCount", vehicleCount);
 	visitor.property("fieldCenter", fieldCenter);
 	visitor.property("fieldSize", fieldSize, 1.0f);

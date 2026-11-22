@@ -168,26 +168,23 @@ void NeuralNetwork::forwardBatch(const float* inputs, int count, float* outputs)
 	std::memcpy(outputs, in, sizeof(float) * mLayers.back() * count);
 }
 
-// Додає до gradients градієнт половини квадрата похибки для одного прикладу й повертає середній квадрат похибки виходів
-float NeuralNetwork::accumulateGradient(const float* input, const float* target, float* gradients) const
+// Обчислює прямий прохід і зберігає виходи всіх шарів, бо від них залежать градієнти
+void NeuralNetwork::forwardTraining(const float* input) const
 {
 	size_t layerCount = mLayers.size();
 
-	if (layerCount < 2) return 0.0f;
-
 	mActivations.resize(layerCount);
+	mOffsets.assign(layerCount, 0);
 
 	for (size_t l = 0; l < layerCount; l++) mActivations[l].resize(mLayers[l]);
 
 	std::memcpy(mActivations[0].data(), input, sizeof(float) * mLayers[0]);
 
-	// Прямий прохід зберігає виходи всіх шарів, бо від них залежать градієнти
-	std::vector<size_t> offsets(layerCount, 0);
 	size_t offset = 0;
 
 	for (size_t l = 1; l < layerCount; l++)
 	{
-		offsets[l] = offset;
+		mOffsets[l] = offset;
 
 		int inSize = mLayers[l - 1];
 		int outSize = mLayers[l];
@@ -210,29 +207,20 @@ float NeuralNetwork::accumulateGradient(const float* input, const float* target,
 
 		offset += inSize * outSize + outSize;
 	}
+}
 
-	// Похибка виходу; похідна тангенса виражається через сам вихід: 1 - y²
-	int outputs = mLayers.back();
-	const float* result = mActivations.back().data();
-	float squared = 0.0f;
+// Поширює похибку виходу з mDelta назад і додає градієнти ваг і зсувів до gradients
+void NeuralNetwork::backpropagate(float* gradients) const
+{
+	size_t layerCount = mLayers.size();
 
-	mDelta.resize(outputs);
-
-	for (int o = 0; o < outputs; o++)
-	{
-		float error = result[o] - target[o];
-		squared += error * error;
-		mDelta[o] = mLinearOutput ? error : error * (1.0f - result[o] * result[o]);
-	}
-
-	// Зворотний прохід: градієнти ваг шару й похибки попереднього шару
 	for (size_t l = layerCount - 1; l >= 1; l--)
 	{
 		int inSize = mLayers[l - 1];
 		int outSize = mLayers[l];
 
-		const float* weights = mParameters.data() + offsets[l];
-		float* weightGradients = gradients + offsets[l];
+		const float* weights = mParameters.data() + mOffsets[l];
+		float* weightGradients = gradients + mOffsets[l];
 		float* biasGradients = weightGradients + inSize * outSize;
 		const float* in = mActivations[l - 1].data();
 
@@ -263,8 +251,51 @@ float NeuralNetwork::accumulateGradient(const float* input, const float* target,
 
 		mDelta.swap(mPreviousDelta);
 	}
+}
+
+// Додає до gradients градієнт половини квадрата похибки для одного прикладу й повертає середній квадрат похибки виходів
+float NeuralNetwork::accumulateGradient(const float* input, const float* target, float* gradients) const
+{
+	if (mLayers.size() < 2) return 0.0f;
+
+	forwardTraining(input);
+
+	// Похибка виходу; похідна тангенса виражається через сам вихід: 1 - y²
+	int outputs = mLayers.back();
+	const float* result = mActivations.back().data();
+	float squared = 0.0f;
+
+	mDelta.resize(outputs);
+
+	for (int o = 0; o < outputs; o++)
+	{
+		float error = result[o] - target[o];
+		squared += error * error;
+		mDelta[o] = mLinearOutput ? error : error * (1.0f - result[o] * result[o]);
+	}
+
+	backpropagate(gradients);
 
 	return squared / (float)outputs;
+}
+
+// Для мережі з одним лінійним виходом, що дає логарифм шансів, додає градієнт логістичної похибки й повертає саму похибку
+float NeuralNetwork::accumulateLogisticGradient(const float* input, float target, float* gradients) const
+{
+	if (mLayers.size() < 2 || mLayers.back() != 1 || !mLinearOutput) return 0.0f;
+
+	forwardTraining(input);
+
+	float logit = mActivations.back()[0];
+	float probability = 1.0f / (1.0f + std::exp(-logit));
+
+	// Похідна перехресної ентропії за логарифмом шансів - просто різниця ймовірності й мітки
+	mDelta.assign(1, probability - target);
+
+	backpropagate(gradients);
+
+	const float epsilon = 1e-6f;
+	return -(target * std::log(probability + epsilon) + (1.0f - target) * std::log(1.0f - probability + epsilon));
 }
 
 // Заповнює ваги випадково за Ксав'є, а зсуви нулями

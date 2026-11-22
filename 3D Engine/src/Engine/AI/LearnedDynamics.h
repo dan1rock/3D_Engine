@@ -17,6 +17,19 @@ struct DynamicsTransition
 	float next[4];
 };
 
+// Приклад для моделі зіткнень: оточення, рух і дія автомобіля та те, чи він зіткнувся протягом горизонту
+struct CollisionSample
+{
+	// Нормовані відстані до перешкод навколо автомобіля
+	float scan[16];
+	// Стан автомобіля в системі координат корпусу
+	float state[4];
+	// Середня дія за горизонт
+	float action[2];
+	// 1, якщо протягом горизонту сталося зіткнення, інакше 0
+	float label;
+};
+
 // Навчена модель динаміки: нейронна мережа передбачає приріст стану транспортного засобу в системі координат корпусу
 class LearnedDynamics
 {
@@ -27,6 +40,12 @@ public:
 	static const int ACTION_SIZE = 2;
 	// Розширення файлів навчених моделей динаміки в ресурсах проєкту
 	static const char* FILE_EXTENSION;
+	// Кількість променів огляду навколо автомобіля для моделі зіткнень
+	static const int COLLISION_RAYS = 16;
+	// Дальність променів огляду для моделі зіткнень, м
+	static const float COLLISION_RANGE;
+	// Горизонт, на якому модель зіткнень передбачає удар, у кроках фізики
+	static const int COLLISION_HORIZON = 25;
 
 	// Розміри шарів мережі: стан і дія, два приховані шари по 128 нейронів, приріст стану
 	static std::vector<int> defaultLayers();
@@ -63,6 +82,19 @@ public:
 	// Запам'ятовує результати перевірки, щоб вони потрапили у файл
 	void setStatistics(long long trainedSamples, float horizonError, int horizon);
 
+	// Створює нову модель зіткнень з випадковими вагами
+	void createCollisionModel(std::mt19937& random);
+	// Перевіряє, чи є модель зіткнень
+	bool hasCollisionModel() const;
+	// Повертає мережу моделі зіткнень
+	NeuralNetwork& getCollisionNetwork();
+	// Повертає ймовірність зіткнення протягом горизонту, якщо автомобіль з таким оточенням і рухом виконуватиме дію
+	float predictCollision(const float* scan, const float* state, const float* action) const;
+	// Робить крок оптимізатора моделі зіткнень на пакеті прикладів і повертає середню логістичну похибку
+	float trainCollisionBatch(const CollisionSample* const* batch, int count, AdamOptimizer& optimizer);
+	// Оцінює модель зіткнень: середня логістична похибка, частка вгаданих зіткнень і частка справжніх серед передбачених
+	void evaluateCollision(const CollisionSample* const* batch, int count, float& loss, float& recall, float& precision) const;
+
 	// Записує модель у файл ресурсу
 	bool save(const std::string& path) const;
 	// Читає модель з файлу ресурсу
@@ -73,6 +105,8 @@ private:
 	void normalizeInput(const float* state, const float* action, float* input) const;
 	// Нормує ціль навчання: приріст стану
 	void normalizeTarget(const float* state, const float* next, float* target) const;
+	// Складає нормований вхід моделі зіткнень
+	void collisionInput(const float* scan, const float* state, const float* action, float* input) const;
 
 	// Мережа, що передбачає нормований приріст стану
 	NeuralNetwork mNetwork;
@@ -92,6 +126,8 @@ private:
 	float mHorizonError = 0.0f;
 	// Горизонт останньої перевірки в кроках
 	int mHorizon = 0;
+	// Мережа, що передбачає логарифм шансів зіткнення
+	NeuralNetwork mCollisionNetwork;
 	// Накопичений градієнт пакета
 	std::vector<float> mGradients;
 	// Нормовані входи пакетного прогнозу

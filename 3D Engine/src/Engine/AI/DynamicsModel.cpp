@@ -2,10 +2,15 @@
 #include "VehicleController.h"
 #include "Entity.h"
 #include "Gizmo.h"
+#include "RigidBody.h"
+#include "Physics.h"
 #include "SimulationSettings.h"
 #include "Properties.h"
 #include "imgui.h"
 #include <map>
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <memory>
 #include <chrono>
 #include <iostream>
@@ -145,12 +150,74 @@ void DynamicsModel::drawPath(const std::vector<Vector3>& path, unsigned int colo
 	}
 }
 
-// Малює прогнозований шлях автомобіля
+// Пускає промені огляду навколо автомобіля для моделі зіткнень і записує відстані, поділені на дальність
+void DynamicsModel::scanSurroundings(VehicleController* vehicle, float* out)
+{
+	RigidBody* body = vehicle->getRigidBody();
+
+	for (int i = 0; i < LearnedDynamics::COLLISION_RAYS; i++) out[i] = 1.0f;
+
+	if (!body) return;
+
+	Vector3 position, right, up, forward;
+	body->getPose(position, right, up, forward);
+
+	// Промені розходяться по колу з центру корпусу: удар можливий і боком, і задом
+	Vector3 origin = position + up * 0.3f;
+
+	for (int i = 0; i < LearnedDynamics::COLLISION_RAYS; i++)
+	{
+		float angle = 6.2831853f * (float)i / (float)LearnedDynamics::COLLISION_RAYS;
+		Vector3 direction = forward * std::cos(angle) + right * std::sin(angle);
+
+		RaycastHit hit;
+
+		if (Physics::raycast(origin, direction, LearnedDynamics::COLLISION_RANGE, hit, body))
+		{
+			out[i] = std::min(hit.distance, LearnedDynamics::COLLISION_RANGE) / LearnedDynamics::COLLISION_RANGE;
+		}
+	}
+}
+
+// Малює прогнозований шлях автомобіля; колір від зеленого до червоного показує навчену ймовірність зіткнення
 void DynamicsModel::update()
 {
 	if (!showPrediction) return;
 
-	if (predictPath(predictionSteps, mPath)) drawPath(mPath, IM_COL32(60, 230, 120, 255), 3.0f);
+	if (!predictPath(predictionSteps, mPath)) return;
+
+	const LearnedDynamics* model = getModel();
+	VehicleController* vehicle = getOwner()->getComponent<VehicleController>();
+
+	float risk = 0.0f;
+
+	if (model && model->hasCollisionModel() && vehicle)
+	{
+		float scan[LearnedDynamics::COLLISION_RAYS];
+		float state[LearnedDynamics::STATE_SIZE];
+		float action[LearnedDynamics::ACTION_SIZE] = { vehicle->getThrottleAction(), vehicle->getSteeringAction() };
+
+		scanSurroundings(vehicle, scan);
+		vehicle->getDynamicsState(state);
+		risk = model->predictCollision(scan, state, action);
+	}
+
+	int red = (int)(60 + 195 * risk);
+	int green = (int)(230 - 170 * risk);
+	drawPath(mPath, IM_COL32(red, green, 60, 255), 3.0f);
+
+	// Біля автомобіля підписано ймовірність зіткнення за поточних дій
+	if (model && model->hasCollisionModel() && !mPath.empty())
+	{
+		float sx, sy;
+
+		if (Gizmo::projectToScreen(mPath[0], sx, sy))
+		{
+			char text[32];
+			snprintf(text, sizeof(text), "risk %.0f%%", risk * 100.0f);
+			ImGui::GetBackgroundDrawList()->AddText(ImVec2(sx + 12.0f, sy - 24.0f), IM_COL32(red, green, 60, 255), text);
+		}
+	}
 }
 
 // Перелічує власні поля для файлу сцени та інспектора

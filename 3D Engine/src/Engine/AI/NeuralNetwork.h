@@ -23,6 +23,8 @@ public:
 
 	// Додає до gradients градієнт половини квадрата похибки для одного прикладу й повертає середній квадрат похибки виходів
 	float accumulateGradient(const float* input, const float* target, float* gradients) const;
+	// Для мережі з одним лінійним виходом, що дає логарифм шансів, додає градієнт логістичної похибки й повертає саму похибку
+	float accumulateLogisticGradient(const float* input, float target, float* gradients) const;
 
 	// Заповнює ваги випадково за Ксав'є, а зсуви нулями
 	void randomize(std::mt19937& rng);
@@ -61,6 +63,10 @@ public:
 private:
 	// Перебудовує транспоновані ваги для пакетного обчислення, якщо параметри змінилися
 	void updateTransposed() const;
+	// Обчислює прямий прохід і зберігає виходи всіх шарів, бо від них залежать градієнти
+	void forwardTraining(const float* input) const;
+	// Поширює похибку виходу з mDelta назад і додає градієнти ваг і зсувів до gradients
+	void backpropagate(float* gradients) const;
 
 	// Розміри шарів від входу до виходу
 	std::vector<int> mLayers;
@@ -75,6 +81,8 @@ private:
 	mutable std::vector<float> mBufferB;
 	// Виходи всіх шарів одного прикладу для зворотного поширення похибки
 	mutable std::vector<std::vector<float>> mActivations;
+	// Зсув параметрів кожного шару для зворотного поширення похибки
+	mutable std::vector<size_t> mOffsets;
 	// Похибки нейронів поточного й попереднього шарів під час зворотного поширення
 	mutable std::vector<float> mDelta;
 	// Похибки нейронів попереднього шару під час зворотного поширення

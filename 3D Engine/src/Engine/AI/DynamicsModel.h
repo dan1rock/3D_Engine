@@ -27,6 +27,8 @@ public:
 
 	// Малює ламану в просторі сцени поверх кадру
 	static void drawPath(const std::vector<Vector3>& path, unsigned int color, float thickness);
+	// Пускає промені огляду навколо автомобіля для моделі зіткнень і записує відстані, поділені на дальність
+	static void scanSurroundings(VehicleController* vehicle, float* out);
 	// Читає модель з файлу ресурсу один раз для всіх, хто її просить; nullptr, якщо файл не прочитано
 	static const LearnedDynamics* loadShared(const std::string& path);
 
