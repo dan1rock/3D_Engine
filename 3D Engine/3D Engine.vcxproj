@@ -217,6 +217,7 @@ ative\lib;$(LibraryPath)</LibraryPath>
     <ClCompile Include="src\Engine\AI\DynamicsModel.cpp" />
     <ClCompile Include="src\Engine\AI\DynamicsTrainer.cpp" />
     <ClCompile Include="src\Engine\AI\ModelPredictiveBrain.cpp" />
+    <ClCompile Include="src\Engine\AI\TrajectoryPredictor.cpp" />
     <ClCompile Include="src\Engine\Main parts\SimulationSettings.cpp" />
     <ClCompile Include="src\Engine\Physics\PhysicsEngine.cpp" />
     <ClCompile Include="src\Engine\Shader managers\PixelShader.cpp" />
@@ -308,6 +309,7 @@ ative\lib;$(LibraryPath)</LibraryPath>
     <ClInclude Include="src\Engine\AI\DynamicsModel.h" />
     <ClInclude Include="src\Engine\AI\DynamicsTrainer.h" />
     <ClInclude Include="src\Engine\AI\ModelPredictiveBrain.h" />
+    <ClInclude Include="src\Engine\AI\TrajectoryPredictor.h" />
     <ClInclude Include="src\Engine\Main parts\SimulationSettings.h" />
     <ClInclude Include="src\Engine\Physics\PhysicsEngine.h" />
     <ClInclude Include="src\Engine\Shader managers\PixelShader.h" />

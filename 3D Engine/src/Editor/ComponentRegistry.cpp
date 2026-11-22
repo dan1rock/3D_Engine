@@ -16,6 +16,7 @@
 #include "DynamicsModel.h"
 #include "DynamicsTrainer.h"
 #include "ModelPredictiveBrain.h"
+#include "TrajectoryPredictor.h"
 
 #include <unordered_map>
 
@@ -89,4 +90,5 @@ void ComponentRegistry::registerEngineTypes()
 	registerType("DynamicsModel", [](Entity* e) -> Component* { return e->addComponent<DynamicsModel>(); });
 	registerType("DynamicsTrainer", [](Entity* e) -> Component* { return e->addComponent<DynamicsTrainer>(); });
 	registerType("ModelPredictiveBrain", [](Entity* e) -> Component* { return e->addComponent<ModelPredictiveBrain>(); });
+	registerType("TrajectoryPredictor", [](Entity* e) -> Component* { return e->addComponent<TrajectoryPredictor>(); });
 }

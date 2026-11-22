@@ -6,6 +6,7 @@
 class Entity;
 class RaySensor;
 class VehicleController;
+class RigidBody;
 
 // Формує вектор спостережень агента-автомобіля: промені, власний рух, наступна точка маршруту й найближчі рухомі об'єкти
 class AgentSensor : public Component
@@ -48,8 +49,8 @@ public:
 	const std::vector<Vector3>& getWaypoints() const;
 	// Повертає номер відрізка маршруту, на якому зараз агент
 	int getSegment() const;
-	// Повертає кількість найближчих рухомих об'єктів з останнього observe і записує їхні положення та швидкості
-	int getTrackedObjects(Vector3* positions, Vector3* velocities) const;
+	// Повертає кількість найближчих рухомих об'єктів з останнього observe і записує їхні положення, швидкості та тіла
+	int getTrackedObjects(Vector3* positions, Vector3* velocities, RigidBody** bodies = nullptr) const;
 
 	// Збирає точки маршруту з дочірніх об'єктів маршруту
 	static void collectWaypoints(Entity* route, std::vector<Vector3>& out);
@@ -86,6 +87,8 @@ private:
 	Vector3 mTrackedPositions[TRACKED_OBJECTS];
 	// Швидкості найближчих рухомих об'єктів з останнього observe
 	Vector3 mTrackedVelocities[TRACKED_OBJECTS];
+	// Тіла найближчих рухомих об'єктів з останнього observe
+	RigidBody* mTrackedBodies[TRACKED_OBJECTS] = {};
 	// Кількість найближчих рухомих об'єктів з останнього observe
 	int mTrackedCount = 0;
 };

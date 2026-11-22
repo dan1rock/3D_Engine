@@ -5,6 +5,7 @@
 #include "RigidBody.h"
 #include "EntityManager.h"
 #include "Properties.h"
+#include "TrajectoryPredictor.h"
 #include <cmath>
 #include <algorithm>
 
@@ -123,13 +124,14 @@ int AgentSensor::getSegment() const
 	return mSegment;
 }
 
-// Повертає кількість найближчих рухомих об'єктів з останнього observe і записує їхні положення та швидкості
-int AgentSensor::getTrackedObjects(Vector3* positions, Vector3* velocities) const
+// Повертає кількість найближчих рухомих об'єктів з останнього observe і записує їхні положення, швидкості та тіла
+int AgentSensor::getTrackedObjects(Vector3* positions, Vector3* velocities, RigidBody** bodies) const
 {
 	for (int i = 0; i < mTrackedCount; i++)
 	{
 		positions[i] = mTrackedPositions[i];
 		velocities[i] = mTrackedVelocities[i];
+		if (bodies) bodies[i] = mTrackedBodies[i];
 	}
 
 	return mTrackedCount;
@@ -305,10 +307,17 @@ void AgentSensor::observeObjects(const Vector3& position, const Vector3& velocit
 
 		mTrackedPositions[mTrackedCount] = body->getOwner()->getTransform()->getPosition();
 		mTrackedVelocities[mTrackedCount] = body->getVelocity();
+		mTrackedBodies[mTrackedCount] = body;
 		mTrackedCount++;
 
 		Vector3 relative = body->getOwner()->getTransform()->getPosition() - position;
 		Vector3 predicted = relative + (body->getVelocity() - velocity) * predictionTime;
+
+		// Прогнозувальник траєкторій сцени, якщо він є, передбачає рух об'єкта точніше за сталу швидкість
+		Vector3 forecast;
+		TrajectoryPredictor* predictor = TrajectoryPredictor::getActive();
+
+		if (predictor && predictor->predict(body, predictionTime, forecast)) predicted = forecast - (position + velocity * predictionTime);
 
 		out[i * 2] = clampUnit(relative * right / range);
 		out[i * 2 + 1] = clampUnit(relative * forward / range);

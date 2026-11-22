@@ -231,6 +231,9 @@
     <ClCompile Include="src\Engine\AI\ModelPredictiveBrain.cpp">
       <Filter>Engine\AI</Filter>
     </ClCompile>
+    <ClCompile Include="src\Engine\AI\TrajectoryPredictor.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
     <ClCompile Include="src\Engine\Main parts\SimulationSettings.cpp">
       <Filter>Engine\Main parts</Filter>
     </ClCompile>
@@ -451,6 +454,9 @@
       <Filter>Engine\AI</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\AI\ModelPredictiveBrain.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\TrajectoryPredictor.h">
       <Filter>Engine\AI</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\Main parts\SimulationSettings.h">

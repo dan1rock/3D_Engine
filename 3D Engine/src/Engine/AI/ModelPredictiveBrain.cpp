@@ -6,6 +6,7 @@
 #include "RaySensor.h"
 #include "RigidBody.h"
 #include "Physics.h"
+#include "TrajectoryPredictor.h"
 #include "Entity.h"
 #include "SimulationSettings.h"
 #include "Properties.h"
@@ -396,7 +397,26 @@ void ModelPredictiveBrain::plan(const LearnedDynamics& model, VehicleController*
 
 	Vector3 trackedPositions[AgentSensor::TRACKED_OBJECTS];
 	Vector3 trackedVelocities[AgentSensor::TRACKED_OBJECTS];
-	int tracked = sensor->getTrackedObjects(trackedPositions, trackedVelocities);
+	RigidBody* trackedBodies[AgentSensor::TRACKED_OBJECTS] = {};
+	int tracked = sensor->getTrackedObjects(trackedPositions, trackedVelocities, trackedBodies);
+
+	// Положення рухомих об'єктів на кожен момент прогнозу: від прогнозувальника траєкторій, а без нього - за сталою швидкістю
+	TrajectoryPredictor* predictor = TrajectoryPredictor::getActive();
+
+	auto objectAt = [&](int o, float time, float& x, float& z)
+	{
+		Vector3 forecast;
+
+		if (predictor && trackedBodies[o] && predictor->predict(trackedBodies[o], time, forecast))
+		{
+			x = forecast.x;
+			z = forecast.z;
+			return;
+		}
+
+		x = trackedPositions[o].x + trackedVelocities[o].x * time;
+		z = trackedPositions[o].z + trackedVelocities[o].z * time;
+	};
 
 	// Кандидати - усі поєднання рівнів газу й керма з наборів; дію з набору кандидат тримає holdTime, а далі дії додаються під час прогнозу
 	mSequences.assign((size_t)count * steps * 2, 0.0f);
@@ -439,6 +459,14 @@ void ModelPredictiveBrain::plan(const LearnedDynamics& model, VehicleController*
 	}
 
 	std::vector<float> along(count, startAlong);
+
+	// Положення рухомих об'єктів на кожному кроці прогнозу обчислюються один раз для всіх кандидатів
+	std::vector<float> objectX((size_t)std::max(tracked, 1) * steps), objectZ((size_t)std::max(tracked, 1) * steps);
+
+	for (int o = 0; o < tracked; o++)
+	{
+		for (int h = 0; h < steps; h++) objectAt(o, (h + 1) * dt, objectX[o * steps + h], objectZ[o * steps + h]);
+	}
 	float previousSteering = vehicle->getSteeringAction();
 
 	for (int h = 0; h < steps; h++)
@@ -492,8 +520,8 @@ void ModelPredictiveBrain::plan(const LearnedDynamics& model, VehicleController*
 			// Наближення до прогнозованих положень рухомих об'єктів
 			for (int o = 0; o < tracked; o++)
 			{
-				float dx = xs[k] - (trackedPositions[o].x + trackedVelocities[o].x * time);
-				float dz = zs[k] - (trackedPositions[o].z + trackedVelocities[o].z * time);
+				float dx = xs[k] - objectX[o * steps + h];
+				float dz = zs[k] - objectZ[o * steps + h];
 				float gap = obstacleRadius * 1.5f - std::sqrt(dx * dx + dz * dz);
 
 				if (gap > 0.0f) penalty += obstacleWeight * gap * gap;
@@ -544,8 +572,11 @@ void ModelPredictiveBrain::plan(const LearnedDynamics& model, VehicleController*
 
 			for (int o = 0; o < tracked; o++)
 			{
-				float ox = px - (trackedPositions[o].x + trackedVelocities[o].x * time);
-				float oz = pz - (trackedPositions[o].z + trackedVelocities[o].z * time);
+				float objectPx, objectPz;
+				objectAt(o, time, objectPx, objectPz);
+
+				float ox = px - objectPx;
+				float oz = pz - objectPz;
 				float gap = obstacleRadius * 1.5f - std::sqrt(ox * ox + oz * oz);
 
 				if (gap > 0.0f) penalty += obstacleWeight * gap * gap;
