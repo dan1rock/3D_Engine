@@ -1932,20 +1932,25 @@
           "heightOffset": 0.3
         },
         {
-          "type": "AgentSensor",
+          "type": "CarAgent",
+          "maxEpisodeSteps": 3000,
           "route": 6,
           "range": 30,
           "maxYawRate": 3,
           "predictionTime": 1,
           "goalRadius": 4,
-          "lookahead": 10
+          "lookahead": 10,
+          "stuckSpeed": 0.5,
+          "stuckTime": 3,
+          "spawnHeight": 0.5,
+          "startOffset": 1,
+          "startAngle": 15,
+          "minStartRemaining": 0.4
         },
         {
           "type": "NeuroevolutionBrain",
-          "maxEpisodeSteps": 3000,
-          "stuckSpeed": 0.5,
-          "stuckTime": 3,
-          "weights": "Assets\\Networks\\Vehicle.nn"
+          "weights": "Assets\\Networks\\Vehicle.nn",
+          "hiddenLayers": "64, 64"
         },
         {
           "type": "VehicleController",
@@ -2009,22 +2014,25 @@
           "heightOffset": 0.3
         },
         {
-          "type": "AgentSensor",
+          "type": "CarAgent",
+          "maxEpisodeSteps": 3000,
           "route": 6,
           "range": 30,
           "maxYawRate": 3,
           "predictionTime": 1,
           "goalRadius": 4,
-          "lookahead": 10
-        },
-        {
-          "type": "ModelPredictiveBrain",
-          "maxEpisodeSteps": 3000,
+          "lookahead": 10,
           "stuckSpeed": 0.5,
           "stuckTime": 3,
+          "spawnHeight": 0.5,
+          "startOffset": 1,
+          "startAngle": 15,
+          "minStartRemaining": 0.4
+        },
+        {
+          "type": "CarPlannerBrain",
           "modelAsset": "Assets\\Networks\\Vehicle Dynamics.dyn",
-          "throttlePool": "-1, 0, 0.5, 1",
-          "steeringPool": "-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1",
+          "actionLevels": "-1, 0, 0.5, 1; -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1",
           "holdTime": 0.3,
           "horizon": 25,
           "replanInterval": 2,
@@ -2091,20 +2099,25 @@
           "heightOffset": 0.3
         },
         {
-          "type": "AgentSensor",
+          "type": "CarAgent",
+          "maxEpisodeSteps": 3000,
           "route": 79,
           "range": 30,
           "maxYawRate": 3,
           "predictionTime": 1,
           "goalRadius": 4,
-          "lookahead": 10
+          "lookahead": 10,
+          "stuckSpeed": 0.5,
+          "stuckTime": 3,
+          "spawnHeight": 0.5,
+          "startOffset": 1,
+          "startAngle": 15,
+          "minStartRemaining": 0.4
         },
         {
           "type": "NeuroevolutionBrain",
-          "maxEpisodeSteps": 3000,
-          "stuckSpeed": 0.5,
-          "stuckTime": 3,
-          "weights": "Assets\\Networks\\Vehicle.nn"
+          "weights": "Assets\\Networks\\Vehicle.nn",
+          "hiddenLayers": "64, 64"
         },
         {
           "type": "VehicleController",
@@ -2168,22 +2181,25 @@
           "heightOffset": 0.3
         },
         {
-          "type": "AgentSensor",
+          "type": "CarAgent",
+          "maxEpisodeSteps": 3000,
           "route": 79,
           "range": 30,
           "maxYawRate": 3,
           "predictionTime": 1,
           "goalRadius": 4,
-          "lookahead": 10
-        },
-        {
-          "type": "ModelPredictiveBrain",
-          "maxEpisodeSteps": 3000,
+          "lookahead": 10,
           "stuckSpeed": 0.5,
           "stuckTime": 3,
+          "spawnHeight": 0.5,
+          "startOffset": 1,
+          "startAngle": 15,
+          "minStartRemaining": 0.4
+        },
+        {
+          "type": "CarPlannerBrain",
           "modelAsset": "Assets\\Networks\\Vehicle Dynamics.dyn",
-          "throttlePool": "-1, 0, 0.5, 1",
-          "steeringPool": "-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1",
+          "actionLevels": "-1, 0, 0.5, 1; -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1",
           "holdTime": 0.3,
           "horizon": 25,
           "replanInterval": 2,

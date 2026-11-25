@@ -1,15 +1,13 @@
 #include "DynamicsTrainer.h"
-#include "VehicleController.h"
-#include "AgentSensor.h"
-#include "RaySensor.h"
+#include "Agent.h"
 #include "AgentBrain.h"
-#include "NeuroevolutionBrain.h"
+#include "ControllableBody.h"
+#include "DynamicsModel.h"
 #include "Prefab.h"
 #include "RigidBody.h"
 #include "EntityManager.h"
 #include "SimulationSettings.h"
 #include "Properties.h"
-#include "DynamicsModel.h"
 #include "imgui.h"
 #include <algorithm>
 #include <chrono>
@@ -31,6 +29,19 @@ static const double EVALUATION_INTERVAL = 2.0;
 static double nowSeconds()
 {
 	return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+// Дописує запис до сховища записів однакової довжини, а заповнене сховище оновлює по колу
+static void storeRow(std::vector<float>& data, size_t& next, size_t capacity, const float* row, int stride)
+{
+	if (data.size() / stride < capacity)
+	{
+		data.insert(data.end(), row, row + stride);
+		return;
+	}
+
+	std::copy(row, row + stride, data.begin() + next * stride);
+	next = (next + 1) % capacity;
 }
 
 // Повертає симуляції звичайний крок і малювання сцени
@@ -56,7 +67,7 @@ void DynamicsTrainer::update()
 	drawWindow();
 }
 
-// Створює водіїв і модель; повертає false, якщо навчання неможливо налаштувати
+// Створює об'єкти й модель; повертає false, якщо навчання неможливо налаштувати
 bool DynamicsTrainer::initialize()
 {
 	mInitialized = true;
@@ -69,156 +80,132 @@ bool DynamicsTrainer::initialize()
 
 	mRandom.seed(seed != 0 ? (unsigned int)seed : std::random_device()());
 
-	// Продовження навчання бере і ваги, і нормування з файлу; інакше модель нова
-	if (!continueTraining || !mModel.load(modelAsset))
-	{
-		mModel.create(mRandom);
-	}
+	int count = std::max(1, bodyCount);
 
-	// Модель зіткнень з'являється й у старій моделі динаміки, що її ще не мала
-	if (!mModel.hasCollisionModel()) mModel.createCollisionModel(mRandom);
-
-	mOptimizer.init(mModel.getNetwork().getParameterCount(), learningRate);
-	mCollisionOptimizer.init(mModel.getCollisionNetwork().getParameterCount(), learningRate);
-
-	AgentSensor::collectRoutes(route, mRoutes);
-
-	bool policyAvailable = !policyWeights.empty() && !mRoutes.empty();
-	int policyDrivers = policyAvailable ? (int)std::round(std::max(0.0f, std::min(policyShare, 1.0f)) * vehicleCount) : 0;
-
-	// Частина випадкових водіїв їздить трасами: там вони б'ються об стіни й перешкоди, і модель зіткнень бачить удари
-	int randomDrivers = std::max(1, vehicleCount) - policyDrivers;
-	int trackDrivers = mRoutes.empty() ? 0 : (int)std::round(std::max(0.0f, std::min(randomOnTracks, 1.0f)) * randomDrivers);
-
-	for (int i = 0; i < std::max(1, vehicleCount); i++)
+	for (int i = 0; i < count; i++)
 	{
 		Entity* entity = agentPrefab->instantiate();
 		entity->setName("Driver " + std::to_string(i));
 
 		Driver driver;
 		driver.entity = entity;
-		driver.vehicle = entity->getComponent<VehicleController>();
+		driver.controllable = entity->getComponent<ControllableBody>();
 		driver.body = entity->getComponent<RigidBody>();
+		driver.agent = entity->getComponent<Agent>();
 
-		if (!driver.vehicle || !driver.body)
+		if (!driver.controllable || !driver.body)
 		{
-			std::cout << "DynamicsTrainer: agent prefab needs a RigidBody and a VehicleController" << std::endl;
+			std::cout << "DynamicsTrainer: agent prefab needs a RigidBody and a component derived from ControllableBody" << std::endl;
 			entity->destroy();
 			return false;
 		}
 
-		driver.vehicle->playerInput = false;
-		driver.vehicle->debugWindow = false;
+		driver.controllable->setTrainingMode(true);
 		driver.body->setCollisionGroup((unsigned int)std::max(0, collisionGroup));
 		driver.body->setReportCollisions(true);
-
-		bool policy = i < policyDrivers;
-		driver.onTrack = !policy && i < policyDrivers + trackDrivers;
-
-		// Випадковому водієві дії задає тренер, тож мозок з образу йому лише заважав би
-		std::vector<AgentBrain*> brains;
-
-		for (Component* component : entity->getComponentList())
-		{
-			if (AgentBrain* brain = dynamic_cast<AgentBrain*>(component)) brains.push_back(brain);
-		}
-
-		if (policy)
-		{
-			if (!entity->getComponent<RaySensor>()) entity->addComponent<RaySensor>();
-
-			driver.sensor = entity->getComponent<AgentSensor>();
-			if (!driver.sensor) driver.sensor = entity->addComponent<AgentSensor>();
-
-			driver.brain = entity->getComponent<NeuroevolutionBrain>();
-			if (!driver.brain) driver.brain = entity->addComponent<NeuroevolutionBrain>();
-
-			driver.brain->weights = policyWeights;
-			driver.brain->episodic = false;
-
-			for (AgentBrain* brain : brains)
-			{
-				if (brain != driver.brain) entity->removeComponent(brain);
-			}
-		}
-		else
-		{
-			for (AgentBrain* brain : brains) entity->removeComponent(brain);
-		}
 
 		mDrivers.push_back(driver);
 	}
 
+	mStateSize = mDrivers.front().controllable->getStateSize();
+	mActionSize = mDrivers.front().controllable->getActionSize();
+
+	if (mStateSize < 3 || mActionSize < 1)
+	{
+		std::cout << "DynamicsTrainer: the controllable body needs at least three state values and one action" << std::endl;
+		return false;
+	}
+
+	// Продовження навчання бере і ваги, і нормування з файлу, якщо модель зроблено для таких самих розмірів; інакше модель нова
+	if (!continueTraining || !mModel.load(modelAsset) || mModel.getStateSize() != mStateSize || mModel.getActionSize() != mActionSize)
+	{
+		mModel.create(mStateSize, mActionSize, mRandom);
+	}
+
+	// Модель зіткнень з'являється й у збереженій моделі, що її ще не мала
+	if (learnCollisions && !mModel.hasCollisionModel()) mModel.createCollisionModel(collisionRays, collisionRange, collisionHorizon, mRandom);
+
+	mOptimizer.init(mModel.getNetwork().getParameterCount(), learningRate);
+	if (mModel.hasCollisionModel()) mCollisionOptimizer.init(mModel.getCollisionNetwork().getParameterCount(), learningRate);
+
+	// Мозком і середовищем можна скористатися лише тоді, коли образ має агента, а сцена - середовище
+	Agent* agent = mDrivers.front().agent;
+	bool canPlace = agent && environment;
+	bool hasBrain = agent && agent->getBrain();
+
+	mVariants = canPlace ? std::max(1, agent->getVariantCount(environment)) : 1;
+
+	int policyDrivers = canPlace && hasBrain ? (int)std::round(std::max(0.0f, std::min(policyShare, 1.0f)) * count) : 0;
+	int randomDrivers = count - policyDrivers;
+	int environmentDrivers = canPlace ? (int)std::round(std::max(0.0f, std::min(environmentShare, 1.0f)) * randomDrivers) : 0;
+
+	for (int i = 0; i < count; i++)
+	{
+		Driver& driver = mDrivers[i];
+
+		driver.policy = i < policyDrivers;
+		driver.inEnvironment = !driver.policy && i < policyDrivers + environmentDrivers;
+		driver.state.assign(mStateSize, 0.0f);
+		driver.actions.assign(mActionSize, 0.0f);
+		driver.targets.assign(mActionSize, 0.0f);
+
+		// Мозок агента керує лише своїм об'єктом і поза навчанням, тож епізод не обривається на першому ударі; решті дії задає тренер
+		if (driver.agent)
+		{
+			driver.agent->setTraining(false);
+			driver.agent->setControlEnabled(driver.policy);
+		}
+	}
+
 	for (Driver& driver : mDrivers) respawn(driver);
 
-	mTrainData.reserve(std::min(datasetCapacity, 1 << 20));
 	mLastEvaluation = nowSeconds();
 
 	return true;
 }
 
-// Ставить водія на початок нового епізоду
+// Ставить об'єкт на початок нового епізоду
 void DynamicsTrainer::respawn(Driver& driver)
 {
 	std::uniform_real_distribution<float> unit(0.0f, 1.0f);
 
-	Vector3 position;
-	float heading = 0.0f;
+	// Актор має повернутися в сцену до того, як йому задаватимуть положення й швидкість
+	driver.entity->isActiveSelf = true;
+	driver.body->syncActivity();
 
-	if (driver.brain || driver.onTrack)
+	if (driver.policy || driver.inEnvironment)
 	{
-		// Водій на трасі стартує з випадкової точки випадкового маршруту, звідки лишається хоч третина шляху
-		Entity* chosen = mRoutes[std::uniform_int_distribution<int>(0, (int)mRoutes.size() - 1)(mRandom)];
+		// Агент сам стає у випадковий варіант середовища з випадковими початковими умовами
+		EpisodeSetup setup;
+		setup.environment = environment;
+		setup.variant = std::uniform_int_distribution<int>(0, mVariants - 1)(mRandom);
+		setup.seed = (unsigned int)mRandom();
 
-		std::vector<Vector3> waypoints;
-		AgentSensor::collectWaypoints(chosen, waypoints);
-
-		// Маршрут без точок не дає де стартувати: водій лишається на місці до наступного епізоду
-		if (waypoints.size() < 2) waypoints = { driver.entity->getTransform()->getPosition(), driver.entity->getTransform()->getPosition() + driver.entity->getTransform()->getForward() };
-
-		int last = std::max(0, (int)(waypoints.size() * 2 / 3) - 1);
-		int start = std::uniform_int_distribution<int>(0, std::max(0, std::min(last, (int)waypoints.size() - 2)))(mRandom);
-
-		Vector3 direction = waypoints[start + 1] - waypoints[start];
-		position = waypoints[start] + Vector3(0.0f, 0.5f, 0.0f);
-		heading = std::atan2(direction.x, direction.z);
-
-		if (driver.sensor)
-		{
-			driver.sensor->route = chosen;
-			driver.sensor->resetRoute(start);
-		}
+		driver.agent->beginEpisode(setup);
 	}
 	else
 	{
 		float half = fieldSize * 0.4f;
-		position = fieldCenter + Vector3((unit(mRandom) * 2.0f - 1.0f) * half, 0.0f, (unit(mRandom) * 2.0f - 1.0f) * half);
-		heading = unit(mRandom) * 6.2831853f;
+		Vector3 position = fieldCenter + Vector3((unit(mRandom) * 2.0f - 1.0f) * half, 0.0f, (unit(mRandom) * 2.0f - 1.0f) * half);
+
+		Transform* transform = driver.entity->getTransform();
+		transform->setPosition(position);
+		transform->setRotation(Vector3(0.0f, unit(mRandom) * 6.2831853f, 0.0f));
+
+		driver.body->setVelocity(Vector3());
+		driver.body->setAngularVelocity(Vector3());
+		driver.controllable->resetControl();
 	}
 
-	driver.entity->isActiveSelf = true;
-	driver.body->syncActivity();
-
-	Transform* transform = driver.entity->getTransform();
-	transform->setPosition(position);
-	transform->setRotation(Vector3(0.0f, heading, 0.0f));
-
-	driver.body->setVelocity(Vector3());
-	driver.body->setAngularVelocity(Vector3());
 	driver.body->takeCollisions();
-
-	driver.vehicle->resetState();
-
-	if (driver.brain) driver.brain->beginEpisode();
 
 	// Приклади, горизонт яких не встиг минути, лишаються без мітки й відкидаються
 	driver.pending.clear();
 	driver.hasState = false;
 	driver.steps = 0;
 	driver.slowSteps = 0;
-	driver.throttle = 0.0f;
-	driver.steering = 0.0f;
 	driver.targetTimer = 0;
+	std::fill(driver.actions.begin(), driver.actions.end(), 0.0f);
 
 	// Частина епізодів цілком іде на перевірку, тож перевірні траєкторії ніколи не потрапляють у навчання
 	driver.trajectory = -1;
@@ -235,7 +222,7 @@ void DynamicsTrainer::respawn(Driver& driver)
 			int slot = (int)mTrajectoryNext;
 			mTrajectoryNext = (mTrajectoryNext + 1) % TRAJECTORY_CAPACITY;
 
-			// Траєкторію, яку зараз записує інший водій, не віддаємо: інакше вона змішала б два епізоди
+			// Траєкторію, яку зараз записує інший об'єкт, не віддаємо: інакше вона змішала б два епізоди
 			bool busy = false;
 
 			for (const Driver& other : mDrivers)
@@ -252,85 +239,51 @@ void DynamicsTrainer::respawn(Driver& driver)
 	}
 }
 
-// Вибирає випадковим водієві нові цільові дії
-void DynamicsTrainer::pickTargets(Driver& driver)
-{
-	std::uniform_real_distribution<float> unit(0.0f, 1.0f);
-
-	// Переважно газ уперед, іноді гальмування чи задній хід і накат, щоб охопити різні режими руху
-	float mode = unit(mRandom);
-
-	if (mode < 0.7f) driver.throttleTarget = 0.2f + 0.8f * unit(mRandom);
-	else if (mode < 0.85f) driver.throttleTarget = -unit(mRandom);
-	else driver.throttleTarget = 0.2f * unit(mRandom) - 0.1f;
-
-	driver.steeringTarget = unit(mRandom) < 0.3f ? 0.0f : unit(mRandom) * 2.0f - 1.0f;
-	driver.targetTimer = std::uniform_int_distribution<int>(20, 120)(mRandom);
-}
-
 // Додає перехід до навчальних або перевірних даних
 void DynamicsTrainer::storeTransition(const Driver& driver, const float* action, const float* next)
 {
-	DynamicsTransition transition;
+	int stride = mModel.getTransitionSize();
+	std::vector<float> row(stride);
 
-	std::copy(driver.state, driver.state + 4, transition.state);
-	std::copy(action, action + 2, transition.action);
-	std::copy(next, next + 4, transition.next);
+	std::copy(driver.state.begin(), driver.state.end(), row.begin());
+	std::copy(action, action + mActionSize, row.begin() + mStateSize);
+	std::copy(next, next + mStateSize, row.begin() + mStateSize + mActionSize);
 
 	mCollected++;
 
 	if (driver.trajectory >= 0)
 	{
-		TrajectoryPoint point;
-		std::copy(driver.state, driver.state + 4, point.state);
-		std::copy(action, action + 2, point.action);
-		point.x = driver.x;
-		point.z = driver.z;
-		point.heading = driver.heading;
-		mTrajectories[driver.trajectory].push_back(point);
+		// Точка перевірної траєкторії: стан і дія на кроці та поза на його початку
+		std::vector<float>& trajectory = mTrajectories[driver.trajectory];
+		trajectory.insert(trajectory.end(), row.begin(), row.begin() + mStateSize + mActionSize);
+		trajectory.push_back(driver.x);
+		trajectory.push_back(driver.z);
+		trajectory.push_back(driver.heading);
 
-		if (mValidationData.size() < VALIDATION_CAPACITY) mValidationData.push_back(transition);
-		else
-		{
-			mValidationData[mValidationNext] = transition;
-			mValidationNext = (mValidationNext + 1) % VALIDATION_CAPACITY;
-		}
-
+		storeRow(mValidationData, mValidationNext, VALIDATION_CAPACITY, row.data(), stride);
 		return;
 	}
 
-	size_t capacity = (size_t)std::max(batchSize, datasetCapacity);
-
-	if (mTrainData.size() < capacity) mTrainData.push_back(transition);
-	else
-	{
-		mTrainData[mTrainNext] = transition;
-		mTrainNext = (mTrainNext + 1) % capacity;
-	}
+	storeRow(mTrainData, mTrainNext, (size_t)std::max(batchSize, datasetCapacity), row.data(), stride);
 }
 
 // Додає приклад з відомою міткою до навчальних або перевірних даних моделі зіткнень
-void DynamicsTrainer::storeCollision(const Driver& driver, const PendingCollision& pending, float label)
+void DynamicsTrainer::storeCollision(const Driver& driver, PendingCollision& pending, float label)
 {
-	CollisionSample sample = pending.sample;
+	int rays = mModel.getCollisionRays();
 	int count = std::max(1, pending.age);
 
 	// Дія прикладу - середня за час від його створення: вона й привела або не привела до удару
-	sample.action[0] = pending.actionSum[0] / count;
-	sample.action[1] = pending.actionSum[1] / count;
-	sample.label = label;
+	for (int i = 0; i < mActionSize; i++) pending.row[rays + mStateSize + i] /= (float)count;
+
+	pending.row.back() = label;
 
 	bool validation = driver.trajectory >= 0;
-	std::vector<CollisionSample>& data = validation ? mCollisionValidation : mCollisionData;
+	std::vector<float>& data = validation ? mCollisionValidation : mCollisionData;
 	size_t& next = validation ? mCollisionValidationNext : mCollisionNext;
 	size_t capacity = validation ? VALIDATION_CAPACITY : (size_t)std::max(batchSize, datasetCapacity);
 
-	if (data.size() < capacity) data.push_back(sample);
-	else
-	{
-		data[next] = sample;
-		next = (next + 1) % capacity;
-	}
+	storeRow(data, next, capacity, pending.row.data(), mModel.getCollisionSampleSize());
 
 	if (!validation)
 	{
@@ -339,20 +292,22 @@ void DynamicsTrainer::storeCollision(const Driver& driver, const PendingCollisio
 	}
 }
 
-// Оновлює приклади водія, що чекають на мітку: удар позначає всі, а спливлий горизонт - найстаріші як безпечні
+// Оновлює приклади, що чекають на мітку: удар позначає всі, а спливлий горизонт - найстаріші як безпечні
 void DynamicsTrainer::updatePending(Driver& driver, const float* action, bool collided)
 {
+	int offset = mModel.getCollisionRays() + mStateSize;
+
 	for (PendingCollision& pending : driver.pending)
 	{
-		pending.actionSum[0] += action[0];
-		pending.actionSum[1] += action[1];
+		for (int i = 0; i < mActionSize; i++) pending.row[offset + i] += action[i];
+
 		pending.age++;
 	}
 
 	// Удар стався в межах горизонту кожного прикладу, що ще чекає
 	if (collided)
 	{
-		for (const PendingCollision& pending : driver.pending) storeCollision(driver, pending, 1.0f);
+		for (PendingCollision& pending : driver.pending) storeCollision(driver, pending, 1.0f);
 
 		driver.pending.clear();
 		return;
@@ -361,7 +316,7 @@ void DynamicsTrainer::updatePending(Driver& driver, const float* action, bool co
 	// Приклади, горизонт яких минув без удару, - безпечні
 	size_t done = 0;
 
-	while (done < driver.pending.size() && driver.pending[done].age >= LearnedDynamics::COLLISION_HORIZON)
+	while (done < driver.pending.size() && driver.pending[done].age >= mModel.getCollisionHorizon())
 	{
 		storeCollision(driver, driver.pending[done], 0.0f);
 		done++;
@@ -370,7 +325,7 @@ void DynamicsTrainer::updatePending(Driver& driver, const float* action, bool co
 	driver.pending.erase(driver.pending.begin(), driver.pending.begin() + done);
 }
 
-// Записує переходи всіх водіїв і задає дії випадковим водіям
+// Записує переходи всіх об'єктів і задає випадкові дії
 void DynamicsTrainer::fixedUpdate()
 {
 	if (mFailed) return;
@@ -382,6 +337,10 @@ void DynamicsTrainer::fixedUpdate()
 	}
 
 	std::uniform_real_distribution<float> noise(-1.0f, 1.0f);
+	bool collisions = mModel.hasCollisionModel();
+
+	std::vector<float> state(mStateSize);
+	std::vector<float> action(mActionSize);
 
 	for (Driver& driver : mDrivers)
 	{
@@ -392,34 +351,34 @@ void DynamicsTrainer::fixedUpdate()
 			return;
 		}
 
-		// Автомобіль збирається на першому кроці; до того записувати нічого
-		if (!driver.vehicle->getRigidBody()) continue;
+		// Об'єкт може збиратися на першому кроці, і фізичного тіла ще немає; до того записувати нічого
+		if (!driver.controllable->getBody()) continue;
 
 		bool collided = driver.body->takeCollisions() > 0;
-		bool upright = driver.vehicle->isUpright();
+		bool upright = driver.controllable->isUpright();
 
-		float state[4];
 		float x, z, heading;
-		driver.vehicle->getDynamicsState(state);
-		driver.vehicle->getPlanarPose(x, z, heading);
+		driver.controllable->getState(state.data());
+		driver.controllable->getPlanarPose(x, z, heading);
 
-		// Дія, з якою автомобіль пройшов попередній крок, - та, що зараз стоїть у керуванні
-		float action[2] = { driver.vehicle->getThrottleAction(), driver.vehicle->getSteeringAction() };
+		// Дія, з якою об'єкт пройшов попередній крок, - та, що зараз стоїть у керуванні
+		driver.controllable->getActions(action.data());
 
 		// Удари й перевертання модель не описує, тож такі переходи не записуються, а епізод завершується
 		bool broken = collided || !upright;
 
-		if (driver.hasState && !broken) storeTransition(driver, action, state);
+		if (driver.hasState && !broken) storeTransition(driver, action.data(), state.data());
 
 		// Удар дає приклади моделі зіткнень; перевертання без удару - ні, бо що до нього призвело, невідомо
-		if (collided || upright) updatePending(driver, action, collided);
+		if (collisions && (collided || upright)) updatePending(driver, action.data(), collided);
 
 		driver.steps++;
 		driver.slowSteps = std::fabs(state[0]) < 0.3f ? driver.slowSteps + 1 : 0;
 
-		bool outside = !driver.brain && !driver.onTrack && (std::fabs(x - fieldCenter.x) > fieldSize * 0.5f || std::fabs(z - fieldCenter.z) > fieldSize * 0.5f);
+		bool onField = !driver.policy && !driver.inEnvironment;
+		bool outside = onField && (std::fabs(x - fieldCenter.x) > fieldSize * 0.5f || std::fabs(z - fieldCenter.z) > fieldSize * 0.5f);
 		bool stuck = driver.slowSteps * SimulationSettings::fixedStep > 3.0f;
-		bool finished = driver.brain && driver.brain->isEpisodeDone();
+		bool finished = driver.policy && driver.agent->isEpisodeDone();
 
 		if (broken || outside || stuck || finished || driver.steps >= episodeSteps)
 		{
@@ -427,29 +386,40 @@ void DynamicsTrainer::fixedUpdate()
 			continue;
 		}
 
-		std::copy(state, state + 4, driver.state);
+		driver.state = state;
 		driver.x = x;
 		driver.z = z;
 		driver.heading = heading;
 		driver.hasState = true;
 
 		// Новий приклад для моделі зіткнень: огляд і стан зараз, а мітку визначить найближчий горизонт
-		PendingCollision pending;
-		DynamicsModel::scanSurroundings(driver.vehicle, pending.sample.scan);
-		std::copy(state, state + 4, pending.sample.state);
-		driver.pending.push_back(pending);
+		if (collisions)
+		{
+			int rays = mModel.getCollisionRays();
+
+			PendingCollision pending;
+			pending.row.assign(mModel.getCollisionSampleSize(), 0.0f);
+			DynamicsModel::scanSurroundings(driver.controllable, mModel, pending.row.data());
+			std::copy(state.begin(), state.end(), pending.row.begin() + rays);
+			driver.pending.push_back(std::move(pending));
+		}
 
 		// Випадкові дії плавно тягнуться до цілей, що час від часу змінюються
-		if (!driver.brain)
+		if (!driver.policy)
 		{
-			if (--driver.targetTimer <= 0) pickTargets(driver);
+			if (--driver.targetTimer <= 0)
+			{
+				driver.controllable->sampleExplorationActions(mRandom, driver.targets.data());
+				driver.targetTimer = std::uniform_int_distribution<int>(20, 120)(mRandom);
+			}
 
-			driver.throttle += (driver.throttleTarget - driver.throttle) * 0.08f + noise(mRandom) * 0.03f;
-			driver.steering += (driver.steeringTarget - driver.steering) * 0.08f + noise(mRandom) * 0.05f;
-			driver.throttle = std::max(-1.0f, std::min(driver.throttle, 1.0f));
-			driver.steering = std::max(-1.0f, std::min(driver.steering, 1.0f));
+			for (int i = 0; i < mActionSize; i++)
+			{
+				float value = driver.actions[i] + (driver.targets[i] - driver.actions[i]) * 0.08f + noise(mRandom) * 0.04f;
+				driver.actions[i] = std::max(-1.0f, std::min(value, 1.0f));
+			}
 
-			driver.vehicle->setActions(driver.throttle, driver.steering);
+			driver.controllable->setActions(driver.actions.data());
 		}
 	}
 }
@@ -457,21 +427,27 @@ void DynamicsTrainer::fixedUpdate()
 // Навчає мережу, доки не вичерпано бюджет кадру
 void DynamicsTrainer::train()
 {
-	if ((int)mTrainData.size() < std::max(warmupSamples, batchSize)) return;
+	int stride = mModel.getTransitionSize();
+	size_t samples = mTrainData.size() / stride;
+
+	if ((int)samples < std::max(warmupSamples, batchSize)) return;
 
 	// Нормування береться з першої зібраної вибірки й далі не змінюється, бо мережа навчається саме під нього
 	if (!mModel.hasNormalization()) mModel.computeNormalization(mTrainData);
 
 	mOptimizer.learningRate = learningRate;
 
+	int collisionStride = mModel.getCollisionSampleSize();
+	size_t collisionSamples = mModel.hasCollisionModel() ? mCollisionData.size() / collisionStride : 0;
+
 	double start = nowSeconds();
-	std::uniform_int_distribution<size_t> pick(0, mTrainData.size() - 1);
+	std::uniform_int_distribution<size_t> pick(0, samples - 1);
 
 	do
 	{
 		mBatch.resize(batchSize);
 
-		for (int i = 0; i < batchSize; i++) mBatch[i] = &mTrainData[pick(mRandom)];
+		for (int i = 0; i < batchSize; i++) mBatch[i] = mTrainData.data() + pick(mRandom) * stride;
 
 		float loss = mModel.trainBatch(mBatch.data(), batchSize, mOptimizer);
 
@@ -479,16 +455,15 @@ void DynamicsTrainer::train()
 		mBatches++;
 
 		// Модель зіткнень навчається поруч, щойно серед прикладів з'явилися удари
-		if ((int)mCollisionData.size() >= batchSize && mCollisionPositives > 0)
+		if ((int)collisionSamples >= batchSize && mCollisionPositives > 0)
 		{
 			mCollisionOptimizer.learningRate = learningRate;
-			mCollisionBatch.resize(batchSize);
 
-			std::uniform_int_distribution<size_t> pickCollision(0, mCollisionData.size() - 1);
+			std::uniform_int_distribution<size_t> pickCollision(0, collisionSamples - 1);
 
-			for (int i = 0; i < batchSize; i++) mCollisionBatch[i] = &mCollisionData[pickCollision(mRandom)];
+			for (int i = 0; i < batchSize; i++) mBatch[i] = mCollisionData.data() + pickCollision(mRandom) * collisionStride;
 
-			float collisionLoss = mModel.trainCollisionBatch(mCollisionBatch.data(), batchSize, mCollisionOptimizer);
+			float collisionLoss = mModel.trainCollisionBatch(mBatch.data(), batchSize, mCollisionOptimizer);
 
 			mCollisionTrainLoss = mCollisionBatches == 0 ? collisionLoss : mCollisionTrainLoss * 0.98f + collisionLoss * 0.02f;
 			mCollisionBatches++;
@@ -499,31 +474,35 @@ void DynamicsTrainer::train()
 // Повертає середню похибку положення на горизонті H на перевірних траєкторіях
 float DynamicsTrainer::horizonError(int horizon, int segments)
 {
+	// Точка траєкторії: стан, дія, положення x і z та курс
+	int stride = mStateSize + mActionSize + 3;
+	int pose = mStateSize + mActionSize;
+
 	std::vector<int> usable;
 
 	for (size_t i = 0; i < mTrajectories.size(); i++)
 	{
-		if ((int)mTrajectories[i].size() > horizon) usable.push_back((int)i);
+		if ((int)(mTrajectories[i].size() / stride) > horizon) usable.push_back((int)i);
 	}
 
 	if (usable.empty()) return -1.0f;
 
 	// Випадкові відрізки траєкторій прогнозуються разом, одним пакетом на крок
-	std::vector<const std::vector<TrajectoryPoint>*> chosen(segments);
+	std::vector<const std::vector<float>*> chosen(segments);
 	std::vector<int> starts(segments);
-	std::vector<float> states((size_t)segments * 4), next((size_t)segments * 4), actions((size_t)segments * 2);
+	std::vector<float> states((size_t)segments * mStateSize), next((size_t)segments * mStateSize), actions((size_t)segments * mActionSize);
 	std::vector<float> xs(segments), zs(segments), headings(segments);
 
 	for (int n = 0; n < segments; n++)
 	{
 		chosen[n] = &mTrajectories[usable[std::uniform_int_distribution<int>(0, (int)usable.size() - 1)(mRandom)]];
-		starts[n] = std::uniform_int_distribution<int>(0, (int)chosen[n]->size() - horizon - 1)(mRandom);
+		starts[n] = std::uniform_int_distribution<int>(0, (int)(chosen[n]->size() / stride) - horizon - 1)(mRandom);
 
-		const TrajectoryPoint& first = (*chosen[n])[starts[n]];
-		std::copy(first.state, first.state + 4, states.data() + n * 4);
-		xs[n] = first.x;
-		zs[n] = first.z;
-		headings[n] = first.heading;
+		const float* first = chosen[n]->data() + (size_t)starts[n] * stride;
+		std::copy(first, first + mStateSize, states.data() + (size_t)n * mStateSize);
+		xs[n] = first[pose];
+		zs[n] = first[pose + 1];
+		headings[n] = first[pose + 2];
 	}
 
 	// Прогноз іде з відомими діями, але без поправок від справжнього стану: похибка накопичується так само, як під час планування
@@ -533,19 +512,20 @@ float DynamicsTrainer::horizonError(int horizon, int segments)
 	{
 		for (int n = 0; n < segments; n++)
 		{
-			const TrajectoryPoint& applied = (*chosen[n])[starts[n] + h - 1];
-			actions[n * 2] = applied.action[0];
-			actions[n * 2 + 1] = applied.action[1];
+			const float* applied = chosen[n]->data() + (size_t)(starts[n] + h - 1) * stride;
+			std::copy(applied + mStateSize, applied + mStateSize + mActionSize, actions.data() + (size_t)n * mActionSize);
 		}
 
 		mModel.predictBatch(states.data(), actions.data(), segments, next.data());
 
 		for (int n = 0; n < segments; n++)
 		{
-			LearnedDynamics::integratePose(xs[n], zs[n], headings[n], next.data() + n * 4, SimulationSettings::fixedStep);
+			LearnedDynamics::integratePose(xs[n], zs[n], headings[n], next.data() + (size_t)n * mStateSize, SimulationSettings::fixedStep);
 
-			const TrajectoryPoint& actual = (*chosen[n])[starts[n] + h];
-			total += std::sqrt((xs[n] - actual.x) * (xs[n] - actual.x) + (zs[n] - actual.z) * (zs[n] - actual.z));
+			const float* actual = chosen[n]->data() + (size_t)(starts[n] + h) * stride;
+			float dx = xs[n] - actual[pose];
+			float dz = zs[n] - actual[pose + 1];
+			total += std::sqrt(dx * dx + dz * dz);
 		}
 
 		states.swap(next);
@@ -559,14 +539,17 @@ void DynamicsTrainer::evaluate()
 {
 	mLastEvaluation = nowSeconds();
 
-	if (mBatches == 0 || mValidationData.empty()) return;
+	int stride = mModel.getTransitionSize();
+	size_t validationSamples = mValidationData.size() / stride;
 
-	int count = std::min((int)mValidationData.size(), VALIDATION_SAMPLE);
-	std::uniform_int_distribution<size_t> pick(0, mValidationData.size() - 1);
+	if (mBatches == 0 || validationSamples == 0) return;
+
+	int count = std::min((int)validationSamples, VALIDATION_SAMPLE);
+	std::uniform_int_distribution<size_t> pick(0, validationSamples - 1);
 
 	mBatch.resize(count);
 
-	for (int i = 0; i < count; i++) mBatch[i] = &mValidationData[pick(mRandom)];
+	for (int i = 0; i < count; i++) mBatch[i] = mValidationData.data() + pick(mRandom) * stride;
 
 	float validation = mModel.evaluate(mBatch.data(), count);
 	float horizon = horizonError(std::max(1, evaluationHorizon), HORIZON_SEGMENTS);
@@ -575,18 +558,20 @@ void DynamicsTrainer::evaluate()
 
 	// Модель зіткнень перевіряється на прикладах з перевірних епізодів
 	bool collisionImproved = false;
+	int collisionStride = mModel.getCollisionSampleSize();
+	size_t collisionSamples = mModel.hasCollisionModel() ? mCollisionValidation.size() / collisionStride : 0;
 
-	if (mCollisionBatches > 0 && !mCollisionValidation.empty())
+	if (mCollisionBatches > 0 && collisionSamples > 0)
 	{
-		int collisionCount = std::min((int)mCollisionValidation.size(), VALIDATION_SAMPLE);
-		std::uniform_int_distribution<size_t> pickCollision(0, mCollisionValidation.size() - 1);
+		int collisionCount = std::min((int)collisionSamples, VALIDATION_SAMPLE);
+		std::uniform_int_distribution<size_t> pickCollision(0, collisionSamples - 1);
 
-		mCollisionBatch.resize(collisionCount);
+		mBatch.resize(collisionCount);
 
-		for (int i = 0; i < collisionCount; i++) mCollisionBatch[i] = &mCollisionValidation[pickCollision(mRandom)];
+		for (int i = 0; i < collisionCount; i++) mBatch[i] = mCollisionValidation.data() + pickCollision(mRandom) * collisionStride;
 
 		float collisionLoss = 0.0f;
-		mModel.evaluateCollision(mCollisionBatch.data(), collisionCount, collisionLoss, mCollisionRecall, mCollisionPrecision);
+		mModel.evaluateCollision(mBatch.data(), collisionCount, collisionLoss, mCollisionRecall, mCollisionPrecision);
 		mCollisionLossHistory.push_back(collisionLoss);
 
 		if (mBestCollisionLoss < 0.0f || collisionLoss < mBestCollisionLoss)
@@ -622,16 +607,19 @@ void DynamicsTrainer::drawWindow()
 
 	if (mFailed)
 	{
-		ImGui::TextWrapped("Training is not running: check the agent prefab in the inspector.");
+		ImGui::TextWrapped("Training is not running: the agent prefab needs a RigidBody and a component derived from ControllableBody (see the console).");
 		ImGui::End();
 		return;
 	}
 
-	ImGui::Text("Transitions: %d train, %d validation, %d trajectories", (int)mTrainData.size(), (int)mValidationData.size(), (int)mTrajectories.size());
+	int stride = std::max(1, mModel.getTransitionSize());
+	int trainSamples = (int)(mTrainData.size() / stride);
 
-	if ((int)mTrainData.size() < warmupSamples)
+	ImGui::Text("Transitions: %d train, %d validation, %d trajectories", trainSamples, (int)(mValidationData.size() / stride), (int)mTrajectories.size());
+
+	if (trainSamples < warmupSamples)
 	{
-		ImGui::Text("Collecting data before training: %d / %d", (int)mTrainData.size(), warmupSamples);
+		ImGui::Text("Collecting data before training: %d / %d", trainSamples, warmupSamples);
 	}
 	else
 	{
@@ -654,15 +642,18 @@ void DynamicsTrainer::drawWindow()
 		ImGui::PlotLines("E(H), m", mHorizonHistory.data(), (int)mHorizonHistory.size(), 0, nullptr, 0.0f, high, ImVec2(0, 60));
 	}
 
-	ImGui::Separator();
-	ImGui::Text("Collision samples: %lld (%.1f%% hits), %d validation", mCollisionTotal, mCollisionTotal > 0 ? 100.0 * mCollisionPositives / mCollisionTotal : 0.0, (int)mCollisionValidation.size());
-
-	if (!mCollisionLossHistory.empty())
+	if (mModel.hasCollisionModel())
 	{
-		float high = *std::max_element(mCollisionLossHistory.begin(), mCollisionLossHistory.end());
+		ImGui::Separator();
+		ImGui::Text("Collision samples: %lld (%.1f%% hits), %d validation", mCollisionTotal, mCollisionTotal > 0 ? 100.0 * mCollisionPositives / mCollisionTotal : 0.0, (int)(mCollisionValidation.size() / mModel.getCollisionSampleSize()));
 
-		ImGui::Text("Collision loss: %.4f, hits caught: %.0f%%, alarms right: %.0f%%", mCollisionLossHistory.back(), mCollisionRecall * 100.0f, mCollisionPrecision * 100.0f);
-		ImGui::PlotLines("Collision", mCollisionLossHistory.data(), (int)mCollisionLossHistory.size(), 0, nullptr, 0.0f, high, ImVec2(0, 60));
+		if (!mCollisionLossHistory.empty())
+		{
+			float high = *std::max_element(mCollisionLossHistory.begin(), mCollisionLossHistory.end());
+
+			ImGui::Text("Collision loss: %.4f, hits caught: %.0f%%, alarms right: %.0f%%", mCollisionLossHistory.back(), mCollisionRecall * 100.0f, mCollisionPrecision * 100.0f);
+			ImGui::PlotLines("Collision", mCollisionLossHistory.data(), (int)mCollisionLossHistory.size(), 0, nullptr, 0.0f, high, ImVec2(0, 60));
+		}
 	}
 
 	if (mSaved) ImGui::Text("Best model saved to %s", modelAsset.c_str());
@@ -678,11 +669,10 @@ void DynamicsTrainer::drawWindow()
 void DynamicsTrainer::visitProperties(PropertyVisitor& visitor)
 {
 	visitor.reference("agentPrefab", agentPrefab);
-	visitor.reference("route", route);
-	visitor.asset("policyWeights", policyWeights, NeuralNetwork::FILE_EXTENSION);
+	visitor.reference("environment", environment);
 	visitor.property("policyShare", policyShare, 0.01f);
-	visitor.property("randomOnTracks", randomOnTracks, 0.01f);
-	visitor.property("vehicleCount", vehicleCount);
+	visitor.property("environmentShare", environmentShare, 0.01f);
+	visitor.property("bodyCount", bodyCount);
 	visitor.property("fieldCenter", fieldCenter);
 	visitor.property("fieldSize", fieldSize, 1.0f);
 	visitor.property("episodeSteps", episodeSteps);
@@ -693,19 +683,26 @@ void DynamicsTrainer::visitProperties(PropertyVisitor& visitor)
 	visitor.property("learningRate", learningRate, 0.0001f);
 	visitor.property("trainMilliseconds", trainMilliseconds, 0.5f);
 	visitor.property("evaluationHorizon", evaluationHorizon);
+	visitor.property("learnCollisions", learnCollisions);
+	visitor.property("collisionRays", collisionRays);
+	visitor.property("collisionRange", collisionRange, 0.5f);
+	visitor.property("collisionHorizon", collisionHorizon);
 	visitor.property("continueTraining", continueTraining);
 	visitor.property("collisionGroup", collisionGroup);
 	visitor.property("seed", seed);
 	visitor.property("stepsPerFrame", stepsPerFrame);
 	visitor.property("renderScene", renderScene);
-	visitor.property("modelAsset", modelAsset);
+	visitor.asset("modelAsset", modelAsset, LearnedDynamics::FILE_EXTENSION);
 
-	vehicleCount = std::max(1, vehicleCount);
+	bodyCount = std::max(1, bodyCount);
 	episodeSteps = std::max(10, episodeSteps);
 	datasetCapacity = std::max(1000, datasetCapacity);
 	warmupSamples = std::max(0, warmupSamples);
 	batchSize = std::max(1, std::min(batchSize, 4096));
 	evaluationHorizon = std::max(1, evaluationHorizon);
 	trainMilliseconds = std::max(0.0f, trainMilliseconds);
+	collisionRays = std::max(1, std::min(collisionRays, 256));
+	collisionRange = std::max(0.5f, collisionRange);
+	collisionHorizon = std::max(1, collisionHorizon);
 	stepsPerFrame = std::max(1, std::min(stepsPerFrame, 200));
 }

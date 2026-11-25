@@ -28,21 +28,41 @@ void VehicleController::awake()
 	isStarted = false;
 }
 
-// Задає нормовані дії газу та керма в межах [-1; 1]; відтоді клавіатура автомобілем не керує
-void VehicleController::setActions(float throttle, float steering)
+// Повертає кількість дій: газ і кермо
+int VehicleController::getActionSize() const
 {
-	mThrottleAction = std::max(-1.0f, std::min(throttle, 1.0f));
-	mSteeringAction = std::max(-1.0f, std::min(steering, 1.0f));
+	return 2;
+}
+
+// Задає нормовані дії газу та керма в межах [-1; 1]; відтоді клавіатура автомобілем не керує
+void VehicleController::setActions(const float* actions)
+{
+	mThrottleAction = std::max(-1.0f, std::min(actions[0], 1.0f));
+	mSteeringAction = std::max(-1.0f, std::min(actions[1], 1.0f));
 	mExternalControl = true;
 }
 
+// Записує поточні дії газу та керма
+void VehicleController::getActions(float* actions) const
+{
+	actions[0] = mThrottleAction;
+	actions[1] = mSteeringAction;
+}
+
 // Скидає кут керма та дії, наприклад перед новим епізодом
-void VehicleController::resetState()
+void VehicleController::resetControl()
 {
 	mSteering = 0.0f;
 	mSpeed = 0.0f;
 	mThrottleAction = 0.0f;
 	mSteeringAction = 0.0f;
+}
+
+// Вимикає під час навчання клавіатуру й вікно налагодження
+void VehicleController::setTrainingMode(bool training)
+{
+	playerInput = !training;
+	debugWindow = !training;
 }
 
 // Повертає поточний кут повороту передніх коліс у радіанах
@@ -64,59 +84,37 @@ float VehicleController::getSteeringAction() const
 }
 
 // Повертає фізичне тіло корпусу, або nullptr, поки автомобіль не зібрано
-RigidBody* VehicleController::getRigidBody() const
+RigidBody* VehicleController::getBody() const
 {
 	return mRigidBody;
 }
 
-// Записує стан для моделі динаміки: поздовжня й поперечна швидкості, кутова швидкість рискання, кут повороту коліс
-void VehicleController::getDynamicsState(float* state) const
+// Повертає розмір стану: три швидкості та кут повороту коліс
+int VehicleController::getStateSize() const
 {
-	if (!mRigidBody)
-	{
-		state[0] = state[1] = state[2] = 0.0f;
-		state[3] = mSteering;
-		return;
-	}
+	return 4;
+}
 
-	Vector3 position, right, up, forward;
-	mRigidBody->getPose(position, right, up, forward);
-
-	Vector3 velocity = mRigidBody->getVelocity();
-	Vector3 angular = mRigidBody->getAngularVelocity();
-
-	state[0] = velocity * forward;
-	state[1] = velocity * right;
-	state[2] = angular * up;
+// Записує стан для моделі динаміки: поздовжня й поперечна швидкості, кутова швидкість рискання, кут повороту коліс
+void VehicleController::getState(float* state) const
+{
+	ControllableBody::getState(state);
 	state[3] = mSteering;
 }
 
-// Повертає положення в площині та курс корпусу; курс 0 означає напрям уздовж осі Z
-void VehicleController::getPlanarPose(float& x, float& z, float& heading) const
+// Вибирає випадкові дії для дослідження руху: здебільшого газ уперед, іноді гальмування чи накат
+void VehicleController::sampleExplorationActions(std::mt19937& random, float* actions) const
 {
-	Vector3 position, right, up, forward;
+	std::uniform_real_distribution<float> unit(0.0f, 1.0f);
 
-	if (mRigidBody) mRigidBody->getPose(position, right, up, forward);
-	else
-	{
-		position = mOwner->getTransform()->getPosition();
-		forward = mOwner->getTransform()->getForward();
-	}
+	// Переважно газ уперед, іноді гальмування чи задній хід і накат, щоб охопити різні режими руху
+	float mode = unit(random);
 
-	x = position.x;
-	z = position.z;
-	heading = std::atan2(forward.x, forward.z);
-}
+	if (mode < 0.7f) actions[0] = 0.2f + 0.8f * unit(random);
+	else if (mode < 0.85f) actions[0] = -unit(random);
+	else actions[0] = 0.2f * unit(random) - 0.1f;
 
-// Перевіряє, чи корпус стоїть на колесах, а не лежить на боці чи даху
-bool VehicleController::isUpright() const
-{
-	if (!mRigidBody) return true;
-
-	Vector3 position, right, up, forward;
-	mRigidBody->getPose(position, right, up, forward);
-
-	return up.y > 0.7f;
+	actions[1] = unit(random) < 0.3f ? 0.0f : unit(random) * 2.0f - 1.0f;
 }
 
 // Забуває фізичне тіло, якщо його прибрали з машини: далі fixedUpdate просто нічого не робить

@@ -1,13 +1,13 @@
 #pragma once
-#include "Component.h"
+#include "ControllableBody.h"
 #include "Vector3.h"
 
 class RigidBody;
 class Prefab;
 class Transform;
 
-// Керування автомобілем: підвіска на променях, зчеплення коліс, тяга й кермо за нормованими діями газу та керма
-class VehicleController : public Component
+// Демонстраційний автомобіль: підвіска на променях, зчеплення коліс, тяга й кермо за двома нормованими діями - газом і кермом
+class VehicleController : public ControllableBody
 {
 public:
 	COMPONENT_TYPE(VehicleController)
@@ -43,10 +43,24 @@ public:
 	// Образ колеса, з якого будуються чотири колеса
 	Prefab* wheelPrefab = nullptr;
 
+	// Повертає кількість дій: газ і кермо
+	int getActionSize() const override;
 	// Задає нормовані дії газу та керма в межах [-1; 1]; відтоді клавіатура автомобілем не керує
-	void setActions(float throttle, float steering);
+	void setActions(const float* actions) override;
+	// Записує поточні дії газу та керма
+	void getActions(float* actions) const override;
 	// Скидає кут керма та дії, наприклад перед новим епізодом
-	void resetState();
+	void resetControl() override;
+	// Вимикає під час навчання клавіатуру й вікно налагодження
+	void setTrainingMode(bool training) override;
+	// Повертає розмір стану: три швидкості та кут повороту коліс
+	int getStateSize() const override;
+	// Записує стан для моделі динаміки: поздовжня й поперечна швидкості, кутова швидкість рискання, кут повороту коліс
+	void getState(float* state) const override;
+	// Повертає фізичне тіло корпусу, або nullptr, поки автомобіль не зібрано
+	RigidBody* getBody() const override;
+	// Вибирає випадкові дії для дослідження руху: здебільшого газ уперед, іноді гальмування чи накат
+	void sampleExplorationActions(std::mt19937& random, float* actions) const override;
 
 	// Повертає поточний кут повороту передніх коліс у радіанах
 	float getSteering() const;
@@ -54,14 +68,6 @@ public:
 	float getThrottleAction() const;
 	// Повертає останню дію керма
 	float getSteeringAction() const;
-	// Повертає фізичне тіло корпусу, або nullptr, поки автомобіль не зібрано
-	RigidBody* getRigidBody() const;
-	// Записує стан для моделі динаміки: поздовжня й поперечна швидкості, кутова швидкість рискання, кут повороту коліс
-	void getDynamicsState(float* state) const;
-	// Повертає положення в площині та курс корпусу; курс 0 означає напрям уздовж осі Z
-	void getPlanarPose(float& x, float& z, float& heading) const;
-	// Перевіряє, чи корпус стоїть на колесах, а не лежить на боці чи даху
-	bool isUpright() const;
 
 	// Перелічує власні поля для файлу сцени та інспектора
 	void visitProperties(PropertyVisitor& visitor) override;

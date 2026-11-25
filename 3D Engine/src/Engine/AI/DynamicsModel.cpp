@@ -1,5 +1,5 @@
 #include "DynamicsModel.h"
-#include "VehicleController.h"
+#include "ControllableBody.h"
 #include "Entity.h"
 #include "Gizmo.h"
 #include "RigidBody.h"
@@ -86,23 +86,24 @@ const LearnedDynamics* DynamicsModel::getModel()
 	return loadShared(modelAsset);
 }
 
-// Прогнозує шлях автомобіля на steps кроків, якщо поточні дії не зміняться; false, якщо моделі чи автомобіля немає
+// Прогнозує шлях керованого об'єкта на steps кроків, якщо поточні дії не зміняться; false, якщо моделі чи об'єкта немає або вони не відповідають одне одному
 bool DynamicsModel::predictPath(int steps, std::vector<Vector3>& path)
 {
 	path.clear();
 
 	const LearnedDynamics* model = getModel();
-	VehicleController* vehicle = getOwner()->getComponent<VehicleController>();
+	ControllableBody* body = getOwner()->getComponent<ControllableBody>();
 
-	if (!model || !vehicle || !vehicle->getRigidBody()) return false;
+	if (!model || !body || !body->getBody() || !isCompatible(*model, *body)) return false;
 
-	float state[LearnedDynamics::STATE_SIZE];
-	float next[LearnedDynamics::STATE_SIZE];
-	float action[LearnedDynamics::ACTION_SIZE] = { vehicle->getThrottleAction(), vehicle->getSteeringAction() };
+	std::vector<float> state(model->getStateSize());
+	std::vector<float> next(model->getStateSize());
+	std::vector<float> action(model->getActionSize());
 	float x, z, heading;
 
-	vehicle->getDynamicsState(state);
-	vehicle->getPlanarPose(x, z, heading);
+	body->getState(state.data());
+	body->getActions(action.data());
+	body->getPlanarPose(x, z, heading);
 
 	// Шлях малюється трохи над землею, на висоті корпусу
 	float height = getOwner()->getTransform()->getPosition().y;
@@ -111,15 +112,21 @@ bool DynamicsModel::predictPath(int steps, std::vector<Vector3>& path)
 
 	for (int i = 0; i < steps; i++)
 	{
-		model->predict(state, action, next);
-		LearnedDynamics::integratePose(x, z, heading, next, SimulationSettings::fixedStep);
+		model->predict(state.data(), action.data(), next.data());
+		LearnedDynamics::integratePose(x, z, heading, next.data(), SimulationSettings::fixedStep);
 
-		for (int k = 0; k < LearnedDynamics::STATE_SIZE; k++) state[k] = next[k];
+		state.swap(next);
 
 		path.push_back(Vector3(x, height, z));
 	}
 
 	return true;
+}
+
+// Перевіряє, чи модель навчено для керованого об'єкта саме таких розмірів стану й дій
+bool DynamicsModel::isCompatible(const LearnedDynamics& model, const ControllableBody& body)
+{
+	return model.getStateSize() == body.getStateSize() && model.getActionSize() == body.getActionSize();
 }
 
 // Малює ламану в просторі сцени поверх кадру
@@ -150,12 +157,14 @@ void DynamicsModel::drawPath(const std::vector<Vector3>& path, unsigned int colo
 	}
 }
 
-// Пускає промені огляду навколо автомобіля для моделі зіткнень і записує відстані, поділені на дальність
-void DynamicsModel::scanSurroundings(VehicleController* vehicle, float* out)
+// Пускає промені огляду моделі зіткнень по колу навколо керованого об'єкта й записує відстані, поділені на дальність
+void DynamicsModel::scanSurroundings(ControllableBody* controllable, const LearnedDynamics& model, float* out)
 {
-	RigidBody* body = vehicle->getRigidBody();
+	int rays = model.getCollisionRays();
+	float range = model.getCollisionRange();
+	RigidBody* body = controllable->getBody();
 
-	for (int i = 0; i < LearnedDynamics::COLLISION_RAYS; i++) out[i] = 1.0f;
+	for (int i = 0; i < rays; i++) out[i] = 1.0f;
 
 	if (!body) return;
 
@@ -165,21 +174,21 @@ void DynamicsModel::scanSurroundings(VehicleController* vehicle, float* out)
 	// Промені розходяться по колу з центру корпусу: удар можливий і боком, і задом
 	Vector3 origin = position + up * 0.3f;
 
-	for (int i = 0; i < LearnedDynamics::COLLISION_RAYS; i++)
+	for (int i = 0; i < rays; i++)
 	{
-		float angle = 6.2831853f * (float)i / (float)LearnedDynamics::COLLISION_RAYS;
+		float angle = 6.2831853f * (float)i / (float)rays;
 		Vector3 direction = forward * std::cos(angle) + right * std::sin(angle);
 
 		RaycastHit hit;
 
-		if (Physics::raycast(origin, direction, LearnedDynamics::COLLISION_RANGE, hit, body))
+		if (Physics::raycast(origin, direction, range, hit, body))
 		{
-			out[i] = std::min(hit.distance, LearnedDynamics::COLLISION_RANGE) / LearnedDynamics::COLLISION_RANGE;
+			out[i] = std::min(hit.distance, range) / range;
 		}
 	}
 }
 
-// Малює прогнозований шлях автомобіля; колір від зеленого до червоного показує навчену ймовірність зіткнення
+// Малює прогнозований шлях; колір від зеленого до червоного показує навчену ймовірність зіткнення
 void DynamicsModel::update()
 {
 	if (!showPrediction) return;
@@ -187,27 +196,29 @@ void DynamicsModel::update()
 	if (!predictPath(predictionSteps, mPath)) return;
 
 	const LearnedDynamics* model = getModel();
-	VehicleController* vehicle = getOwner()->getComponent<VehicleController>();
+	ControllableBody* body = getOwner()->getComponent<ControllableBody>();
 
 	float risk = 0.0f;
+	bool hasRisk = model && body && model->hasCollisionModel();
 
-	if (model && model->hasCollisionModel() && vehicle)
+	if (hasRisk)
 	{
-		float scan[LearnedDynamics::COLLISION_RAYS];
-		float state[LearnedDynamics::STATE_SIZE];
-		float action[LearnedDynamics::ACTION_SIZE] = { vehicle->getThrottleAction(), vehicle->getSteeringAction() };
+		std::vector<float> scan(model->getCollisionRays());
+		std::vector<float> state(model->getStateSize());
+		std::vector<float> action(model->getActionSize());
 
-		scanSurroundings(vehicle, scan);
-		vehicle->getDynamicsState(state);
-		risk = model->predictCollision(scan, state, action);
+		scanSurroundings(body, *model, scan.data());
+		body->getState(state.data());
+		body->getActions(action.data());
+		risk = model->predictCollision(scan.data(), state.data(), action.data());
 	}
 
 	int red = (int)(60 + 195 * risk);
 	int green = (int)(230 - 170 * risk);
 	drawPath(mPath, IM_COL32(red, green, 60, 255), 3.0f);
 
-	// Біля автомобіля підписано ймовірність зіткнення за поточних дій
-	if (model && model->hasCollisionModel() && !mPath.empty())
+	// Біля об'єкта підписано ймовірність зіткнення за поточних дій
+	if (hasRisk && !mPath.empty())
 	{
 		float sx, sy;
 

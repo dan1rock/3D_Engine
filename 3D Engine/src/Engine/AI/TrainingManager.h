@@ -1,15 +1,16 @@
 #pragma once
 #include "Component.h"
 #include "GeneticAlgorithm.h"
-#include "Vector3.h"
 #include <string>
 #include <vector>
 
 class Entity;
 class Prefab;
+class Agent;
 class NeuroevolutionBrain;
+struct EpisodeSetup;
 
-// Тренер агентів: створює популяцію, проводить епізоди на навчальних трасах, перевіряє найкращу особину на окремій трасі й навчає нейроеволюцією
+// Тренер нейроеволюції: створює популяцію агентів з образу, проводить епізоди в навчальному середовищі, перевіряє найкращу особину в окремому й зберігає її мережу
 class TrainingManager : public Component
 {
 public:
@@ -18,12 +19,12 @@ public:
 	// Повертає симуляції звичайний крок і малювання сцени
 	~TrainingManager() override;
 
-	// Образ агента: автомобіль з фізичним тілом; сенсори й мозок додаються, якщо їх немає
+	// Образ агента: об'єкт з компонентом, похідним від Agent; мозок NeuroevolutionBrain додається, якщо його немає
 	Prefab* agentPrefab = nullptr;
-	// Навчальні маршрути: маршрут із точками або група маршрутів, з яких епізоди беруться по черзі
-	Entity* route = nullptr;
-	// Перевірні маршрути, на яких навчання не відбувається: за ними вибирається мережа, що зберігається
-	Entity* validationRoute = nullptr;
+	// Навчальне середовище, яке тренер передає агентам на початку епізоду; що воно означає, вирішує агент
+	Entity* environment = nullptr;
+	// Перевірне середовище, в якому навчання не відбувається: за ним вибирається мережа, що зберігається
+	Entity* validationEnvironment = nullptr;
 
 	// Розмір популяції, тобто кількість агентів, що навчаються одночасно
 	int populationSize = 64;
@@ -41,14 +42,6 @@ public:
 	int episodesPerGeneration = 2;
 	// Найбільша кількість кроків в епізоді
 	int maxEpisodeSteps = 3000;
-	// Висота над точкою маршруту, на якій з'являється агент
-	float spawnHeight = 0.5f;
-	// Найбільший випадковий зсув старту вбік від маршруту, м
-	float startOffset = 1.0f;
-	// Найбільше випадкове відхилення початкового курсу від маршруту, градуси
-	float startAngle = 10.0f;
-	// Найменша частка маршруту, яка має лишатися попереду випадкової точки старту
-	float minStartRemaining = 0.5f;
 	// Група фільтрації зіткнень агентів, щоб вони не зіштовхувалися між собою
 	int collisionGroup = 1;
 	// Зерно генератора випадкових чисел; 0 - нове зерно щоразу
@@ -62,7 +55,7 @@ public:
 	bool renderScene = true;
 
 	// Шлях до файлу, куди зберігаються ваги найкращої мережі
-	std::string weightsAsset = "Assets\\Networks\\Vehicle.nn";
+	std::string weightsAsset = "Assets\\Networks\\Agent.nn";
 
 	// Перелічує власні поля для файлу сцени та інспектора
 	void visitProperties(PropertyVisitor& visitor) override;
@@ -78,14 +71,21 @@ private:
 	// Початкові умови епізоду, однакові для всіх агентів популяції
 	struct EpisodePlan
 	{
-		// Маршрут епізоду
-		Entity* route;
-		// Номер точки маршруту, з якої стартують агенти
-		int start;
-		// Зсув старту вбік від маршруту, м
-		float offset;
-		// Відхилення початкового курсу, радіани
-		float angle;
+		// Варіант навчального середовища
+		int variant;
+		// Зерно випадкових початкових умов
+		unsigned int seed;
+	};
+
+	// Агент популяції: об'єкт, його компонент агента й мозок
+	struct Member
+	{
+		// Об'єкт агента
+		Entity* entity;
+		// Компонент агента
+		Agent* agent;
+		// Мозок агента
+		NeuroevolutionBrain* brain;
 	};
 
 	// Передає симуляції темп і малювання та показує вікно з ходом навчання
@@ -95,18 +95,20 @@ private:
 
 	// Створює популяцію й агентів; повертає false, якщо навчання неможливо налаштувати
 	bool initialize();
-	// Створює агента з образу та налаштовує його для навчання; nullptr, якщо образ не підходить
-	Entity* createAgent(const std::string& name, NeuroevolutionBrain*& brain);
-	// Ставить агента на маршрут і починає йому новий епізод
-	void placeAgent(Entity* agent, NeuroevolutionBrain* brain, Entity* agentRoute, int start, float offset, float angle);
-	// Ставить усіх агентів популяції на старт поточного епізоду
+	// Створює агента з образу та налаштовує його для навчання; false, якщо образ не підходить
+	bool createMember(const std::string& name, Member& member);
+	// Повертає агента в сцену й починає йому новий епізод
+	void beginEpisode(Member& member, const EpisodeSetup& setup);
+	// Починає всім агентам популяції поточний епізод
 	void startEpisode();
 	// Оцінює покоління, зберігає найкращу особину, якщо перевірки немає, і створює наступне покоління
 	void finishGeneration();
 	// Складає початкові умови епізодів наступного покоління
 	void planEpisodes();
-	// Веде перевірку найкращої особини на перевірних маршрутах і зберігає мережу, що пройшла їх найкраще
+	// Веде перевірку найкращої особини в перевірному середовищі й зберігає мережу, що показала себе найкраще
 	void updateValidation();
+	// Починає перевірному агентові епізод з потрібним варіантом середовища
+	void beginValidationEpisode();
 	// Повертає крок мутації для поточного покоління
 	float currentSigma() const;
 	// Малює вікно з ходом навчання
@@ -115,15 +117,15 @@ private:
 	// Генетичний алгоритм над параметрами мереж
 	GeneticAlgorithm mAlgorithm;
 	// Агенти популяції
-	std::vector<Entity*> mAgents;
-	// Мозки агентів у тому самому порядку
-	std::vector<NeuroevolutionBrain*> mBrains;
+	std::vector<Member> mMembers;
+	// Розміри шарів мережі агентів
+	std::vector<int> mLayers;
 	// Сума винагород кожної особини за епізоди поточного покоління
 	std::vector<float> mEpisodeFitness;
 	// Початкові умови епізодів поточного покоління
 	std::vector<EpisodePlan> mPlans;
-	// Навчальні маршрути
-	std::vector<Entity*> mRoutes;
+	// Кількість варіантів навчального середовища
+	int mVariants = 1;
 	// Найкраща пристосованість кожного покоління для графіка
 	std::vector<float> mBestHistory;
 	// Середня пристосованість кожного покоління для графіка
@@ -143,29 +145,29 @@ private:
 	// Чи ваги найкращої мережі вдалося зберегти останнього разу
 	bool mSaved = false;
 
-	// Агент, що проходить перевірні маршрути з найкращою особиною
-	Entity* mValidator = nullptr;
-	// Мозок перевірного агента
-	NeuroevolutionBrain* mValidatorBrain = nullptr;
-	// Перевірні маршрути
-	std::vector<Entity*> mValidationRoutes;
+	// Агент, що проходить перевірне середовище з найкращою особиною
+	Member mValidator = {};
+	// Кількість варіантів перевірного середовища
+	int mValidationVariants = 0;
 	// Параметри особини, яку зараз перевіряють
 	std::vector<float> mValidationParameters;
 	// Покоління, особину якого зараз перевіряють; -1 - перевірка не йде
 	int mValidationGeneration = -1;
 	// Останнє покоління, особину якого вже перевірено
 	int mValidatedGeneration = -1;
-	// Номер перевірного маршруту в поточній перевірці
-	int mValidationRouteIndex = 0;
-	// Сума пройдених часток перевірних маршрутів у поточній перевірці
-	float mValidationCompletion = 0.0f;
-	// Сума винагород перевірних маршрутів у поточній перевірці
+	// Номер варіанта перевірного середовища в поточній перевірці
+	int mValidationVariant = 0;
+	// Сума оцінок перевірних епізодів у поточній перевірці
+	float mValidationScore = 0.0f;
+	// Сума винагород перевірних епізодів у поточній перевірці
 	float mValidationReward = 0.0f;
-	// Середня пройдена частка перевірних маршрутів кожної перевірки, у відсотках
+	// Середня оцінка кожної перевірки для графіка
 	std::vector<float> mValidationHistory;
-	// Найкраща середня пройдена частка перевірних маршрутів
-	float mBestValidation = -1.0f;
-	// Винагорода перевірки, що дала найкращу частку
+	// Найкраща середня оцінка перевірки
+	float mBestValidation = 0.0f;
+	// Чи вже є найкраща перевірка
+	bool mHasBestValidation = false;
+	// Винагорода перевірки, що дала найкращу оцінку
 	float mBestValidationReward = 0.0f;
 	// Покоління мережі, що пройшла перевірку найкраще
 	int mBestValidationGeneration = 0;

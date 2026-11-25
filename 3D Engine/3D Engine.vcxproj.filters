@@ -198,20 +198,29 @@
     <ClCompile Include="src\Engine\AI\GeneticAlgorithm.cpp">
       <Filter>Engine\AI</Filter>
     </ClCompile>
-    <ClCompile Include="src\Engine\AI\VehicleController.cpp">
-      <Filter>Engine\AI</Filter>
-    </ClCompile>
     <ClCompile Include="src\Engine\AI\RaySensor.cpp">
-      <Filter>Engine\AI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Engine\AI\AgentSensor.cpp">
-      <Filter>Engine\AI</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Engine\AI\AgentBrain.cpp">
       <Filter>Engine\AI</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine\AI\NeuroevolutionBrain.cpp">
       <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\Agent.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\ControllableBody.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Engine\AI\RouteTracker.cpp">
+      <Filter>Engine\AI</Filter>
+    </ClCompile>
+    <ClCompile Include="Demo\Components\VehicleController.cpp">
+      <Filter>Application\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Demo\Components\CarAgent.cpp">
+      <Filter>Application\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="Demo\Components\CarPlannerBrain.cpp">
+      <Filter>Application\Components</Filter>
     </ClCompile>
     <ClCompile Include="src\Engine\AI\TrainingManager.cpp">
       <Filter>Engine\AI</Filter>
@@ -423,13 +432,7 @@
     <ClInclude Include="src\Engine\AI\GeneticAlgorithm.h">
       <Filter>Engine\AI</Filter>
     </ClInclude>
-    <ClInclude Include="src\Engine\AI\VehicleController.h">
-      <Filter>Engine\AI</Filter>
-    </ClInclude>
     <ClInclude Include="src\Engine\AI\RaySensor.h">
-      <Filter>Engine\AI</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Engine\AI\AgentSensor.h">
       <Filter>Engine\AI</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\AI\AgentBrain.h">
@@ -437,6 +440,24 @@
     </ClInclude>
     <ClInclude Include="src\Engine\AI\NeuroevolutionBrain.h">
       <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\Agent.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\ControllableBody.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Engine\AI\RouteTracker.h">
+      <Filter>Engine\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="Demo\Components\VehicleController.h">
+      <Filter>Application\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Demo\Components\CarAgent.h">
+      <Filter>Application\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="Demo\Components\CarPlannerBrain.h">
+      <Filter>Application\Components</Filter>
     </ClInclude>
     <ClInclude Include="src\Engine\AI\TrainingManager.h">
       <Filter>Engine\AI</Filter>

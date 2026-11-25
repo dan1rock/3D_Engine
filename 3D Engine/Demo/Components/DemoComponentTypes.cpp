@@ -3,6 +3,8 @@
 #include "Entity.h"
 
 #include "VehicleController.h"
+#include "CarAgent.h"
+#include "CarPlannerBrain.h"
 #include "FollowComponent.h"
 #include "FrameCounter.h"
 #include "SceneChanger.h"
@@ -13,7 +15,12 @@
 // Реєструє компоненти демонстраційного проєкту в редакторі та у файлі сцени
 void registerDemoComponentTypes()
 {
-	// Старі сцени зберігали автомобіль під давнім іменем компонента; тепер ним керує VehicleController рушія
+	// Автомобіль демонстрації та його штучний інтелект, побудовані на базових класах Agent, ControllableBody і ModelPredictiveBrain рушія
+	ComponentRegistry::registerType("VehicleController", [](Entity* e) -> Component* { return e->addComponent<VehicleController>(); });
+	ComponentRegistry::registerType("CarAgent", [](Entity* e) -> Component* { return e->addComponent<CarAgent>(); });
+	ComponentRegistry::registerType("CarPlannerBrain", [](Entity* e) -> Component* { return e->addComponent<CarPlannerBrain>(); });
+
+	// Старі сцени зберігали автомобіль під давнім іменем компонента
 	ComponentRegistry::registerAlias("CarComponent", [](Entity* e) -> Component* { return e->addComponent<VehicleController>(); });
 	ComponentRegistry::registerType("FollowComponent", [](Entity* e) -> Component* { return e->addComponent<FollowComponent>(); });
 	ComponentRegistry::registerType("FrameCounter", [](Entity* e) -> Component* { return e->addComponent<FrameCounter>(); });

@@ -8,14 +8,11 @@
 #include "MeshCollider.h"
 #include "SphereCollider.h"
 #include "PlaneCollider.h"
-#include "VehicleController.h"
 #include "RaySensor.h"
-#include "AgentSensor.h"
 #include "NeuroevolutionBrain.h"
 #include "TrainingManager.h"
 #include "DynamicsModel.h"
 #include "DynamicsTrainer.h"
-#include "ModelPredictiveBrain.h"
 #include "TrajectoryPredictor.h"
 
 #include <unordered_map>
@@ -81,14 +78,11 @@ void ComponentRegistry::registerEngineTypes()
 	// Фізичне тіло за замовчуванням нерухоме: рухоме потребує маси, яку задають в інспекторі
 	registerType("RigidBody", [](Entity* e) -> Component* { return e->addComponent<RigidBody>(true); });
 
-	// Компоненти агентів штучного інтелекту
-	registerType("VehicleController", [](Entity* e) -> Component* { return e->addComponent<VehicleController>(); });
+	// Готові компоненти штучного інтелекту; агента, керований об'єкт і власні мозки проєкт успадковує від Agent, ControllableBody та AgentBrain
 	registerType("RaySensor", [](Entity* e) -> Component* { return e->addComponent<RaySensor>(); });
-	registerType("AgentSensor", [](Entity* e) -> Component* { return e->addComponent<AgentSensor>(); });
 	registerType("NeuroevolutionBrain", [](Entity* e) -> Component* { return e->addComponent<NeuroevolutionBrain>(); });
 	registerType("TrainingManager", [](Entity* e) -> Component* { return e->addComponent<TrainingManager>(); });
 	registerType("DynamicsModel", [](Entity* e) -> Component* { return e->addComponent<DynamicsModel>(); });
 	registerType("DynamicsTrainer", [](Entity* e) -> Component* { return e->addComponent<DynamicsTrainer>(); });
-	registerType("ModelPredictiveBrain", [](Entity* e) -> Component* { return e->addComponent<ModelPredictiveBrain>(); });
 	registerType("TrajectoryPredictor", [](Entity* e) -> Component* { return e->addComponent<TrajectoryPredictor>(); });
 }
